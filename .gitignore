@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Build outputs
+dist
+build
+.next
+out
+*.tsbuildinfo
+
+# Turbo
+.turbo
+
+# Environment files — NEVER commit secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+
+# Testing
+coverage
+.nyc_output
+
+# Temp
+.temp
+.tmp
+*.pid
+*.pid.lock
+
+# Claude Code (local session files — not for repo)
+.claude
+.claudeignore
+
+# Supabase local dev (if ever initialized)
+supabase/.branches
+supabase/.temp
+
+# Misc
+*.pem
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+.github
+Updated_Scope_of_work_v1.0.pdf

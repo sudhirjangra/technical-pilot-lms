@@ -1,0 +1,60 @@
+{
+  "name": "turborepo",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "add:api": "pnpm add --filter=api",
+    "add:main": "pnpm add -w",
+    "add:shadcn": "pnpm add --filter=@repo/shadcn",
+    "add:utils": "pnpm add --filter=@repo/utils",
+    "add:web": "pnpm add --filter=web",
+    "build": "turbo build",
+    "build:api": "pnpm build --filter=api",
+    "build:web": "pnpm build --filter=web",
+    "changeset": "changeset",
+    "clear:modules": "npx npkill",
+    "commit": "cz",
+    "dev": "turbo dev",
+    "dev:api": "pnpm dev --filter=api",
+    "dev:web": "pnpm dev --filter=web",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "lint": "turbo lint",
+    "lint:api": "pnpm lint --filter=api",
+    "lint:web": "pnpm lint --filter=web",
+    "prepare": "husky",
+    "start": "turbo start",
+    "test": "turbo test",
+    "test:api": "pnpm test --filter=api",
+    "test:web": "pnpm test --filter=web"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.10",
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@total-typescript/ts-reset": "^0.6.1",
+    "@types/node": "^22.0.0",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
+    "prettier": "^3.5.0",
+    "prettier-plugin-css-order": "^2.1.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-packagejson": "^2.5.6",
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "turbo": "^2.4.4",
+    "typescript": "5.8.3",
+    "zod": "^3.24.4"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=20"
+  }
+}

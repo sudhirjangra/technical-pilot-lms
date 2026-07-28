@@ -1,0 +1,12 @@
+{
+  "extends": "@repo/ts-config/react-library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/shadcn": ["./src"],
+      "@repo/shadcn/*": ["./src/*"]
+    }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}
