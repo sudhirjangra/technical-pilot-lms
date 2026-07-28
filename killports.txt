@@ -1,0 +1,12 @@
+# Kill specific ports
+kill -9 $(lsof -ti :3000) 2>/dev/null   # web
+kill -9 $(lsof -ti :8000) 2>/dev/null   # api
+kill -9 $(lsof -ti :3000,:8000) 2>/dev/null   # both at once
+
+# Kill and start dev
+bash dev.sh
+
+# Kill and start specific
+bash dev.sh web
+bash dev.sh api
+bash dev.sh all

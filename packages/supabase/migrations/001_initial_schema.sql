@@ -5,7 +5,7 @@
 -- ============================================================
 
 -- ─── ENUMS ───────────────────────────────────────────────────
-create type user_role as enum ('admin', 'sub_admin', 'student');
+create type user_role as enum ('admin', 'sub_admin', 'student'); -- done
 create type device_platform as enum ('web', 'android', 'ios');
 create type course_status as enum ('draft', 'published', 'archived');
 create type lesson_type as enum ('video', 'pdf', 'assignment', 'test');
@@ -483,8 +483,14 @@ create policy "Students read own enrollments"
 create policy "Admin reads all enrollments"
   on public.enrollments for select using (public.get_my_role() in ('admin', 'sub_admin'));
 
-create policy "Admin manages enrollments"
-  on public.enrollments for insert update delete using (public.get_my_role() in ('admin', 'sub_admin'));
+create policy "Admin inserts enrollments"
+  on public.enrollments for insert with check (public.get_my_role() in ('admin', 'sub_admin'));
+
+create policy "Admin updates enrollments"
+  on public.enrollments for update using (public.get_my_role() in ('admin', 'sub_admin'));
+
+create policy "Admin deletes enrollments"
+  on public.enrollments for delete using (public.get_my_role() in ('admin', 'sub_admin'));
 
 -- ─── PROGRESS POLICIES ───────────────────────────────────────
 create policy "Students manage own progress"
