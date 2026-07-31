@@ -86,7 +86,11 @@ CREATE POLICY progress_student_update ON public.progress
 CREATE POLICY progress_service_all ON public.progress
   FOR ALL USING (auth.role() = 'service_role');
 
--- Updated_at triggers
+-- Updated_at triggers (idempotent for re-runs)
+DROP TRIGGER IF EXISTS enrollments_updated_at ON public.enrollments;
+DROP TRIGGER IF EXISTS payments_updated_at ON public.payments;
+DROP TRIGGER IF EXISTS progress_updated_at ON public.progress;
+
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN

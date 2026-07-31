@@ -122,6 +122,7 @@
 - [x] Progress module — lesson-level tracking, course progress overview, video position resume
 - [x] EnrollmentGuard — reusable guard that verifies active enrollment from any route param
 - [x] Migration 004 — enrollments, payments, progress tables + RLS + indexes + triggers
+- [x] Fixed migration 004 re-run safety by dropping existing trigger names before recreating them
 - [x] Razorpay env vars added to validation schema (with defaults for dev)
 - [x] safeFetch fixed: network errors caught gracefully (no more TypeError: fetch failed crashes)
 - [x] Middleware wrapped in try-catch (resilient to API being down)
@@ -133,6 +134,9 @@
 - Stricter rate limiting on auth endpoints (5/min per IP)
 - Session timeout on inactivity
 - Frontend: course management UI (admin panel)
+
+### Next Step
+- Re-run migration 004 in Supabase after applying this fix, then verify the payment and progress tables are writable for enrolled students.
 
 ## Known Remaining Warnings (Not Blocking)
 - Health endpoints are public (acceptable for uptime monitoring)
