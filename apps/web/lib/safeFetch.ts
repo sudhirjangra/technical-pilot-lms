@@ -31,11 +31,16 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
   }
 
   if (!response.ok) {
-    const msg = res.message;
+    const body = res as Record<string, unknown>;
+    // If response has structured error data (code, sessions, etc.), pass full JSON
+    if (body.code) {
+      return [JSON.stringify(body), null];
+    }
+    const msg = body.message;
     if (typeof msg === 'object' && msg !== null) {
       return [JSON.stringify(msg), null];
     }
-    return [msg ?? 'Request failed', null];
+    return [(msg as string) ?? 'Request failed', null];
   }
 
   const validateFields = schema.safeParse(res);

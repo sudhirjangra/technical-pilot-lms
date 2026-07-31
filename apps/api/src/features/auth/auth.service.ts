@@ -60,8 +60,9 @@ export class AuthService {
   async generateTokens(
     userId: string,
     email: string,
+    role: string,
   ): Promise<AuthTokensInterface> {
-    const payload = { id: userId, email };
+    const payload = { id: userId, email, role };
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.config.get('ACCESS_TOKEN_SECRET'),
@@ -177,7 +178,7 @@ export class AuthService {
       });
     }
 
-    const tokens = await this.generateTokens(authUser.id, authUser.email!);
+    const tokens = await this.generateTokens(authUser.id, authUser.email!, profile.role);
 
     const { data: device } = await this.supabase
       .from('devices')
@@ -387,9 +388,16 @@ export class AuthService {
       .maybeSingle();
     if (!device) throw new NotFoundException('Session not found');
 
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', dto.user_id)
+      .single();
+
     const tokens = await this.generateTokens(
       userData.user.id,
       userData.user.email!,
+      profile?.role ?? 'student',
     );
 
     await this.supabase

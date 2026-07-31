@@ -37,7 +37,7 @@ export class AuditLogInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((response) => {
         const resourceId =
-          request.params?.id ?? (response as Record<string, unknown>)?.data?.id ?? null;
+          request.params?.id ?? ((response as Record<string, unknown>)?.data as Record<string, unknown>)?.id ?? null;
         const resourceType = context.getClass().name.replace('Controller', '').toLowerCase();
 
         // Fire and forget — don't block the response

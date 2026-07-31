@@ -38,7 +38,7 @@ export class EnrollmentGuard implements CanActivate {
         .select('chapters(course_id)')
         .eq('id', params.lessonId)
         .single();
-      courseId = (lesson?.chapters as { course_id: string })?.course_id;
+      courseId = (lesson?.chapters as unknown as { course_id: string })?.course_id;
     }
 
     // Derive courseId from chapterId if present

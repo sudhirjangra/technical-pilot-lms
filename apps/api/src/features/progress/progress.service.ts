@@ -25,7 +25,7 @@ export class ProgressService {
       .single();
     if (lessonErr || !lesson) throw new NotFoundException('Lesson not found');
 
-    const courseId = (lesson.chapters as { course_id: string }).course_id;
+    const courseId = (lesson.chapters as unknown as { course_id: string }).course_id;
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
