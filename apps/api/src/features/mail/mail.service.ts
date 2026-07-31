@@ -30,7 +30,7 @@ export class MailService {
   async sendEmail(mailOptions: ISendMailOptions): Promise<void> {
     try {
       await this.mailerService.sendMail({
-        from: `${APP_NAME}<${this.config.get('MAIL_USERNAME')}>`,
+        from: `${APP_NAME}<${this.config.get('MAIL_FROM')}>`,
         ...mailOptions,
       });
     } catch (error) {

@@ -24,18 +24,17 @@ import {
 } from '@repo/shadcn/card';
 import { Input } from '@repo/shadcn/input';
 import { Label } from '@repo/shadcn/label';
+import { PasswordInput } from '@repo/shadcn/password-input';
 import { useSession } from 'next-auth/react';
 import { useAction } from 'next-safe-action/hooks';
 import { useState } from 'react';
 
 export default function GeneralSettings() {
-  const session = useSession({
-    required: true,
-  });
+  const session = useSession({ required: true });
   const [userData, setUserData] = useState({
-    name: session?.data?.user?.profile?.name ?? '',
-    email: session?.data?.user.email ?? '',
-    username: session?.data?.user.username ?? '',
+    full_name: session?.data?.user?.full_name ?? '',
+    email: session?.data?.user?.email ?? '',
+    phone: session?.data?.user?.phone ?? '',
   });
 
   const handleChange = (
@@ -52,27 +51,26 @@ export default function GeneralSettings() {
     isExecuting,
     result: { validationErrors, serverError },
   } = useAction(deleteAccount);
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>General Account Settings</CardTitle>
           <CardDescription>
-            Update your basic profile information
+            Your basic profile information
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                disabled
-                id="name"
-                name="name"
-                value={userData.name}
-                onChange={handleChange}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input
+              disabled
+              id="full_name"
+              name="full_name"
+              value={userData.full_name}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="space-y-2">
@@ -88,12 +86,12 @@ export default function GeneralSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="phone">Phone</Label>
             <Input
               disabled
-              id="username"
-              name="username"
-              value={userData.username}
+              id="phone"
+              name="phone"
+              value={userData.phone}
               onChange={handleChange}
             />
           </div>
@@ -131,10 +129,9 @@ export default function GeneralSettings() {
                   action.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <Input
+              <PasswordInput
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                type="password"
                 placeholder="Enter your account password"
               />
               {(validationErrors?.password || serverError) && (
@@ -147,10 +144,7 @@ export default function GeneralSettings() {
                 <Button
                   disabled={isExecuting}
                   onClick={async () => {
-                    const data = await executeAsync({
-                      password,
-                    });
-                    console.log(data);
+                    await executeAsync({ password });
                   }}
                 >
                   {isExecuting && '...'}

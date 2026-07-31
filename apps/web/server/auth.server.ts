@@ -13,6 +13,7 @@ import {
   GetSessionsSchema,
   RefreshToken,
   RefreshTokenSchema,
+  ResendOtpSchema,
   ResetPasswordSchema,
   Session,
   SignIn,
@@ -29,7 +30,7 @@ import { redirect } from 'next/navigation';
 
 /**
  * Parses and sends credential-based login with device info to backend.
- * @param credentials
+ * Throws specific error strings for EMAIL_NOT_CONFIRMED and DEVICE_LIMIT_REACHED.
  */
 export const authorizeSignIn = async (
   credentials: SignIn,
@@ -48,24 +49,26 @@ export const authorizeSignIn = async (
     }),
   });
 
-  if (error) return null;
+  if (error) {
+    throw new Error(error);
+  }
   const { data: user, tokens } = data;
   return {
     id: user.id,
     email: user.email,
-    username: user.username,
-    isEmailVerified: user.isEmailVerified,
-    emailVerifiedAt: user.emailVerifiedAt,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-    profile: user.profile,
+    role: user.role,
+    full_name: user.full_name,
+    phone: user.phone,
+    avatar_url: user.avatar_url,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
     tokens: tokens,
   };
 };
 
 /**
  * UI Sign-in action using credentials.
- * @schema SignInSchema
  */
 export const signInWithCredentials = safeAction
   .schema(SignInSchema)
@@ -74,6 +77,16 @@ export const signInWithCredentials = safeAction
       await signIn('credentials', parsedInput);
     } catch (error) {
       if (error instanceof AuthError) {
+        if (error.cause && typeof error.cause === 'object') {
+          const cause = error.cause as { err?: Error };
+          const msg = cause.err?.message ?? '';
+          if (msg.includes('EMAIL_NOT_CONFIRMED')) {
+            throw new Error('EMAIL_NOT_CONFIRMED');
+          }
+          if (msg.includes('DEVICE_LIMIT_REACHED')) {
+            throw new Error(msg);
+          }
+        }
         if (error.type === 'CredentialsSignin') {
           throw new Error('Invalid credentials.');
         }
@@ -84,6 +97,24 @@ export const signInWithCredentials = safeAction
         redirect('/');
       }
     }
+  });
+
+/**
+ * Remove a specific session by ID (public, used during device-limit flow).
+ */
+export const removeSession = safeAction
+  .schema(SignOutSchema)
+  .action(async ({ parsedInput }) => {
+    const [error] = await safeFetch(DefaultReturnSchema, '/auth/sign-out', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ session_token: parsedInput.session_token }),
+    });
+    if (error) throw new Error(error);
+    return 'success';
   });
 
 /**
@@ -103,14 +134,9 @@ export const signUpWithCredentials = safeAction
       body: JSON.stringify(parsedInput),
     });
 
-    if (error) throw error;
+    if (error) throw new Error(error);
 
-    await signIn('credentials', {
-      identifier: parsedInput.email,
-      password: parsedInput.password,
-      redirect: true,
-      redirectTo: '/auth/confirm-email',
-    });
+    redirect(`/auth/confirm-email?email=${encodeURIComponent(parsedInput.email)}`);
   });
 
 /**
@@ -319,7 +345,6 @@ export const getAuthSessions = async (): Promise<Session[]> => {
 export const confirmEmail = safeAction
   .schema(ConfirmEmailSchema)
   .action(async ({ parsedInput }) => {
-    const session = await auth();
     const [error] = await safeFetch(
       DefaultReturnSchema,
       '/auth/confirm-email',
@@ -329,23 +354,36 @@ export const confirmEmail = safeAction
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          Authorization: `Bearer ${session?.user?.tokens.access_token}`,
         },
         body: JSON.stringify(parsedInput),
       },
     );
     if (error) throw new Error(error);
-    await update({
-      user: {
-        isEmailVerified: true,
+    redirect(`/auth/sign-in`);
+  });
+
+export const resendOtp = safeAction
+  .schema(ResendOtpSchema)
+  .action(async ({ parsedInput }) => {
+    const [error] = await safeFetch(
+      DefaultReturnSchema,
+      '/auth/resend-otp',
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(parsedInput),
       },
-    });
-    redirect(`/`);
+    );
+    if (error) throw new Error(error);
+    return 'OTP sent';
   });
 
 /**
  * Update tokens in auth session
- * @param data
  */
 const updateTokens = async (data: RefreshToken) => {
   await update({
@@ -432,5 +470,6 @@ export const deleteAccount = safeAction
       },
     );
     if (error) throw new Error(error);
+    await signOut({ redirect: false });
     redirect('/auth/sign-in');
   });

@@ -19,6 +19,7 @@ import {
 } from '@repo/shadcn/input-otp';
 import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
+import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { Session } from 'next-auth';
 import { useAction } from 'next-safe-action/hooks';
@@ -94,11 +95,10 @@ const ResetPasswordForm = ({ session }: { session: Session | null }) => {
                         New Password
                       </Label>
                     </div>
-                    <Input
+                    <PasswordInput
                       disabled={isExecuting}
                       name="newPassword"
                       id="newPassword"
-                      type="password"
                       onChange={handleChange}
                       required
                       autoFocus

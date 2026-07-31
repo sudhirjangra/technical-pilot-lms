@@ -4,7 +4,7 @@ import {
   RefreshTokenInterface,
   RegisterUserInterface,
 } from '@/common/interfaces';
-import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { SUPABASE_ADMIN, SUPABASE_ANON } from '@/common/modules/supabase.module';
 import { Env, generateRefreshTime } from '@/common/utils';
 import {
   ChangePasswordDto,
@@ -45,6 +45,8 @@ export class AuthService {
     private readonly config: ConfigService<Env>,
     @Inject(SUPABASE_ADMIN)
     private readonly supabase: SupabaseClient,
+    @Inject(SUPABASE_ANON)
+    private readonly supabaseAnon: SupabaseClient,
     private readonly mailService: MailService,
     private readonly logger: Logger,
   ) {}
@@ -90,22 +92,38 @@ export class AuthService {
     const userId = authData.user.id;
     const { error: profileError } = await this.supabase
       .from('profiles')
-      .insert({
-        id: userId,
-        email: dto.email,
-        role: 'student',
-        full_name: dto.email.split('@')[0],
-      });
+      .upsert(
+        {
+          id: userId,
+          email: dto.email,
+          role: 'student',
+          full_name: dto.email.split('@')[0],
+        },
+        { onConflict: 'id' },
+      );
     if (profileError) {
+      this.logger.error({ profileError }, 'Profile upsert failed');
       await this.supabase.auth.admin.deleteUser(userId);
       throw new BadRequestException('Registration failed.');
     }
+
+    // Generate OTP for email verification using magiclink type (works for existing users)
+    const { data: linkData, error: linkError } =
+      await this.supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: dto.email,
+      });
+    if (linkError) {
+      this.logger.warn({ linkError }, 'Failed to generate OTP link');
+    }
+
+    const otp = linkData?.properties?.email_otp ?? '';
 
     try {
       await this.mailService.sendEmail({
         to: [dto.email],
         subject: 'Confirm your email',
-        html: RegisterSuccessMail({ name: dto.email.split('@')[0], otp: '' }),
+        html: RegisterSuccessMail({ name: dto.email.split('@')[0], otp }),
       });
     } catch (mailError) {
       this.logger.warn(
@@ -118,15 +136,24 @@ export class AuthService {
   }
 
   async signIn(dto: SignInUserDto): Promise<LoginUserInterface> {
-    const emailToUse = (dto as any).email ?? (dto as any).identifier ?? '';
+    const emailToUse = dto.identifier;
     const authUser = await this.getUserByEmail(emailToUse);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error: signInError } = await this.supabase.auth.signInWithPassword({
-      email: authUser.email!,
-      password: (dto as any).password,
-    });
-    if (signInError) throw new UnauthorizedException('Invalid credentials');
+    // Verify password using anon client
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: authUser.email!,
+        password: dto.password,
+      });
+
+    // If error is NOT "Email not confirmed", password is wrong
+    if (signInError) {
+      if (signInError.message.includes('Email not confirmed')) {
+        throw new UnauthorizedException('EMAIL_NOT_CONFIRMED');
+      }
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const { data: profile, error: profileError } = await this.supabase
       .from('profiles')
@@ -136,14 +163,18 @@ export class AuthService {
     if (profileError || !profile)
       throw new NotFoundException('Profile not found');
 
-    const { count } = await this.supabase
+    // Check device limit — return sessions if limit reached
+    const { data: existingDevices } = await this.supabase
       .from('devices')
-      .select('id', { count: 'exact', head: true })
+      .select('id, device_name, platform, last_active_at, created_at')
       .eq('user_id', authUser.id);
-    if ((count ?? 0) >= 2) {
-      throw new BadRequestException(
-        'Max device limit reached (2). Sign out from another device.',
-      );
+
+    if ((existingDevices?.length ?? 0) >= 2) {
+      throw new BadRequestException({
+        code: 'DEVICE_LIMIT_REACHED',
+        message: 'Max device limit reached (2). Remove a session to continue.',
+        sessions: existingDevices,
+      });
     }
 
     const tokens = await this.generateTokens(authUser.id, authUser.email!);
@@ -153,7 +184,7 @@ export class AuthService {
       .insert({
         user_id: authUser.id,
         device_fingerprint: tokens.refresh_token,
-        device_name: (dto as any).device_name ?? 'unknown',
+        device_name: dto.device_name ?? 'unknown',
         platform: 'web',
       })
       .select('id')
@@ -168,9 +199,9 @@ export class AuthService {
         html: SignInSuccessMail({
           username: profile.full_name ?? profile.email,
           loginTime: new Date(),
-          ipAddress: (dto as any).ip ?? 'unknown',
-          location: (dto as any).location ?? 'unknown',
-          device: (dto as any).device_name ?? 'unknown',
+          ipAddress: dto.ip ?? 'unknown',
+          location: dto.location ?? 'unknown',
+          device: dto.device_name ?? 'unknown',
         }),
       });
     } catch (mailError) {
@@ -188,22 +219,51 @@ export class AuthService {
     };
   }
 
-  async confirmEmail(dto: ConfirmEmailDto): Promise<void> {
-    const authUser = await this.getUserByEmail(dto.email);
+  async resendOtp(email: string): Promise<void> {
+    const authUser = await this.getUserByEmail(email);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error } = await this.supabase.auth.admin.updateUserById(
-      authUser.id,
-      {
-        email_confirm: true,
-      },
-    );
-    if (error) throw new BadRequestException('Email confirmation failed');
+    if (authUser.email_confirmed_at) {
+      throw new BadRequestException('Email already confirmed');
+    }
 
+    const { data: linkData, error: linkError } =
+      await this.supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+    if (linkError) {
+      throw new BadRequestException('Failed to generate OTP');
+    }
+
+    const otp = linkData?.properties?.email_otp ?? '';
+
+    await this.mailService.sendEmail({
+      to: [email],
+      subject: 'Your verification code',
+      html: RegisterSuccessMail({ name: email.split('@')[0], otp }),
+    });
+  }
+
+  async confirmEmail(dto: ConfirmEmailDto): Promise<void> {
+    const { error } = await this.supabaseAnon.auth.verifyOtp({
+      email: dto.email,
+      token: dto.token,
+      type: 'magiclink',
+    });
+    if (error) {
+      this.logger.error(
+        { error: error.message, email: dto.email },
+        'OTP verification failed',
+      );
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
+    const authUser = await this.getUserByEmail(dto.email);
     const { data: profile } = await this.supabase
       .from('profiles')
       .select('full_name')
-      .eq('id', authUser.id)
+      .eq('id', authUser?.id ?? '')
       .single();
 
     await this.mailService.sendEmail({
@@ -270,11 +330,14 @@ export class AuthService {
     const authUser = await this.getUserByEmail(emailToUse);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error: signInError } = await this.supabase.auth.signInWithPassword({
-      email: authUser.email!,
-      password: (dto as any).password,
-    });
-    if (signInError) throw new UnauthorizedException('Invalid credentials');
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: authUser.email!,
+        password: (dto as any).password,
+      });
+    if (signInError && !signInError.message.includes('Email not confirmed')) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const { error } = await this.supabase.auth.admin.updateUserById(
       authUser.id,
@@ -372,6 +435,19 @@ export class AuthService {
       dto.user_id,
     );
     if (error || !data.user) throw new NotFoundException('User not found');
+
+    // Verify password before allowing deletion
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: data.user.email!,
+        password: dto.password,
+      });
+    if (signInError && !signInError.message.includes('Email not confirmed')) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    // Clean up devices first
+    await this.supabase.from('devices').delete().eq('user_id', dto.user_id);
 
     const { error: deleteError } = await this.supabase.auth.admin.deleteUser(
       dto.user_id,

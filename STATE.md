@@ -1,119 +1,59 @@
-# Project State & Tracker
+# Project State
 
-## Current Phase: Phase 1 — Foundation & Infrastructure
+## Completed
 
-### Phase Overview
+### Phase 1: Auth + Profile + Cleanup (Done)
+- [x] Full auth flow: sign-up, sign-in, sign-out, confirm-email, forgot/reset password, change password, delete account
+- [x] Device tracking (max 2 devices) with sessions management UI
+- [x] Profile page with tabs: profile info, general settings, security, sessions, appearance
+- [x] Password visibility toggle (PasswordInput component) on all password fields
+- [x] Fixed type mismatches (general-settings used non-existent user.profile.name/username)
+- [x] Fixed SessionSchema to match actual DB devices table columns
+- [x] Removed S3/Backblaze code with hardcoded credentials
+- [x] Removed blog tables (content_blog_posts, content_blog_post_comments, private_items)
+- [x] Cleaned home page (removed RichTextEditor, media player cruft)
+- [x] Fixed is-authorized middleware (home page now accessible to guests)
+- [x] Updated APP_NAME/metadata from "Turbo NPN" to "Institution LMS"
+- [x] Removed public file upload test endpoint
+- [x] Created migration 002_drop_unused_tables.sql
+- [x] Full migration 001 with all ARCHITECTURE.md tables + RLS policies
+- [x] Cleaned env schema (removed AWS vars)
+- [x] Updated .env.example with correct required vars
 
-Set up Supabase, configure auth, establish NestJS module structure, wire up monorepo packages. This phase produces a working auth flow (register/login/device management) with proper security.
+## Current Database
+- profiles, devices, audit_logs (as per current_in_database.sql)
+- Blog tables exist but migration 002 drops them
 
----
+### Phase 1.5: Frontend Auth Error Handling (Done)
+- [x] Sign-in form handles EMAIL_NOT_CONFIRMED → redirects to /auth/confirm-email?email=...
+- [x] Sign-in form handles DEVICE_LIMIT_REACHED → shows sessions picker UI, user removes one, then auto-retries sign-in
+- [x] Confirm-email form reads email from URL params (no session required)
+- [x] confirmEmail server action no longer requires auth header (endpoint is @Public)
+- [x] Sign-up no longer attempts signIn after registration → redirects to confirm-email page
+- [x] /auth/confirm-email added to public paths in middleware
+- [x] safeFetch preserves structured error payloads (JSON objects)
+- [x] removeSession server action for device-limit flow
 
-### Immediate Next Step
+## Immediate Next Step
+- Configure Supabase email settings (see below)
+- Run migration 002 in Supabase to drop blog tables
+- Run migration 001 (if not already run) to create full schema
+- Verify app compiles: `pnpm build`
+- Test auth flow end-to-end
 
-- [ ] Run migration SQL in Supabase Dashboard (SQL Editor → paste `packages/supabase/migrations/001_initial_schema.sql`)
-- [ ] Configure Supabase Auth (email/password provider, email templates in Supabase Dashboard)
-- [ ] Implement JWT auth guard using Supabase JWT verification (replace current custom JWT)
+## Supabase Email Setup Required
+1. Dashboard → Authentication → Email Templates → Disable "Enable email confirmations" (we send custom emails via Resend)
+2. OR keep it enabled but set Custom SMTP to your Resend SMTP (smtp.resend.com:465, user=resend, pass=RESEND_API_KEY)
+3. In apps/api/.env set: RESEND_API_KEY, MAIL_FROM (e.g. noreply@yourdomain.com)
+4. Domain must be verified in Resend dashboard for MAIL_FROM to work
 
----
-
-### Phase 1 Backlog (Infrastructure)
-
-- [x] Remove TypeORM dependency, switch all DB access to Supabase SDK
-- [x] Write Supabase migrations: full schema in `packages/supabase/migrations/001_initial_schema.sql`
-- [ ] Configure Supabase Auth (email/password provider, email templates)
-- [ ] Implement auth module in NestJS (register, login, logout, refresh, device check)
-- [ ] Set up RLS policies for users and devices tables
-- [ ] Integrate NextAuth 5 with Supabase Auth on web frontend
-- [ ] Device limit enforcement (max 2 devices per user)
-- [ ] Session monitoring and audit logging
-- [ ] Configure Resend for transactional emails
-- [ ] Set up environment variables and secrets management
-
-### Phase 2 Backlog (Course Management)
-
-- [ ] Supabase migrations: categories, courses, chapters, lessons, video_lessons, pdf_notes, assignments
-- [ ] Course CRUD API (NestJS)
-- [ ] Chapter/Lesson CRUD with ordering
-- [ ] Vimeo integration (video upload, embed URL generation)
-- [ ] PDF upload to Supabase Storage with access policies
-- [ ] Assignment creation API
-- [ ] Draft/publish workflow
-- [ ] Admin course management UI
-- [ ] Student course browsing UI (public)
-
-### Phase 3 Backlog (Payments & Enrollment)
-
-- [ ] Supabase migrations: payments, enrollments tables
-- [ ] Razorpay integration (order creation, webhook verification, signature validation)
-- [ ] Payment flow: browse → buy → pay → auto-enroll
-- [ ] Invoice generation
-- [ ] Payment history (student + admin views)
-- [ ] Refund support (admin-initiated)
-- [ ] Enrollment status management
-
-### Phase 4 Backlog (Learning Experience)
-
-- [ ] Video player with resume-from-position
-- [ ] Dynamic watermark overlay (student identity on video)
-- [ ] PDF viewer with download (enrolled students only)
-- [ ] Progress tracking (video %, lesson completion, chapter completion, course %)
-- [ ] Assignment submission and grading
-- [ ] Student learning dashboard
-
-### Phase 5 Backlog (Tests & Analytics)
-
-- [ ] Supabase migrations: tests, questions, options, attempts, answers
-- [ ] Test/quiz builder (admin)
-- [ ] Test-taking UI (student) with timer
-- [ ] Auto-grading MCQs
-- [ ] Test analytics: score, accuracy, time per question, weak topics
-- [ ] Historical performance tracking
-- [ ] Improvement suggestions engine
-
-### Phase 6 Backlog (Referrals & Doubt Sessions)
-
-- [ ] Referral code generation and tracking
-- [ ] Referral discount application at checkout
-- [ ] Commission calculation and approval workflow
-- [ ] Referral dashboard (student + admin)
-- [ ] Doubt session slot management (admin)
-- [ ] Booking system with conflict prevention
-- [ ] Calendar UI for students
-- [ ] Booking confirmations and reminders (email)
-
-### Phase 7 Backlog (Admin Reports & Polish)
-
-- [ ] Admin analytics dashboard (KPIs: revenue, users, enrollments, completions)
-- [ ] Student performance reports
-- [ ] Payment & revenue reports
-- [ ] Referral analytics (top referrers, conversion rates)
-- [ ] Engagement metrics (active users, time spent, popular courses)
-- [ ] CSV/Excel export
-- [ ] Sub-admin permission management UI
-- [ ] Content security audit and hardening
-- [ ] Performance optimization
-- [ ] Production deployment (Vercel + Supabase)
-
----
-
-### Completed Tasks
-
-- [x] Initial monorepo setup (Turborepo + pnpm workspaces)
-- [x] Next.js 15 web app with ShadCN UI, theming, font switching
-- [x] NestJS 11 API with Fastify adapter
-- [x] Shared packages (shadcn, eslint-config, ts-config, constants, utils)
-- [x] Husky + commitlint + lint-staged configured
-- [x] Defined project architecture (ARCHITECTURE.md)
-- [x] Defined project plan (STATE.md)
-- [x] Read and analyzed full Scope of Work document
-- [x] Created `packages/supabase/` shared package (client, server, admin, middleware, types)
-
----
-
-### Key Decisions Made
-
-1. **NestJS kept as dedicated backend** — serves web + future mobile apps
-2. **Supabase as database** — replaces TypeORM, provides Auth + Storage + RLS + Realtime
-3. **Roles: Admin + Sub-admin + Student** — Sub-admin gets configurable granular permissions from admin
-4. **Auth: Supabase Auth + NextAuth 5** — Supabase handles server-side auth/sessions, NextAuth manages frontend
-5. **No instructor role** — Admin/sub-admin handles course content creation
+## Future Steps (Phase 2)
+- Course CRUD (admin)
+- Chapter/Lesson management
+- Video integration (Vimeo)
+- Payment integration (Razorpay)
+- Enrollment + progress tracking
+- Referral system
+- Doubt sessions
+- Admin dashboard
+- Sub-admin permissions

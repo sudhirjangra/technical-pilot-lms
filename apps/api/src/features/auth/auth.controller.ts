@@ -14,6 +14,7 @@ import {
   DeleteUserDto,
   ForgotPasswordDto,
   RefreshTokenDto,
+  ResendOtpDto,
   ResetPasswordDto,
   SignInUserDto,
   SignOutAllDeviceUserDto,
@@ -81,6 +82,7 @@ export class AuthController {
    * @param {SignOutUserDto} signOutUserDto - Data for signing out.
    * @returns {Promise<MessageResponse>} Response message.
    */
+  @Public()
   @Post('sign-out')
   async signOut(
     @Body() signOutUserDto: SignOutUserDto,
@@ -133,6 +135,14 @@ export class AuthController {
    * @param {ConfirmEmailDto} confirmEmailDto - Email confirmation data.
    * @returns {Promise<MessageResponse>} Response message.
    */
+  @Public()
+  @Post('resend-otp')
+  async resendOtp(@Body() dto: ResendOtpDto): Promise<MessageResponse> {
+    await this.authService.resendOtp(dto.email);
+    return { message: 'OTP sent successfully' };
+  }
+
+  @Public()
   @Patch('confirm-email')
   async confirmEmail(
     @Body() confirmEmailDto: ConfirmEmailDto,

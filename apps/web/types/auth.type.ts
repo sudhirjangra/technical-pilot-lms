@@ -52,37 +52,24 @@ export const SignInDataSchema = z.object({
   }),
 });
 
-/**
- * Schema representing a single session.
- */
 export const SessionSchema = z.object({
   id: z.string().min(1),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-  ip: z.string().min(1),
-  browser: z.string().min(1),
-  device_os: z.string().min(1),
-  device_type: z.string().min(1),
-  device_name: z.string().min(1),
-  location: z.string().min(1),
-  refresh_token: z.string(),
   user_id: z.string(),
+  device_fingerprint: z.string(),
+  device_name: z.string(),
+  platform: z.enum(['web', 'android', 'ios']),
+  last_active_at: z.coerce.date(),
+  created_at: z.coerce.date(),
 });
 
 export type Session = z.infer<typeof SessionSchema>;
 
-/**
- * Schema for getting a single session response.
- */
 export const GetSessionSchema = z.object({
   data: SessionSchema,
 });
 
 export type GetSession = z.infer<typeof GetSessionSchema>;
 
-/**
- * Schema for getting multiple sessions.
- */
 export const GetSessionsSchema = z.object({
   data: z.array(SessionSchema),
 });
@@ -133,7 +120,11 @@ export const ResetPasswordSchema = z.object({
  */
 export const ConfirmEmailSchema = z.object({
   email: z.string().email(),
-  token: z.string().min(6).max(6),
+  token: z.string().min(6).max(8),
+});
+
+export const ResendOtpSchema = z.object({
+  email: z.string().email(),
 });
 
 /**

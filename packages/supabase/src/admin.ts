@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types/index.js';
 
 let adminClient: ReturnType<typeof createClient<Database>> | null = null;
+let anonClient: ReturnType<typeof createClient<Database>> | null = null;
 
 export function createAdminClient() {
   if (adminClient) return adminClient;
@@ -23,4 +24,24 @@ export function createAdminClient() {
   });
 
   return adminClient;
+}
+
+export function createAnonClient() {
+  if (anonClient) return anonClient;
+
+  const url = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+  }
+
+  anonClient = createClient<Database>(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return anonClient;
 }

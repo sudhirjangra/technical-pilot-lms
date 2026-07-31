@@ -1,5 +1,5 @@
 # Project Directives: Institution LMS
-
+IMPORTANT NOTE: Save my tokens by not repharsing my wording or other things. Don't run and wait for build commands.
 ## Core Workflow Rules
 
 1. **Never vibe code.** Before writing or modifying any code, read `ARCHITECTURE.md` to understand system design and `STATE.md` to know current task.

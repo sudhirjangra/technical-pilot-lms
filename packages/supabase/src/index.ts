@@ -1,4 +1,4 @@
-export { createAdminClient } from './admin.js';
+export { createAdminClient, createAnonClient } from './admin.js';
 export { createClient } from './client.js';
 export { getSupabaseConfig } from './config.js';
 export { createMiddlewareClient } from './middleware.js';

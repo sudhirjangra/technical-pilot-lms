@@ -34,51 +34,57 @@ const SessionsSettings = async () => {
             {sessions
               .sort(
                 (a, b) =>
-                  new Date(b.updatedAt).getTime() -
-                  new Date(a.updatedAt).getTime(),
+                  new Date(b.last_active_at).getTime() -
+                  new Date(a.last_active_at).getTime(),
               )
-              .map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-start justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex gap-3">
-                    {session.device_type === 'desktop' && (
-                      <Laptop className="size-7 text-muted-foreground" />
-                    )}{' '}
-                    {session.device_type === 'mobile' && (
-                      <Smartphone className="size-7 text-muted-foreground" />
-                    )}
-                    {session.device_type === 'unknown' && (
-                      <TriangleAlert className="size-7 text-muted-foreground" />
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">
-                          {session.device_name} - {session.browser}
-                        </h3>
-                        {session.id ===
-                          authSession?.user?.tokens.session_token && (
-                          <Badge variant="secondary">Current Session</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {session.location} • IP: {session.ip}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(
-                          session.updatedAt,
-                          'MM-DD-YYYY / hh:mm:ss:A',
-                        )}
-                      </p>
-                    </div>
-                  </div>
+              .map((session) => {
+                const isCurrent =
+                  session.id === authSession?.user?.tokens.session_token;
+                const icon =
+                  session.platform === 'web' ? (
+                    <Laptop className="size-7 text-muted-foreground" />
+                  ) : session.platform === 'android' ||
+                    session.platform === 'ios' ? (
+                    <Smartphone className="size-7 text-muted-foreground" />
+                  ) : (
+                    <TriangleAlert className="size-7 text-muted-foreground" />
+                  );
 
-                  {!(
-                    session.id === authSession?.user?.tokens?.session_token
-                  ) && <SessionOtherLogout session_token={session.id} />}
-                </div>
-              ))}
+                return (
+                  <div
+                    key={session.id}
+                    className="flex items-start justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex gap-3">
+                      {icon}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">
+                            {session.device_name}
+                          </h3>
+                          {isCurrent && (
+                            <Badge variant="secondary">Current Session</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Platform: {session.platform}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Last active:{' '}
+                          {formatDate(
+                            session.last_active_at,
+                            'MM-DD-YYYY / hh:mm:ss:A',
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {!isCurrent && (
+                      <SessionOtherLogout session_token={session.id} />
+                    )}
+                  </div>
+                );
+              })}
           </div>
         </CardContent>
       </Card>

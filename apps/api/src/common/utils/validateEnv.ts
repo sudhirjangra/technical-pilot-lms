@@ -1,8 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Zod schema for validating and typing environment variables.
- */
 export const EnvSchema = z.object({
   HOST: z.string(),
   NODE_ENV: z
@@ -17,16 +14,9 @@ export const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),
-  MAIL_HOST: z.string(),
-  MAIL_USERNAME: z.string(),
-  MAIL_PASSWORD: z.string(),
-  FILE_SYSTEM: z.enum(['s3', 'public']),
+  RESEND_API_KEY: z.string().default(''),
+  MAIL_FROM: z.string().default('onboarding@resend.dev'),
   FILE_MAX_SIZE: z.coerce.number().default(20971520),
-  AWS_REGION: z.string().default(''),
-  AWS_ACCESS_KEY_ID: z.string().default(''),
-  AWS_SECRET_ACCESS_KEY: z.string().default(''),
-  AWS_S3_BUCKET_NAME: z.string().default(''),
-  AWS_S3_ENDPOINT: z.string().default(''),
 });
 
 /**

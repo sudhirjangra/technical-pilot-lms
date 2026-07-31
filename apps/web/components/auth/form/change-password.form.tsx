@@ -9,9 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@repo/shadcn/card';
-import { Input } from '@repo/shadcn/input';
 import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
+import { PasswordInput } from '@repo/shadcn/password-input';
 import { toast } from '@repo/shadcn/sonner';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
@@ -64,13 +64,12 @@ const ChangePasswordForm = () => {
             <Label isRequired htmlFor="current-password">
               Current Password
             </Label>
-            <Input
+            <PasswordInput
               disabled={isExecuting}
               onChange={handleChange}
               value={formData.password}
               name="password"
               id="current-password"
-              type="password"
             />
             {validationErrors?.password?._errors?.[0] && (
               <p className="text-xs text-red-500">
@@ -83,13 +82,12 @@ const ChangePasswordForm = () => {
             <Label isRequired htmlFor="new-password">
               New Password
             </Label>
-            <Input
+            <PasswordInput
               disabled={isExecuting}
               onChange={handleChange}
               value={formData.newPassword}
               name="newPassword"
               id="new-password"
-              type="password"
             />
             {validationErrors?.newPassword?._errors?.[0] && (
               <p className="text-xs text-red-500">
@@ -103,13 +101,12 @@ const ChangePasswordForm = () => {
             <Label isRequired htmlFor="confirm-password">
               Confirm New Password
             </Label>
-            <Input
+            <PasswordInput
               disabled={isExecuting}
               onChange={handleChange}
               value={formData.confirmNewPassword}
               name="confirmNewPassword"
               id="confirm-password"
-              type="password"
             />
             {validationErrors?.confirmNewPassword?._errors?.[0] && (
               <p className="text-xs text-red-500">

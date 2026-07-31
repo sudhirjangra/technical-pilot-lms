@@ -77,12 +77,13 @@ export interface Database {
           id?: string;
           user_id: string;
           device_fingerprint: string;
-          device_name: string;
-          platform: DevicePlatform;
+          device_name?: string;
+          platform?: DevicePlatform;
           last_active_at?: string;
           created_at?: string;
         };
         Update: {
+          device_fingerprint?: string;
           device_name?: string;
           last_active_at?: string;
         };
@@ -173,6 +174,33 @@ export interface Database {
         Update: {
           status?: EnrollmentStatus;
           completed_at?: string | null;
+        };
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          resource_type: string | null;
+          resource_id: string | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          metadata: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          action: string;
+          resource_type?: string | null;
+          resource_id?: string | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          metadata?: Json | null;
         };
       };
       payments: {

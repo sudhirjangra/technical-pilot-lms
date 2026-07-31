@@ -2,9 +2,7 @@
 import { useSession } from 'next-auth/react';
 
 const Session = () => {
-  useSession({
-    required: true,
-  });
+  useSession();
   return <></>;
 };
 

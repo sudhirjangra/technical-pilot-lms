@@ -41,22 +41,16 @@ export const metadata = {
     template: `%s | ${APP_NAME}`,
   },
   description:
-    'Turbo NPN is the next-generation social platform where you connect, share, and discover in real time. Join the conversation and stay in the loop with what matters most to you.',
+    'A comprehensive Learning Management System for institutional use. Purchase courses, learn through videos, track progress, and more.',
   keywords: [
-    APP_NAME,
-    'social media platform',
-    'real-time updates',
-    'microblogging app',
-    'trending topics',
-    'community engagement',
-    'follow creators',
-    'Myanmar social app',
-    'connect with friends',
-    'share thoughts',
-    'post updates',
-    'live conversations',
-    'digital community',
-    'social network Myanmar',
+    'LMS',
+    'learning management system',
+    'online courses',
+    'education',
+    'e-learning',
+    'video courses',
+    'assignments',
+    'tests',
   ],
   alternates: {
     canonical: '/',
@@ -65,29 +59,13 @@ export const metadata = {
     type: 'website',
     title: APP_NAME,
     description:
-      'Join Turbo NPN to connect with your world. Share moments, follow trending topics, and be part of a real-time conversation.',
+      'Institution LMS — learn through structured courses with videos, assignments, and tests.',
     url: APP_URL,
     locale: 'en-US',
   },
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: APP_NAME,
-    description:
-      'Turbo NPN — the real-time social network for discovering, sharing, and connecting across Myanmar and beyond.',
-  },
-  verification: {
-    google: 'your-google-verification-token',
   },
   icons: {
     icon: '/metadata/favicon.ico',

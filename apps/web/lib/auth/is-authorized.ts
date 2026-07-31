@@ -21,41 +21,25 @@ export const isAuthorized = ({
   auth: Session | null;
 }) => {
   const isAuth = !!auth?.user;
-  const isVerifiedUser = !!auth?.user.isEmailVerified;
   const { nextUrl } = request;
   const { pathname } = nextUrl;
 
-  // Allow access to public assets
   if (pathname.startsWith('/assets') || pathname.startsWith('/favicon.ico')) {
     return true;
   }
 
-  // Handle unauthenticated access
+  const publicPaths = ['/', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/confirm-email'];
+  const isPublicPath = publicPaths.some(
+    (p) => pathname === p || (p !== '/' && pathname.startsWith(p)),
+  );
+
   if (!isAuth) {
-    if (
-      pathname === '/' ||
-      pathname.startsWith('/p') ||
-      pathname.startsWith('/auth/confirm-email')
-    ) {
-      return Response.redirect(new URL('/auth/sign-in', nextUrl));
-    }
+    if (isPublicPath) return true;
+    return Response.redirect(new URL('/auth/sign-in', nextUrl));
   }
 
-  // Handle authenticated user
-  if (isAuth) {
-    if (!isVerifiedUser) {
-      const isAlreadyOnConfirmPage = pathname.startsWith('/auth/confirm-email');
-      if (!isAlreadyOnConfirmPage) {
-        return Response.redirect(new URL('/auth/confirm-email', nextUrl));
-      }
-    }
-
-    if (
-      pathname.startsWith('/auth/sign') ||
-      (pathname.startsWith('/auth/confirm-email') && isVerifiedUser)
-    ) {
-      return Response.redirect(new URL('/', nextUrl));
-    }
+  if (isAuth && pathname.startsWith('/auth/sign')) {
+    return Response.redirect(new URL('/', nextUrl));
   }
 
   return true;

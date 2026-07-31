@@ -13,6 +13,7 @@ import {
 import { Input } from '@repo/shadcn/input';
 import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
+import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
@@ -84,11 +85,10 @@ const SignUpForm = () => {
                         Password
                       </Label>
                     </div>
-                    <Input
+                    <PasswordInput
                       disabled={isExecuting}
                       name="password"
                       id="password"
-                      type="password"
                       onChange={handleChange}
                       required
                     />

@@ -6,24 +6,19 @@ import { User } from 'next-auth';
  */
 declare module 'next-auth' {
   /**
-   * The shape of the user object returned in the OAuth providers' `[username]` callback,
-   * or the second parameter of the `session` callback, when using a database.
+   * The shape of the user object returned in the session callback.
+   * Aligned with profiles table structure.
    *
    * @interface User
    * @property {string} id - Unique identifier for the user.
    * @property {string} email - User's email address.
-   * @property {string} username - User's username.
-   * @property {boolean} isEmailVerified - Indicates if the user's email is verified.
-   * @property {Date | null} [emailVerifiedAt] - Date when the email was verified, if applicable.
-   * @property {Date} createdAt - Date when the user was created.
-   * @property {Date} updatedAt - Date when the user was last updated.
-   * @property {Object} profile - User's profile information.
-   * @property {string} profile.name - Name of the user.
-   * @property {string} profile.gender - Gender of the user.
-   * @property {string | null} [profile.phoneNumber] - Optional phone number.
-   * @property {string | null} [profile.profilePicture] - Optional profile picture URL.
-   * @property {Date | null} [profile.dateOfBirth] - Optional date of birth.
-   * @property {string | null} [profile.address] - Optional address.
+   * @property {string} role - User role: admin, sub_admin, or student.
+   * @property {string | null} [full_name] - User's full name.
+   * @property {string | null} [phone] - User's phone number.
+   * @property {string | null} [avatar_url] - User's avatar URL.
+   * @property {boolean} is_active - Whether the user account is active.
+   * @property {Date} created_at - Date when the user was created.
+   * @property {Date} updated_at - Date when the user was last updated.
    * @property {Object} tokens - Authentication tokens.
    * @property {string} tokens.access_token - Access token.
    * @property {string} tokens.refresh_token - Refresh token.
@@ -33,19 +28,13 @@ declare module 'next-auth' {
   interface User {
     id: string;
     email: string;
-    username: string;
-    isEmailVerified: boolean;
-    emailVerifiedAt?: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    profile: {
-      name: string;
-      gender: string;
-      phoneNumber?: string | null;
-      profilePicture?: string | null;
-      dateOfBirth?: Date | null;
-      address?: string | null;
-    };
+    role: 'admin' | 'sub_admin' | 'student';
+    full_name?: string | null;
+    phone?: string | null;
+    avatar_url?: string | null;
+    is_active: boolean;
+    created_at: Date;
+    updated_at: Date;
     tokens: {
       access_token: string;
       refresh_token: string;
