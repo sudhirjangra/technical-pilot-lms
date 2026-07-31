@@ -72,6 +72,7 @@ export class PaymentsService {
     const order = await razorpayRes.json();
 
     // Store pending payment
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const { data: payment, error } = await this.supabase
       .from('payments')
       .insert({
@@ -80,6 +81,7 @@ export class PaymentsService {
         amount,
         discount_amount: discountAmount,
         razorpay_order_id: order.id,
+        invoice_number: invoiceNumber,
         status: 'pending',
       })
       .select('*')
@@ -123,10 +125,10 @@ export class PaymentsService {
     if (error || !payment) throw new BadRequestException('Payment record not found or already processed');
 
     // Create enrollment
-    await this.supabase.from('enrollments').insert({
-      student_id: studentId,
-      course_id: payment.course_id,
-    });
+    await this.supabase.from('enrollments').upsert(
+      { student_id: studentId, course_id: payment.course_id },
+      { onConflict: 'student_id,course_id' },
+    );
 
     return { message: 'Payment verified, enrollment activated', payment };
   }

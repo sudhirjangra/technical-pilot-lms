@@ -35,11 +35,11 @@
 - [x] removeSession server action for device-limit flow
 
 ## Immediate Next Step
+- Sign out and sign back in (JWT now includes role)
+- Test admin panel: create categories → create courses → add chapters → add lessons
+- Test student flow: browse /courses → view course → enroll → see dashboard progress
 - Add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET to .env
 - Run migration 004 in Supabase
-- Test payment flow via Swagger (create order → verify payment)
-- Test enrollment + progress APIs
-- Build admin dashboard frontend (course management UI)
 
 ### Phase 2.0: Course CRUD (Done)
 - [x] Categories module — full CRUD, public read, admin write
@@ -73,15 +73,48 @@
 3. In apps/api/.env set: RESEND_API_KEY, MAIL_FROM (e.g. noreply@yourdomain.com)
 4. Domain must be verified in Resend dashboard for MAIL_FROM to work
 
-## Future Steps (Phase 2)
+### Phase 3.0: Frontend UI (Done)
+- [x] Admin panel layout with sidebar (Courses, Categories, Students, Enrollments, Payments)
+- [x] Admin courses — list, create, delete, link to detail page
+- [x] Admin course detail — edit status, manage chapters + lessons (add/delete), view enrollments
+- [x] Admin categories — list, create, delete
+- [x] Admin students — list with search, role/status badges
+- [x] Admin enrollments — search by course ID, manual enrollment
+- [x] Admin payments — list with status badges
+- [x] Public /courses page — browse published courses with search
+- [x] Public /courses/[slug] — course detail with pricing, enrollment CTA
+- [x] Student /dashboard — enrolled courses overview
+- [x] Student /dashboard/courses/[courseId] — per-course progress (chapter/lesson breakdown, progress bar)
+- [x] All Zod schemas fixed to unwrap API { message, data } envelope
+- [x] JWT now includes `role` field (was missing, caused all @Roles guards to fail)
+- [x] Home page navigation updated (Dashboard, Browse Courses, Profile, Admin Panel)
+- [x] /courses added to public paths
+
+### Phase 3.5: Sub-Admin Permissions + Security Hardening (Done)
+- [x] sub_admin_permissions table — migration 005
+- [x] PermissionsModule — set/get/revoke permissions, promote/demote users
+- [x] PermissionGuard — checks sub-admin permission slugs, admin bypasses
+- [x] @Permissions() decorator for granular endpoint control
+- [x] RolesGuard updated — sub_admin now passes @Roles('ADMIN') (actual access controlled by PermissionGuard)
+- [x] 11 permission slugs per ARCHITECTURE.md (courses, students, payments, doubt_sessions, reports, referrals)
+- [x] Admin UI: /admin/sub-admins — promote students, edit permissions with checkboxes, demote
+- [x] CSP headers in next.config.ts (frame-src for Razorpay + Vimeo, connect-src for Razorpay API)
+- [x] Strict rate limiting on auth endpoints — sign-up/sign-in: 5/min, forgot-password: 3/min
+- [x] All permission endpoints audit-logged
+
+## Future Steps
 - Video integration (Vimeo) — upload, signed URL generation, player embed
 - Referral system — codes, commissions, discount application
-- Doubt sessions — slot management, booking, calendar
-- Admin dashboard (frontend) — course/student/payment management UI
-- Sub-admin permissions — permission guard, permission matrix CRUD
-- CSP headers in Next.js middleware
-- Stricter rate limiting on auth endpoints (5/min per IP)
 - Session timeout on inactivity
+
+### Phase 4.0: Doubt Sessions (Done)
+- [x] Migration 006 — doubt_slots + doubt_bookings tables, RLS, indexes
+- [x] DoubtSessionsModule — full backend: create/cancel/delete slots, book/cancel bookings
+- [x] Slot availability logic — auto-marks full when max_bookings reached, reopens on cancel
+- [x] Admin UI: /admin/doubt-sessions — create slots (date/time/duration/capacity), cancel, delete, grouped by date
+- [x] Student UI: /dashboard/doubt-sessions — browse upcoming slots, book, view/cancel bookings
+- [x] All mutations audit-logged
+- [x] Admin sidebar + student dashboard updated with doubt session links
 
 ### Phase 2.5: Enrollments + Payments + Progress (Done)
 - [x] Enrollments module — CRUD, student self-check, admin course-enrollments view

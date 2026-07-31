@@ -52,9 +52,17 @@ export class AuthService {
   ) {}
 
   private async getUserByEmail(email: string) {
-    const { data, error } = await this.supabase.auth.admin.listUsers();
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('email', email)
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return data.users.find((u) => u.email === email) ?? null;
+    if (!data) return null;
+    const { data: authData, error: authError } =
+      await this.supabase.auth.admin.getUserById(data.id);
+    if (authError) throw new Error(authError.message);
+    return authData.user;
   }
 
   async generateTokens(
@@ -178,7 +186,7 @@ export class AuthService {
       });
     }
 
-    const tokens = await this.generateTokens(authUser.id, authUser.email!, profile.role);
+    const tokens = await this.generateTokens(authUser.id, authUser.email!, profile.role ?? 'student');
 
     const { data: device } = await this.supabase
       .from('devices')

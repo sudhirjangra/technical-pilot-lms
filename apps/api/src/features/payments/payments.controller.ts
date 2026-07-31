@@ -55,12 +55,13 @@ export class PaymentsController {
   /** Admin: list all payments */
   @Get()
   @Roles('ADMIN')
-  findAll(
+  async findAll(
     @Query('status') status?: string,
     @Query('course_id') course_id?: string,
     @Query('student_id') student_id?: string,
   ) {
-    return this.paymentsService.findAll({ status, course_id, student_id });
+    const data = await this.paymentsService.findAll({ status, course_id, student_id });
+    return { data };
   }
 
   /** Admin: refund a payment */

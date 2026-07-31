@@ -7,8 +7,11 @@ import { cn } from '@repo/shadcn/lib/utils';
 const navItems = [
   { label: 'Courses', href: '/admin/courses' },
   { label: 'Categories', href: '/admin/categories' },
+  { label: 'Students', href: '/admin/students' },
+  { label: 'Sub-Admins', href: '/admin/sub-admins' },
   { label: 'Enrollments', href: '/admin/enrollments' },
   { label: 'Payments', href: '/admin/payments' },
+  { label: 'Doubt Sessions', href: '/admin/doubt-sessions' },
 ];
 
 export function AdminSidebar() {

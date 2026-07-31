@@ -38,8 +38,9 @@ export class EnrollmentsController {
   /** Admin: get enrollments for a course */
   @Get('course/:courseId')
   @Roles('ADMIN')
-  findByCourse(@Param('courseId', ParseUUIDPipe) courseId: string) {
-    return this.enrollmentsService.findByCourse(courseId);
+  async findByCourse(@Param('courseId', ParseUUIDPipe) courseId: string) {
+    const data = await this.enrollmentsService.findByCourse(courseId);
+    return { data };
   }
 
   /** Admin: get specific enrollment */

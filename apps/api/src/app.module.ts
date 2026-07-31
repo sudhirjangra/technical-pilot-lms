@@ -9,10 +9,12 @@ import { validateEnv } from '@/common/utils';
 import { CategoriesModule } from '@/features/categories/categories.module';
 import { ChaptersModule } from '@/features/chapters/chapters.module';
 import { CoursesModule } from '@/features/courses/courses.module';
+import { DoubtSessionsModule } from '@/features/doubt-sessions/doubt-sessions.module';
 import { EnrollmentsModule } from '@/features/enrollments/enrollments.module';
 import { FileModule } from '@/features/file/file.module';
 import { LessonsModule } from '@/features/lessons/lessons.module';
 import { PaymentsModule } from '@/features/payments/payments.module';
+import { PermissionsModule } from '@/features/permissions/permissions.module';
 import { ProgressModule } from '@/features/progress/progress.module';
 import { UsersModule } from '@/features/users/users.module';
 import { Module } from '@nestjs/common';
@@ -63,6 +65,8 @@ import { MailModule } from './features/mail/mail.module';
     EnrollmentsModule,
     PaymentsModule,
     ProgressModule,
+    PermissionsModule,
+    DoubtSessionsModule,
   ],
 })
 export class AppModule {}

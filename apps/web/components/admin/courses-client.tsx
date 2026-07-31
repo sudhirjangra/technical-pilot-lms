@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Course, createCourse, deleteCourse } from '@/server/admin/courses.server';
 import { Category } from '@/server/admin/categories.server';
 import { Button } from '@repo/shadcn/button';
@@ -86,7 +87,7 @@ export function CoursesClient({ courses, categories }: { courses: Course[]; cate
         {courses.length === 0 && <p className="text-muted-foreground">No courses yet.</p>}
         {courses.map((course) => (
           <Card key={course.id} className="p-4 flex items-center justify-between">
-            <div>
+            <Link href={`/admin/courses/${course.id}`} className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold">{course.title}</h3>
                 <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
@@ -97,7 +98,7 @@ export function CoursesClient({ courses, categories }: { courses: Course[]; cate
                 ₹{course.price}{course.discount_price ? ` → ₹${course.discount_price}` : ''}
                 {course.categories ? ` • ${course.categories.name}` : ''}
               </p>
-            </div>
+            </Link>
             <Button variant="destructive" size="sm" onClick={() => handleDelete(course.id)}>
               Delete
             </Button>

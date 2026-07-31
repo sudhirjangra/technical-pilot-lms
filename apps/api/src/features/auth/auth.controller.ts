@@ -32,6 +32,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 
 /**
@@ -53,6 +54,7 @@ export class AuthController {
    * @returns {Promise<MessageResponse>} Response message.
    */
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('sign-up')
   async register(
     @Body() createUserDto: CreateUserDto,
@@ -68,6 +70,7 @@ export class AuthController {
    * @returns {Promise<SignInResponse>} Sign-in response with tokens and user data.
    */
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('sign-in')
   async signIn(@Body() signInUserDto: SignInUserDto): Promise<SignInResponse> {
     const data = await this.authService.signIn(signInUserDto);
@@ -118,7 +121,7 @@ export class AuthController {
     @Param('userId') userId: string,
     @Req() req: any,
   ): Promise<SessionsResponse> {
-    if (req.user.id !== userId && req.user.role !== 'admin') {
+    if (req.user.id !== userId && (req.user.role ?? '').toUpperCase() !== 'ADMIN') {
       throw new ForbiddenException('Cannot access other users sessions');
     }
     const data = await this.authService.getSessions(userId);
@@ -166,6 +169,7 @@ export class AuthController {
    * @returns {Promise<MessageResponse>} Response message.
    */
   @Public()
+  @Throttle({ short: { limit: 3, ttl: 60000 } })
   @Patch('forgot-password')
   async forgotPassword(
     @Body() forgotPasswordDto: ForgotPasswordDto,

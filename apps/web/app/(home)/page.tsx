@@ -26,10 +26,16 @@ const Page = async () => {
             <p>Logged in as {session.user.email}</p>
             <div className="flex gap-3">
               <Button asChild>
-                <Link href="/profile">Your Profile</Link>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/courses">Browse Courses</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/profile">Profile</Link>
               </Button>
               {session.user.role === 'admin' && (
-                <Button variant="outline" asChild>
+                <Button variant="secondary" asChild>
                   <Link href="/admin">Admin Panel</Link>
                 </Button>
               )}

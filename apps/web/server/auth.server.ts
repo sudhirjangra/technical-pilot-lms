@@ -434,9 +434,13 @@ export const validateSessionIfExist = async (): Promise<GetSession> => {
   const [error, data] = await getSessionById();
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
-    await signOut({
-      redirect: false,
-    });
+    // Only sign out if the error indicates the session is truly invalid (404),
+    // not when the API is just unreachable (network errors)
+    if (error.includes('Session not found') || error.includes('Invalid Access Token')) {
+      await signOut({
+        redirect: false,
+      });
+    }
   }
   return data;
 };
