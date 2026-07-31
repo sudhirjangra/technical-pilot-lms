@@ -35,12 +35,11 @@
 - [x] removeSession server action for device-limit flow
 
 ## Immediate Next Step
-- Configure Supabase email settings (see below)
-- Run migration 002 in Supabase to drop blog tables
-- Run migration 003 to add sessions table + performance indexes
-- Run migration 001 (if not already run) to create full schema
-- Verify app compiles: `pnpm build`
-- Test Course CRUD via Swagger/Postman
+- Add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET to .env
+- Run migration 004 in Supabase
+- Test payment flow via Swagger (create order → verify payment)
+- Test enrollment + progress APIs
+- Build admin dashboard frontend (course management UI)
 
 ### Phase 2.0: Course CRUD (Done)
 - [x] Categories module — full CRUD, public read, admin write
@@ -76,8 +75,23 @@
 
 ## Future Steps (Phase 2)
 - Video integration (Vimeo) — upload, signed URL generation, player embed
-- Payment integration (Razorpay) — webhook signature verification, order creation
-- Enrollment + progress tracking — enrollment guard for content access
+- Referral system — codes, commissions, discount application
+- Doubt sessions — slot management, booking, calendar
+- Admin dashboard (frontend) — course/student/payment management UI
+- Sub-admin permissions — permission guard, permission matrix CRUD
+- CSP headers in Next.js middleware
+- Stricter rate limiting on auth endpoints (5/min per IP)
+- Session timeout on inactivity
+
+### Phase 2.5: Enrollments + Payments + Progress (Done)
+- [x] Enrollments module — CRUD, student self-check, admin course-enrollments view
+- [x] Payments module — Razorpay order creation, client-side signature verification, webhook handler
+- [x] Progress module — lesson-level tracking, course progress overview, video position resume
+- [x] EnrollmentGuard — reusable guard that verifies active enrollment from any route param
+- [x] Migration 004 — enrollments, payments, progress tables + RLS + indexes + triggers
+- [x] Razorpay env vars added to validation schema (with defaults for dev)
+- [x] safeFetch fixed: network errors caught gracefully (no more TypeError: fetch failed crashes)
+- [x] Middleware wrapped in try-catch (resilient to API being down)
 - Referral system
 - Doubt sessions
 - Admin dashboard (frontend)

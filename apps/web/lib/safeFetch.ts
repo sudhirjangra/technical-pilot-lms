@@ -15,9 +15,20 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
   url: URL | RequestInfo,
   init?: RequestInit,
 ): Promise<[string | null, z.TypeOf<T>]> => {
-  const response: Response = await fetch(`${env.API_URL}${url}`, init);
+  let response: Response;
+  try {
+    response = await fetch(`${env.API_URL}${url}`, init);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Network request failed';
+    return [msg, null];
+  }
 
-  const res = await response.json();
+  let res: unknown;
+  try {
+    res = await response.json();
+  } catch {
+    return ['Invalid JSON response', null];
+  }
 
   if (!response.ok) {
     const msg = res.message;

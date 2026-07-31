@@ -17,6 +17,9 @@ export const EnvSchema = z.object({
   RESEND_API_KEY: z.string().default(''),
   MAIL_FROM: z.string().default('onboarding@resend.dev'),
   FILE_MAX_SIZE: z.coerce.number().default(20971520),
+  RAZORPAY_KEY_ID: z.string().min(1).default(''),
+  RAZORPAY_KEY_SECRET: z.string().min(1).default(''),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).default(''),
 });
 
 /**
