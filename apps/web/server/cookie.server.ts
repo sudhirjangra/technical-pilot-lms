@@ -2,11 +2,6 @@
 
 import { cookies } from 'next/headers';
 
-/**
- * Set a cookie in the server-side response.
- * @param name - The name of the cookie to set.
- * @param value - The value of the cookie.
- */
 export const setCookie = async ({
   name,
   value,
@@ -19,5 +14,10 @@ export const setCookie = async ({
   cookie.set({
     name,
     value,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60,
   });
 };

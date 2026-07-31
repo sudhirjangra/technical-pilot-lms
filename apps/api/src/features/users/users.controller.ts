@@ -1,16 +1,21 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Roles } from '@/common/decorators';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
+@UseGuards(RolesGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Roles('ADMIN')
   @Get()
   async findAll() {
     const data = await this.usersService.findAll();
     return { message: 'Users fetched successfully', data };
   }
 
+  @Roles('ADMIN')
   @Get(':identifier')
   async findOne(@Param('identifier') identifier: string) {
     const data = await this.usersService.findOne(identifier);

@@ -37,9 +37,23 @@
 ## Immediate Next Step
 - Configure Supabase email settings (see below)
 - Run migration 002 in Supabase to drop blog tables
+- Run migration 003 to add sessions table + performance indexes
 - Run migration 001 (if not already run) to create full schema
 - Verify app compiles: `pnpm build`
 - Test auth flow end-to-end
+
+## Security Audit Fixes Applied (Phase 1.6)
+- [x] Password complexity enforcement on DTOs (min 8, uppercase, lowercase, number, special char)
+- [x] Users endpoint locked behind `@Roles('ADMIN')` guard
+- [x] Sessions endpoint ownership check (user can only access own sessions)
+- [x] JWT verification uses explicit `algorithms: ['HS256']`
+- [x] RolesGuard: removed SUPERADMIN backdoor, case-insensitive comparison
+- [x] Role constants aligned with ARCHITECTURE.md (ADMIN, SUB_ADMIN, STUDENT)
+- [x] Cookie security flags (httpOnly, secure, sameSite, path, maxAge)
+- [x] changePassword removed unsafe `as any` casts
+- [x] Production console.log statements gated behind NODE_ENV check
+- [x] Migration 003: sessions table + 40+ performance indexes
+- [x] Profile avatar editor: removed debug logs
 
 ## Supabase Email Setup Required
 1. Dashboard → Authentication → Email Templates → Disable "Enable email confirmations" (we send custom emails via Resend)
@@ -48,12 +62,22 @@
 4. Domain must be verified in Resend dashboard for MAIL_FROM to work
 
 ## Future Steps (Phase 2)
-- Course CRUD (admin)
+- Course CRUD (admin) — controller, service, DTOs, RolesGuard
 - Chapter/Lesson management
 - Video integration (Vimeo)
-- Payment integration (Razorpay)
-- Enrollment + progress tracking
+- Payment integration (Razorpay) — webhook signature verification
+- Enrollment + progress tracking — enrollment guard for content access
 - Referral system
 - Doubt sessions
 - Admin dashboard
-- Sub-admin permissions
+- Sub-admin permissions — permission guard, permission matrix CRUD
+- Audit logging interceptor (log all mutations to audit_logs table)
+- CSP headers in Next.js middleware
+- Stricter rate limiting on auth endpoints (5/min per IP)
+- Session timeout on inactivity
+
+## Known Remaining Warnings (Not Blocking)
+- Health endpoints are public (acceptable for uptime monitoring)
+- Swagger only enabled in non-production (OK)
+- Device fingerprint uses refresh_token (works but could be decoupled later)
+- Frontend CSRF: Server Actions have built-in protection; direct fetches rely on SameSite cookies

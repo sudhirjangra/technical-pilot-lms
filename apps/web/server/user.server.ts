@@ -33,7 +33,7 @@ export const getUser = async (identifier: string): Promise<User | null> => {
     cache: 'no-store',
   });
   if (error) {
-    console.log('Get user error', error);
+    if (process.env.NODE_ENV !== 'production') console.log('Get user error', error);
     return null;
   }
   return data.data;

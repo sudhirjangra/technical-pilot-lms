@@ -421,7 +421,7 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
     },
   );
   if (error) {
-    console.log('Refresh access token error', error);
+    if (process.env.NODE_ENV !== 'production') console.log('Refresh access token error', error);
     return;
   }
   await updateTokens(data);
@@ -433,12 +433,11 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
 export const validateSessionIfExist = async (): Promise<GetSession> => {
   const [error, data] = await getSessionById();
   if (error) {
-    console.log('Validate session error', error);
+    if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
     await signOut({
       redirect: false,
     });
   }
-  console.log('Validate session success');
   return data;
 };
 

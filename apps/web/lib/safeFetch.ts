@@ -30,8 +30,9 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
   const validateFields = schema.safeParse(res);
 
   if (!validateFields.success) {
-    console.log(res);
-    console.log('Validation errors:', validateFields.error);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('safeFetch validation errors:', validateFields.error);
+    }
     return [`Validation error: ${validateFields.error.message}`, null];
   }
 

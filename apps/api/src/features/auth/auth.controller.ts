@@ -24,10 +24,12 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -112,7 +114,13 @@ export class AuthController {
    * @returns {Promise<SessionsResponse>} List of user sessions.
    */
   @Get('sessions/:userId')
-  async sessions(@Param('userId') userId: string): Promise<SessionsResponse> {
+  async sessions(
+    @Param('userId') userId: string,
+    @Req() req: any,
+  ): Promise<SessionsResponse> {
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      throw new ForbiddenException('Cannot access other users sessions');
+    }
     const data = await this.authService.getSessions(userId);
     return { data };
   }

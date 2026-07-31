@@ -38,7 +38,6 @@ const ProfileAvatarEditor = () => {
     onDrop,
     accept,
   });
-  console.log(selectedFile);
   return (
     <div className="relative">
       <Avatar className="h-32 w-32 border-4 border-white">
@@ -58,9 +57,6 @@ const ProfileAvatarEditor = () => {
             if (previewUrl) {
               setPreviewUrl(previewUrl);
             }
-            // handle the cropped image file and preview URL
-            console.log('file:', file);
-            console.log('previewUrl:', previewUrl);
           }}
         />
         <Button

@@ -326,14 +326,13 @@ export class AuthService {
   }
 
   async changePassword(dto: ChangePasswordDto): Promise<void> {
-    const emailToUse = (dto as any).email ?? (dto as any).identifier ?? '';
-    const authUser = await this.getUserByEmail(emailToUse);
+    const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
     const { error: signInError } =
       await this.supabaseAnon.auth.signInWithPassword({
         email: authUser.email!,
-        password: (dto as any).password,
+        password: dto.password,
       });
     if (signInError && !signInError.message.includes('Email not confirmed')) {
       throw new UnauthorizedException('Invalid credentials');
