@@ -40,7 +40,20 @@
 - Run migration 003 to add sessions table + performance indexes
 - Run migration 001 (if not already run) to create full schema
 - Verify app compiles: `pnpm build`
-- Test auth flow end-to-end
+- Test Course CRUD via Swagger/Postman
+
+### Phase 2.0: Course CRUD (Done)
+- [x] Categories module — full CRUD, public read, admin write
+- [x] Courses module — full CRUD with slug lookup, status management, published_at auto-set
+- [x] Chapters module — CRUD nested under courses, reorder support, auto sort_order
+- [x] Lessons module — CRUD nested under chapters, reorder support, auto sort_order
+- [x] All admin endpoints protected with @Roles('ADMIN')
+- [x] Public endpoints: course listing (published only), category listing, slug lookup
+- [x] Audit logging interceptor created + applied to courses (create/update/delete)
+- [x] UUID validation on all :id params via ParseUUIDPipe
+- [x] Input validation: slug format, max lengths, numeric constraints
+- [x] Database types added for categories, chapters, lessons
+- [x] All modules registered in app.module.ts
 
 ## Security Audit Fixes Applied (Phase 1.6)
 - [x] Password complexity enforcement on DTOs (min 8, uppercase, lowercase, number, special char)
@@ -62,19 +75,17 @@
 4. Domain must be verified in Resend dashboard for MAIL_FROM to work
 
 ## Future Steps (Phase 2)
-- Course CRUD (admin) — controller, service, DTOs, RolesGuard
-- Chapter/Lesson management
-- Video integration (Vimeo)
-- Payment integration (Razorpay) — webhook signature verification
+- Video integration (Vimeo) — upload, signed URL generation, player embed
+- Payment integration (Razorpay) — webhook signature verification, order creation
 - Enrollment + progress tracking — enrollment guard for content access
 - Referral system
 - Doubt sessions
-- Admin dashboard
+- Admin dashboard (frontend)
 - Sub-admin permissions — permission guard, permission matrix CRUD
-- Audit logging interceptor (log all mutations to audit_logs table)
 - CSP headers in Next.js middleware
 - Stricter rate limiting on auth endpoints (5/min per IP)
 - Session timeout on inactivity
+- Frontend: course management UI (admin panel)
 
 ## Known Remaining Warnings (Not Blocking)
 - Health endpoints are public (acceptable for uptime monitoring)

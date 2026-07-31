@@ -6,7 +6,11 @@ import {
   ThrottleModule,
 } from '@/common/modules';
 import { validateEnv } from '@/common/utils';
+import { CategoriesModule } from '@/features/categories/categories.module';
+import { ChaptersModule } from '@/features/chapters/chapters.module';
+import { CoursesModule } from '@/features/courses/courses.module';
 import { FileModule } from '@/features/file/file.module';
+import { LessonsModule } from '@/features/lessons/lessons.module';
 import { UsersModule } from '@/features/users/users.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -49,6 +53,10 @@ import { MailModule } from './features/mail/mail.module';
     MailModule,
     HealthModule,
     FileModule,
+    CategoriesModule,
+    CoursesModule,
+    ChaptersModule,
+    LessonsModule,
   ],
 })
 export class AppModule {}

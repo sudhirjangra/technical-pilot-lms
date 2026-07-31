@@ -242,6 +242,88 @@ export interface Database {
           updated_at?: string;
         };
       };
+      categories: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          thumbnail_url: string | null;
+          sort_order: number;
+          is_active: boolean;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          thumbnail_url?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          name?: string;
+          slug?: string;
+          description?: string | null;
+          thumbnail_url?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+        };
+      };
+      chapters: {
+        Row: {
+          id: string;
+          course_id: string;
+          title: string;
+          description: string | null;
+          sort_order: number;
+          is_published: boolean;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          title: string;
+          description?: string | null;
+          sort_order?: number;
+          is_published?: boolean;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          sort_order?: number;
+          is_published?: boolean;
+        };
+      };
+      lessons: {
+        Row: {
+          id: string;
+          chapter_id: string;
+          title: string;
+          description: string | null;
+          lesson_type: LessonType;
+          sort_order: number;
+          is_published: boolean;
+          duration_seconds: number | null;
+        };
+        Insert: {
+          id?: string;
+          chapter_id: string;
+          title: string;
+          description?: string | null;
+          lesson_type: LessonType;
+          sort_order?: number;
+          is_published?: boolean;
+          duration_seconds?: number | null;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          lesson_type?: LessonType;
+          sort_order?: number;
+          is_published?: boolean;
+          duration_seconds?: number | null;
+        };
+      };
     };
     Enums: {
       user_role: UserRole;
