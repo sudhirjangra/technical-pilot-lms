@@ -52,7 +52,7 @@ export async function getChapters(courseId: string): Promise<Chapter[]> {
     { headers: { Authorization: `Bearer ${session?.user?.tokens.access_token}` }, cache: 'no-store' },
   );
   if (error) return [];
-  return data.data;
+  return data!.data;
 }
 
 export async function createChapter(payload: { course_id: string; title: string; description?: string; is_published?: boolean }) {
@@ -62,7 +62,7 @@ export async function createChapter(payload: { course_id: string; title: string;
     { method: 'POST', headers: await authHeaders(), cache: 'no-store', body: JSON.stringify(payload) },
   );
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }
 
 export async function updateChapter(id: string, payload: { title?: string; description?: string; is_published?: boolean }) {
@@ -72,7 +72,7 @@ export async function updateChapter(id: string, payload: { title?: string; descr
     { method: 'PATCH', headers: await authHeaders(), cache: 'no-store', body: JSON.stringify(payload) },
   );
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }
 
 export async function deleteChapter(id: string) {
@@ -93,7 +93,7 @@ export async function createLesson(payload: {
     { method: 'POST', headers: await authHeaders(), cache: 'no-store', body: JSON.stringify(payload) },
   );
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }
 
 export async function updateLesson(id: string, payload: { title?: string; description?: string; is_published?: boolean }) {
@@ -103,7 +103,7 @@ export async function updateLesson(id: string, payload: { title?: string; descri
     { method: 'PATCH', headers: await authHeaders(), cache: 'no-store', body: JSON.stringify(payload) },
   );
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }
 
 export async function deleteLesson(id: string) {

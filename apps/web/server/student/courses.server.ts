@@ -23,7 +23,7 @@ export type PublicCourse = z.infer<typeof CourseSchema>;
 export async function getPublishedCourses(): Promise<PublicCourse[]> {
   const [error, data] = await safeFetch(PublicCoursesSchema, '/courses', { cache: 'no-store' });
   if (error) return [];
-  return data.data;
+  return data!.data;
 }
 
 export async function getCourseBySlug(slug: string) {
@@ -33,7 +33,7 @@ export async function getCourseBySlug(slug: string) {
     { cache: 'no-store' },
   );
   if (error) return null;
-  return data.data;
+  return data!.data;
 }
 
 const EnrollmentSchema = z.object({

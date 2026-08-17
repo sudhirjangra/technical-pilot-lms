@@ -20,10 +20,6 @@ export type ProgressStatus = 'not_started' | 'in_progress' | 'completed';
 
 export type BookingStatus = 'confirmed' | 'cancelled' | 'completed' | 'no_show';
 
-export type ReferralStatus = 'pending' | 'converted' | 'expired';
-
-export type CommissionStatus = 'pending' | 'approved' | 'paid' | 'rejected';
-
 export type DevicePlatform = 'web' | 'android' | 'ios';
 
 export interface Database {
@@ -333,8 +329,6 @@ export interface Database {
       lesson_type: LessonType;
       progress_status: ProgressStatus;
       booking_status: BookingStatus;
-      referral_status: ReferralStatus;
-      commission_status: CommissionStatus;
       device_platform: DevicePlatform;
     };
   };

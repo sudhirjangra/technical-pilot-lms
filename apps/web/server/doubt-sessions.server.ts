@@ -49,7 +49,7 @@ export async function getAdminSlots(date?: string): Promise<Slot[]> {
     headers: h, cache: 'no-store',
   });
   if (error) return [];
-  return data;
+  return data!;
 }
 
 export async function createSlot(payload: {
@@ -61,7 +61,7 @@ export async function createSlot(payload: {
     method: 'POST', headers: h, cache: 'no-store', body: JSON.stringify(payload),
   });
   if (error) return { error };
-  return { data };
+  return { data: data! };
 }
 
 export async function deleteSlot(id: string) {
@@ -90,7 +90,7 @@ export async function getUpcomingSlots(): Promise<Slot[]> {
     cache: 'no-store',
   });
   if (error) return [];
-  return data;
+  return data!;
 }
 
 export async function bookSlot(slotId: string) {
@@ -100,7 +100,7 @@ export async function bookSlot(slotId: string) {
     body: JSON.stringify({ slot_id: slotId }),
   });
   if (error) return { error };
-  return { data };
+  return { data: data! };
 }
 
 export async function getMyBookings(): Promise<Booking[]> {
@@ -110,7 +110,7 @@ export async function getMyBookings(): Promise<Booking[]> {
     cache: 'no-store',
   });
   if (error) return [];
-  return data;
+  return data!;
 }
 
 export async function cancelBooking(bookingId: string) {

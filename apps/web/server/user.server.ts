@@ -20,7 +20,7 @@ export const getAllUsers = async (): Promise<GetAllUsers> => {
     return {
       data: [],
     };
-  return data;
+  return data!;
 };
 
 /**
@@ -36,5 +36,5 @@ export const getUser = async (identifier: string): Promise<User | null> => {
     if (process.env.NODE_ENV !== 'production') console.log('Get user error', error);
     return null;
   }
-  return data.data;
+  return data!.data;
 };

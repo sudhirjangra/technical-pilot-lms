@@ -8,13 +8,13 @@ import { env } from './env';
  * @param {T} schema - Zod schema to validate the response data
  * @param {URL | RequestInfo} url - API endpoint (relative to env.API_URL)
  * @param {RequestInit} [init] - Optional fetch init options
- * @returns {Promise<[string | null, z.TypeOf<T> | null]>} - Returns a tuple of [errorMessage, validatedData]
+ * @returns {Promise<[string, null] | [null, z.TypeOf<T>]>} - Discriminated tuple: [error, null] | [null, data]
  */
 export const safeFetch = async <T extends ZodSchema<unknown>>(
   schema: T,
   url: URL | RequestInfo,
   init?: RequestInit,
-): Promise<[string | null, z.TypeOf<T>]> => {
+): Promise<[string, null] | [null, z.TypeOf<T>]> => {
   let response: Response;
   try {
     response = await fetch(`${env.API_URL}${url}`, init);

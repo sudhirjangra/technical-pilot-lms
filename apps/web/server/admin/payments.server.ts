@@ -33,5 +33,5 @@ export async function getPayments(): Promise<Payment[]> {
     cache: 'no-store',
   });
   if (error) return [];
-  return data.data;
+  return data!.data;
 }

@@ -49,6 +49,11 @@ export class CreateCourseDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   discount_price?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsEnum(['draft', 'published', 'archived'])
+  status?: 'draft' | 'published' | 'archived';
 }
 
 export class UpdateCourseDto {

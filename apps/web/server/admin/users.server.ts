@@ -26,5 +26,5 @@ export async function getUsers(): Promise<AdminUser[]> {
     { headers: { Authorization: `Bearer ${session?.user?.tokens.access_token}` }, cache: 'no-store' },
   );
   if (error) return [];
-  return data.data;
+  return data!.data;
 }

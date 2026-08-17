@@ -6,7 +6,6 @@ export const ALL_PERMISSIONS = [
   'payments:read', 'payments:refund',
   'doubt_sessions:manage',
   'reports:read', 'reports:export',
-  'referrals:read', 'referrals:approve',
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];

@@ -2,7 +2,6 @@ import NotFound from '@/app/not-found';
 import { auth } from '@/auth';
 import BackNavigation from '@/components/back-navigation';
 import AppearanceSettings from '@/components/profile/appearance-settings';
-import GeneralSettings from '@/components/profile/general-settings';
 import ProfileHeader from '@/components/profile/profile-header';
 import ProfileSidebar from '@/components/profile/profile-sidebar';
 import SecuritySettings from '@/components/profile/security-settings';
@@ -49,9 +48,6 @@ const Page = async () => {
                 <h4>Active: {user.is_active ? 'Yes' : 'No'}</h4>
               </CardContent>
             </Card>
-          </TabsContent>
-          <TabsContent value="general">
-            <GeneralSettings />
           </TabsContent>
           <TabsContent value="security">
             <SecuritySettings />

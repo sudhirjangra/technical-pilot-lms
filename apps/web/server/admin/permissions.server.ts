@@ -33,7 +33,7 @@ export async function getSubAdmins(): Promise<SubAdmin[]> {
     headers: h, cache: 'no-store',
   });
   if (error) return [];
-  return data;
+  return data!;
 }
 
 export async function getAvailablePermissions(): Promise<string[]> {
@@ -42,7 +42,7 @@ export async function getAvailablePermissions(): Promise<string[]> {
     headers: h, cache: 'no-store',
   });
   if (error) return [];
-  return data.data;
+  return data!.data;
 }
 
 export async function setPermissions(userId: string, permissions: string[]) {

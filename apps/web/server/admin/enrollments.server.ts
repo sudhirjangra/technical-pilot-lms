@@ -30,7 +30,7 @@ export async function getCourseEnrollments(courseId: string): Promise<Enrollment
     cache: 'no-store',
   });
   if (error) return [];
-  return data.data;
+  return data!.data;
 }
 
 export async function createEnrollment(studentId: string, courseId: string) {

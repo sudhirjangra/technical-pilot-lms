@@ -31,7 +31,7 @@ export async function getCourseById(id: string): Promise<CourseDetail | null> {
     { headers: { Authorization: `Bearer ${session?.user?.tokens.access_token}` }, cache: 'no-store' },
   );
   if (error) return null;
-  return data.data;
+  return data!.data;
 }
 
 export async function updateCourse(id: string, payload: Record<string, unknown>) {
@@ -47,5 +47,5 @@ export async function updateCourse(id: string, payload: Record<string, unknown>)
     },
   );
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }

@@ -23,7 +23,7 @@ export type Category = z.infer<typeof CategorySchema>;
 export async function getCategories(): Promise<Category[]> {
   const [error, data] = await safeFetch(CategoriesResponseSchema, '/categories');
   if (error) return [];
-  return data.data;
+  return data!.data;
 }
 
 export async function createCategory(formData: {

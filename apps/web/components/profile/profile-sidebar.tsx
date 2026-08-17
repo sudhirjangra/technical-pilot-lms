@@ -8,7 +8,6 @@ import {
   Shield,
   Smartphone,
   User as UserIcon,
-  UserPenIcon,
 } from '@repo/shadcn/lucide';
 import { TabsList, TabsTrigger } from '@repo/shadcn/tabs';
 
@@ -18,11 +17,6 @@ const ProfileSidebar = () => {
       id: 'profile',
       label: 'Profile',
       icon: UserIcon,
-    },
-    {
-      id: 'general',
-      label: 'General',
-      icon: UserPenIcon,
     },
     {
       id: 'security',
