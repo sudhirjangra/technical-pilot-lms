@@ -52,7 +52,7 @@ export const authorizeSignIn = async (
   if (error) {
     throw new Error(error);
   }
-  const { data: user, tokens } = data;
+  const { data: user, tokens } = data!;
   return {
     id: user.id,
     email: user.email,
@@ -265,7 +265,7 @@ export const forgotPassword = safeAction
     );
     if (error) throw error;
     redirect(
-      `/auth/reset-password?email=${parsedInput.identifier}&message=${data.message}`,
+      `/auth/reset-password?email=${parsedInput.identifier}&message=${data!.message}`,
     );
   });
 
@@ -335,7 +335,7 @@ export const getAuthSessions = async (): Promise<Session[]> => {
   );
 
   if (error) return [];
-  return data.data;
+  return data!.data;
 };
 
 /**
@@ -424,13 +424,13 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
     if (process.env.NODE_ENV !== 'production') console.log('Refresh access token error', error);
     return;
   }
-  await updateTokens(data);
+  await updateTokens(data!);
 };
 
 /**
  * Validate session if exist from server session
  */
-export const validateSessionIfExist = async (): Promise<GetSession> => {
+export const validateSessionIfExist = async (): Promise<GetSession | null> => {
   const [error, data] = await getSessionById();
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);

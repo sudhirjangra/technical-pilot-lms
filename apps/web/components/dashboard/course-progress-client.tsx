@@ -26,7 +26,6 @@ interface ChapterProgress {
 }
 
 export function CourseProgressClient({
-  courseId,
   progress,
 }: {
   courseId: string;

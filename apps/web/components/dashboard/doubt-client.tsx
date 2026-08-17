@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Slot, Booking, bookSlot, cancelBooking } from '@/server/doubt-sessions.server';
 import { Button } from '@repo/shadcn/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
+import { Card } from '@repo/shadcn/card';
 import { Badge } from '@repo/shadcn/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/shadcn/tabs';
 import { toast } from '@repo/shadcn/sonner';

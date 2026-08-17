@@ -44,7 +44,7 @@ export async function createCategory(formData: {
     body: JSON.stringify(formData),
   });
   if (error) return { error };
-  return { data: data.data };
+  return { data: data!.data };
 }
 
 export async function deleteCategory(id: string) {

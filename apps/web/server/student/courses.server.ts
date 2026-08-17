@@ -58,7 +58,7 @@ export async function getMyEnrollments(): Promise<StudentEnrollment[]> {
     { headers: { Authorization: `Bearer ${session.user.tokens.access_token}` }, cache: 'no-store' },
   );
   if (error) return [];
-  return data;
+  return data!;
 }
 
 export async function checkEnrollment(courseId: string): Promise<boolean> {
@@ -70,7 +70,7 @@ export async function checkEnrollment(courseId: string): Promise<boolean> {
     { headers: { Authorization: `Bearer ${session.user.tokens.access_token}` }, cache: 'no-store' },
   );
   if (error) return false;
-  return data.enrolled;
+  return data!.enrolled;
 }
 
 const ProgressSchema = z.object({

@@ -5,6 +5,7 @@ import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Input } from '@repo/shadcn/input';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -42,8 +43,8 @@ export function CourseBrowseClient({ courses }: { courses: PublicCourse[] }) {
           <Link key={course.id} href={`/courses/${course.slug}`}>
             <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
               {course.thumbnail_url && (
-                <div className="h-40 bg-muted rounded-t-lg overflow-hidden">
-                  <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                <div className="relative h-40 bg-muted rounded-t-lg overflow-hidden">
+                  <Image src={course.thumbnail_url} alt={course.title} fill className="object-cover" />
                 </div>
               )}
               <CardHeader>
