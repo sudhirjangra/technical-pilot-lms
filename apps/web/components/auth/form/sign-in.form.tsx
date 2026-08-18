@@ -2,6 +2,7 @@
 
 import LogoIcon from '@/components/logo-icon';
 import { removeSession, signInWithCredentials } from '@/server/auth.server';
+import { APP_NAME } from '@repo/constants/app';
 import { Button } from '@repo/shadcn/button';
 import {
   Card,
@@ -84,16 +85,17 @@ const SignInForm = () => {
     }
   };
 
+  // Device limit view
   if (deviceSessions.length > 0) {
     return (
-      <div className={cn('w-full flex flex-col gap-6')}>
-        <Card className="max-w-xl w-full mx-auto">
-          <CardHeader className="text-center mb-4">
-            <LogoIcon className="mb-3" />
-            <CardTitle className="text-xl text-start">
-              Device Limit Reached
-            </CardTitle>
-            <CardDescription className="text-start">
+      <div className="flex flex-col gap-6 w-full">
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex justify-center mb-3">
+              <LogoIcon width={44} height={44} />
+            </div>
+            <CardTitle className="text-xl">Device Limit Reached</CardTitle>
+            <CardDescription>
               You have reached the maximum of 2 active sessions. Remove one to
               continue signing in.
             </CardDescription>
@@ -103,12 +105,10 @@ const SignInForm = () => {
               {deviceSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
                 >
                   <div>
-                    <p className="font-medium text-sm">
-                      {session.device_name}
-                    </p>
+                    <p className="font-medium text-sm">{session.device_name}</p>
                     <p className="text-xs text-muted-foreground">
                       {session.platform} &middot; Last active:{' '}
                       {new Date(session.last_active_at).toLocaleDateString()}
@@ -120,13 +120,13 @@ const SignInForm = () => {
                     disabled={removingId === session.id}
                     onClick={() => handleRemoveSession(session.id)}
                   >
-                    {removingId === session.id ? 'Removing...' : 'Remove'}
+                    {removingId === session.id ? 'Removing…' : 'Remove'}
                   </Button>
                 </div>
               ))}
               <Button
                 variant="outline"
-                className="w-full mt-4"
+                className="w-full mt-2"
                 onClick={() => setDeviceSessions([])}
               >
                 Cancel
@@ -139,88 +139,101 @@ const SignInForm = () => {
   }
 
   return (
-    <div className={cn('w-full flex flex-col gap-6')}>
-      <Card className="max-w-xl w-full mx-auto">
-        <CardHeader className="text-center mb-7">
-          <LogoIcon className="mb-3" />
-          <CardTitle className="text-xl text-start">SignIn</CardTitle>
+    <div className="flex flex-col gap-6 w-full">
+      <Card>
+        <CardHeader className="text-center pb-2">
+          {/* Logo */}
+          <div className="flex justify-center mb-4">
+            <LogoIcon width={48} height={48} />
+          </div>
+          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription
-            className={cn('text-start', serverError && 'text-red-500')}
+            className={cn(
+              'text-sm',
+              serverError && !serverError.includes('DEVICE_LIMIT')
+                ? 'text-destructive'
+                : '',
+            )}
           >
             {serverError && !serverError.includes('DEVICE_LIMIT')
               ? serverError
-              : 'SignIn with your account'}
+              : `Sign in to your ${APP_NAME} account`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                execute(formData);
-              }}
-            >
-              <div className="grid gap-6">
-                <div className="grid gap-6">
-                  <div className="grid gap-2">
-                    <Label isRequired htmlFor="email">
-                      Email
-                    </Label>
-                    <Input
-                      disabled={isExecuting}
-                      name="identifier"
-                      id="email"
-                      placeholder="acme@example.com"
-                      onChange={handleChange}
-                      autoFocus
-                      autoComplete="email"
-                      required
-                    />
-                    {validationErrors?.identifier?._errors?.[0] && (
-                      <p className="text-xs text-red-500">
-                        {validationErrors.identifier._errors[0]}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <div className="flex items-center">
-                      <Label isRequired htmlFor="password">
-                        Password
-                      </Label>
-                      <Link
-                        href={'/auth/forgot-password'}
-                        className="ml-auto text-sm underline-offset-4 hover:underline"
-                      >
-                        Forgot your password?
-                      </Link>
-                    </div>
-                    <PasswordInput
-                      disabled={isExecuting}
-                      name="password"
-                      id="password"
-                      onChange={handleChange}
-                      required
-                    />
-                    {validationErrors?.password?._errors?.[0] && (
-                      <p className="text-xs text-red-500">
-                        {validationErrors.password._errors[0]}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-sm">
-                    Don&apos;t have an account?{' '}
-                    <Link
-                      href={'/auth/sign-up'}
-                      className="underline underline-offset-4"
-                    >
-                      Sign up
-                    </Link>
-                  </div>
-                  <SubmitButton isLoading={isExecuting} name={'Sign In'} />
-                </div>
+
+        <CardContent className="pt-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              execute(formData);
+            }}
+          >
+            <div className="grid gap-5">
+              {/* Email */}
+              <div className="grid gap-2">
+                <Label isRequired htmlFor="identifier">
+                  Email
+                </Label>
+                <Input
+                  id="identifier"
+                  name="identifier"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  autoFocus
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.identifier?._errors?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {validationErrors.identifier._errors[0]}
+                  </p>
+                )}
               </div>
-            </form>
-          </div>
+
+              {/* Password */}
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label isRequired htmlFor="password">
+                    Password
+                  </Label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.password?._errors?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {validationErrors.password._errors[0]}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit */}
+              <SubmitButton isLoading={isExecuting} name="Sign In" />
+
+              {/* Sign up link */}
+              <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/auth/sign-up"
+                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>

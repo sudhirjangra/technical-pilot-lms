@@ -8,6 +8,7 @@
     "./shadcn.css": "./src/shadcn.css",
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
+    "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
     "./hooks/x/*": "./src/hooks/*.tsx",
     "./hooks/t/*": "./src/hooks/*.ts",
     "./lucide": "./src/icon/lucide/index.tsx",

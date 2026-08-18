@@ -3,6 +3,7 @@
 import PasswordValidErrors from '@/components/auth/form/password-valid-errors';
 import LogoIcon from '@/components/logo-icon';
 import { signUpWithCredentials } from '@/server/auth.server';
+import { APP_NAME } from '@repo/constants/app';
 import {
   Card,
   CardContent,
@@ -23,13 +24,16 @@ const SignUpForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    phone: '',
   });
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormData((prevState) => ({
       ...prevState,
       [event.target.name]: event.target.value,
     }));
   };
+
   const {
     execute,
     isExecuting,
@@ -37,82 +41,111 @@ const SignUpForm = () => {
   } = useAction(signUpWithCredentials);
 
   return (
-    <div className={cn('w-full flex flex-col gap-6')}>
-      <Card className="max-w-xl w-full mx-auto">
-        <CardHeader className="text-center mb-7">
-          <LogoIcon className="mb-3" />
-          <CardTitle className="text-xl text-start">SignUp</CardTitle>
+    <div className="flex flex-col gap-6 w-full">
+      <Card>
+        <CardHeader className="text-center pb-2">
+          <div className="flex justify-center mb-4">
+            <LogoIcon width={48} height={48} />
+          </div>
+          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription
-            className={cn('text-start', serverError && 'text-red-500')}
+            className={cn('text-sm', serverError ? 'text-destructive' : '')}
           >
-            {serverError ?? 'Sign Up your account'}
+            {serverError ?? `Join ${APP_NAME} and start learning`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                execute(formData);
-              }}
-            >
-              <div className="grid gap-6">
-                <div className="grid gap-6">
-                  <div className="grid gap-2">
-                    <Label isRequired htmlFor="email">
-                      Email
-                    </Label>
-                    <Input
-                      disabled={isExecuting}
-                      name="email"
-                      id="email"
-                      type="email"
-                      placeholder="acme@example.com"
-                      onChange={handleChange}
-                      autoFocus
-                      autoComplete="email"
-                      required
-                    />
-                    {validationErrors?.email?._errors?.[0] && (
-                      <p className="text-xs text-red-500">
-                        {validationErrors.email._errors[0]}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <div className="flex items-center">
-                      <Label isRequired htmlFor="password">
-                        Password
-                      </Label>
-                    </div>
-                    <PasswordInput
-                      disabled={isExecuting}
-                      name="password"
-                      id="password"
-                      onChange={handleChange}
-                      required
-                    />
-                    {validationErrors?.password?._errors?.[0] && (
-                      <p className="text-xs text-red-500">
-                        {validationErrors.password._errors[0]}
-                      </p>
-                    )}
-                    <PasswordValidErrors password={formData.password} />
-                  </div>
-                  <div className="text-sm">
-                    Already have an account?{' '}
-                    <Link
-                      href={'/auth/sign-in'}
-                      className="underline underline-offset-4"
-                    >
-                      Sign in
-                    </Link>
-                  </div>
-                  <SubmitButton isLoading={isExecuting} name={'Sign Up'} />
-                </div>
+
+        <CardContent className="pt-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              // strip empty phone before submitting
+              execute({
+                ...formData,
+                phone: formData.phone.trim() || undefined,
+              });
+            }}
+          >
+            <div className="grid gap-5">
+              {/* Email */}
+              <div className="grid gap-2">
+                <Label isRequired htmlFor="email">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  autoFocus
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.email?._errors?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {validationErrors.email._errors[0]}
+                  </p>
+                )}
               </div>
-            </form>
-          </div>
+
+              {/* Phone (optional) */}
+              <div className="grid gap-2">
+                <Label htmlFor="phone">
+                  Mobile Number{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+919876543210"
+                  autoComplete="tel"
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.phone?._errors?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {validationErrors.phone._errors[0]}
+                  </p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="grid gap-2">
+                <Label isRequired htmlFor="password">
+                  Password
+                </Label>
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.password?._errors?.[0] && (
+                  <p className="text-xs text-destructive">
+                    {validationErrors.password._errors[0]}
+                  </p>
+                )}
+                <PasswordValidErrors password={formData.password} />
+              </div>
+
+              {/* Submit */}
+              <SubmitButton isLoading={isExecuting} name="Create Account" />
+
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link
+                  href="/auth/sign-in"
+                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>

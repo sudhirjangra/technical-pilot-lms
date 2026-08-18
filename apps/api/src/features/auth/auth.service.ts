@@ -107,6 +107,7 @@ export class AuthService {
           email: dto.email,
           role: 'student',
           full_name: dto.email.split('@')[0],
+          ...(dto.phone ? { phone: dto.phone } : {}),
         },
         { onConflict: 'id' },
       );

@@ -1,12 +1,14 @@
 import { auth } from '@/auth';
 import LogoIcon from '@/components/logo-icon';
 import Session from '@/components/session';
+import { redirect } from 'next/navigation';
 import { Button } from '@repo/shadcn/button';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import Link from 'next/link';
 
 const Page = async () => {
   const session = await auth();
+  if (session?.user) redirect('/dashboard');
   return (
     <section className="min-h-dvh container flex flex-col">
       <nav className="w-full flex justify-between items-center py-5">

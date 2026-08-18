@@ -19,3 +19,6 @@ export function useMobile() {
 
   return !!isMobile;
 }
+
+// Alias — used by sidebar.tsx and package export
+export const useIsMobile = useMobile;

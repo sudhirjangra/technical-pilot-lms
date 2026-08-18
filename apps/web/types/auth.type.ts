@@ -23,6 +23,11 @@ const passWordSchema = z
 export const SignUpSchema = z.object({
   email: z.string().email(),
   password: passWordSchema,
+  phone: z
+    .string()
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)')
+    .optional()
+    .or(z.literal('')),
 });
 
 /**
