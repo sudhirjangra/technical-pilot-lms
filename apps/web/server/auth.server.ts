@@ -50,7 +50,9 @@ export const authorizeSignIn = async (
   });
 
   if (error) {
-    throw new Error(error);
+    // Must throw AuthError — @auth/core swallows plain Error from authorize callbacks.
+    // We stash the original message in cause so signInWithCredentials can read it.
+    throw new AuthError(error, { cause: { message: error } });
   }
   const { data: user, tokens } = data!;
   return {
@@ -76,26 +78,32 @@ export const signInWithCredentials = safeAction
     try {
       await signIn('credentials', parsedInput);
     } catch (error) {
+      if (isRedirectError(error)) throw error; // success — let NextAuth's redirect through
       if (error instanceof AuthError) {
-        if (error.cause && typeof error.cause === 'object') {
-          const cause = error.cause as { err?: Error };
-          const msg = cause.err?.message ?? '';
-          if (msg.includes('EMAIL_NOT_CONFIRMED')) {
-            throw new Error('EMAIL_NOT_CONFIRMED');
-          }
-          if (msg.includes('DEVICE_LIMIT_REACHED')) {
-            throw new Error(msg);
-          }
+        // NextAuth 5 beta wraps the original error differently across versions.
+        // Check all known locations: cause.err.message, cause.message, error.message.
+        const cause = error.cause as Record<string, unknown> | undefined;
+        const msg: string =
+          (cause?.err instanceof Error ? cause.err.message : null) ??
+          (typeof cause?.message === 'string' ? cause.message : null) ??
+          error.message ??
+          '';
+        const normalizedMsg = msg.toLowerCase();
+
+        if (
+          msg.includes('Unable to reach the API server') ||
+          normalizedMsg.includes('fetch failed')
+        ) {
+          throw new Error(
+            'Unable to reach the API server. Please ensure backend is running and try again.',
+          );
         }
-        if (error.type === 'CredentialsSignin') {
-          throw new Error('Invalid credentials.');
-        }
-        throw new Error('Something went wrong.');
+        if (msg.includes('EMAIL_NOT_CONFIRMED')) throw new Error('EMAIL_NOT_CONFIRMED');
+        if (msg.includes('DEVICE_LIMIT_REACHED')) throw new Error(msg);
+        if (error.type === 'CredentialsSignin') throw new Error(msg || 'Invalid credentials');
+        throw new Error(msg || 'Something went wrong');
       }
-      if (isRedirectError(error)) {
-        revalidateTag('/auth/sign-in');
-        redirect('/');
-      }
+      throw error;
     }
   });
 
@@ -263,7 +271,7 @@ export const forgotPassword = safeAction
         body: JSON.stringify(parsedInput),
       },
     );
-    if (error) throw error;
+    if (error) throw new Error(error);
     redirect(
       `/auth/reset-password?email=${parsedInput.identifier}&message=${data!.message}`,
     );
@@ -289,7 +297,7 @@ export const resetPassword = safeAction
         body: JSON.stringify(parsedInput),
       },
     );
-    if (error) throw error;
+    if (error) throw new Error(error);
     redirect('/auth/sign-in');
   });
 

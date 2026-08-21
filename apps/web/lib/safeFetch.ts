@@ -1,6 +1,24 @@
 import z, { ZodSchema } from 'zod';
 import { env } from './env';
 
+const API_UNREACHABLE_MESSAGE =
+  'Unable to reach the API server. Please ensure backend is running and try again.';
+
+const isLocalApiHost = (host: string) => host === 'localhost' || host === '127.0.0.1';
+
+const toFetchInput = (url: URL | RequestInfo): string | URL | Request => {
+  if (typeof url === 'string' || url instanceof URL) return url;
+  return url;
+};
+
+const getRelativePath = (url: URL | RequestInfo): string | null => {
+  if (typeof url === 'string') {
+    return url.startsWith('/') ? url : null;
+  }
+  if (url instanceof URL) return null;
+  return url.url.startsWith('/') ? url.url : null;
+};
+
 /**
  * Fetch data from API and validate the response using a Zod schema.
  *
@@ -16,11 +34,39 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
   init?: RequestInit,
 ): Promise<[string, null] | [null, z.TypeOf<T>]> => {
   let response: Response;
+  const relativePath = getRelativePath(url);
+  const apiBase = new URL(env.API_URL);
+  const canRetryWithLoopback =
+    relativePath !== null && isLocalApiHost(apiBase.hostname);
+  const fallbackBase = canRetryWithLoopback
+    ? new URL(apiBase.toString())
+    : null;
+
+  if (fallbackBase) {
+    fallbackBase.hostname =
+      apiBase.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
+  }
+
+  const requestUrl = relativePath
+    ? new URL(relativePath, apiBase).toString()
+    : toFetchInput(url);
+  const fallbackUrl =
+    fallbackBase && relativePath
+      ? new URL(relativePath, fallbackBase).toString()
+      : null;
+
   try {
-    response = await fetch(`${env.API_URL}${url}`, init);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Network request failed';
-    return [msg, null];
+    response = await fetch(requestUrl, init);
+  } catch {
+    if (fallbackUrl) {
+      try {
+        response = await fetch(fallbackUrl, init);
+      } catch {
+        return [API_UNREACHABLE_MESSAGE, null];
+      }
+    } else {
+      return [API_UNREACHABLE_MESSAGE, null];
+    }
   }
 
   let res: unknown;

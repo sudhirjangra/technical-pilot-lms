@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <ModeSwitcher />
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left brand panel — hidden on mobile */}
         <aside className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col relative overflow-hidden bg-primary/5 dark:bg-primary/10 border-r border-border/50">
           {/* Decorative gradient blobs */}
@@ -79,17 +79,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Right form panel */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-w-0">
           {/* Theme switcher — top-right, large screens only */}
           <div className="hidden lg:flex justify-end p-5">
             <ModeSwitcher />
           </div>
 
-          <div className="flex-1 flex items-center justify-center px-6 py-10 lg:py-6">
+          <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-y-auto">
             <div className="w-full max-w-md">{children}</div>
           </div>
 
-          <footer className="text-center text-xs text-muted-foreground py-5 px-6">
+          <footer className="flex-shrink-0 text-center text-xs text-muted-foreground py-4 px-6 border-t border-border/50">
             By continuing, you agree to our{' '}
             <Link href="#" className="underline underline-offset-4 hover:text-foreground">
               Terms of Service

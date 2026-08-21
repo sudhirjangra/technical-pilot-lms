@@ -35,7 +35,7 @@ const AppearanceSettings = ({ select_font }: { select_font: string }) => {
           <div>
             <RadioGroup
               className="grid grid-cols-2 gap-5 max-w-sm p-0"
-              defaultValue={resolvedTheme === 'dark' ? 'dark' : 'light'}
+              value={resolvedTheme === 'dark' ? 'dark' : 'light'}
               onValueChange={(value) => setTheme(value)}
             >
               <div className={cn('relative rounded-sm overflow-hidden')}>

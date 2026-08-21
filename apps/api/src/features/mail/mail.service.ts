@@ -30,11 +30,12 @@ export class MailService {
   async sendEmail(mailOptions: ISendMailOptions): Promise<void> {
     try {
       await this.mailerService.sendMail({
-        from: `${APP_NAME}<${this.config.get('MAIL_FROM')}>`,
+        from: `${APP_NAME} <${this.config.get('MAIL_FROM')}>`,
         ...mailOptions,
       });
     } catch (error) {
-      this.logger.warn({ error }, 'Mail delivery failed');
+      this.logger.error({ error }, 'Mail delivery failed');
+      throw error;
     }
   }
 }

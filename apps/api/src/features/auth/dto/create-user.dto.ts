@@ -21,8 +21,8 @@ export class CreateUserDto {
   })
   password: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty()
   @IsString()
-  phone?: string;
+  @MinLength(10, { message: 'Phone number must be at least 10 digits' })
+  phone: string;
 }

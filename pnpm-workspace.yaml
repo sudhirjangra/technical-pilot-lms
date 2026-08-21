@@ -1,6 +1,13 @@
 packages:
   - apps/*
   - packages/*
+allowBuilds:
+  '@scarf/scarf': true
+  '@swc/core': true
+  argon2: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
 ignoredBuiltDependencies:
   - unrs-resolver
 onlyBuiltDependencies:

@@ -30,6 +30,7 @@ export class JwtRefreshGuard implements CanActivate {
     try {
       request.user = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get('REFRESH_TOKEN_SECRET'),
+        algorithms: ['HS256'],
       });
     } catch {
       throw new UnauthorizedException('Invalid Refresh Token');

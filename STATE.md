@@ -34,6 +34,19 @@
 - [x] safeFetch preserves structured error payloads (JSON objects)
 - [x] removeSession server action for device-limit flow
 
+### Auth Bug Fixes + Sidebar (Done)
+- [x] Fixed sign-up hang: dev SMTP fallback now uses jsonTransport (no network connection) instead of fake Ethereal credentials that caused 2-min timeout
+- [x] mail.service.ts no longer re-throws errors — emails are best-effort, failures logged only
+- [x] Fixed sign-out not deleting device: sidebar now calls removeSession (NestJS) before signOut (NextAuth) — prevents device accumulation and subsequent login failures
+- [x] Added fetch-failure resiliency for auth flows: ipinfo lookup now fails safe, safeFetch now surfaces a friendly API-unreachable message with localhost/127.0.0.1 fallback retry, and sign-in normalizes fetch-failed AuthErrors
+- [x] Fixed reset-password OTP mismatch and security: UI now accepts 6-8 digits, schema/DTO aligned, and backend now verifies recovery OTP before allowing password change
+- [x] Improved resend-OTP errors by surfacing/logging provider error message instead of generic failure
+- [x] Fixed sign-up for existing unconfirmed users: resend OTP failure no longer hard-fails registration flow (warning logged, flow continues to confirm-email screen)
+- [x] Sidebar: user avatar + name + email in footer dropdown (ShadCN pattern)
+- [x] Sidebar: dropdown includes Profile, Settings, Sign out with proper destructive style
+- [x] Sidebar: removed duplicate Account nav group (moved to footer dropdown)
+- [x] Sidebar: added SidebarSeparator between nav groups
+
 ## Immediate Next Step
 - Add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET to .env
 - Run migration 004 in Supabase

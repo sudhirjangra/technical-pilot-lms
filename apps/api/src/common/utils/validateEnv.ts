@@ -14,12 +14,16 @@ export const EnvSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),
-  RESEND_API_KEY: z.string().default(''),
-  MAIL_FROM: z.string().default('onboarding@resend.dev'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().default('noreply@example.com'),
   FILE_MAX_SIZE: z.coerce.number().default(20971520),
-  RAZORPAY_KEY_ID: z.string().min(1).default(''),
-  RAZORPAY_KEY_SECRET: z.string().min(1).default(''),
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).default(''),
+  RAZORPAY_KEY_ID: z.string().default(''),
+  RAZORPAY_KEY_SECRET: z.string().default(''),
+  RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
+  PASSWORD_RESET_REDIRECT_URL: z.string().url().optional(),
 });
 
 /**

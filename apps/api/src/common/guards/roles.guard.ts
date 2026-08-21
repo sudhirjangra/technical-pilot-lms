@@ -17,8 +17,9 @@ export class RolesGuard implements CanActivate {
     const { user } = context.switchToHttp().getRequest();
     if (!user?.role) return false;
 
+    // Check if user has one of the required roles (exact match only)
     return requiredRoles.some(
       (role) => user.role.toUpperCase() === role.toUpperCase(),
-    ) || user.role.toUpperCase() === 'SUB_ADMIN';
+    );
   }
 }

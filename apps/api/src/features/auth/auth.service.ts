@@ -22,14 +22,13 @@ import { MailService } from '@/features/mail/mail.service';
 import {
   ChangePasswordSuccessMail,
   ConfirmEmailSuccessMail,
-  RegisterSuccessMail,
-  ResetPasswordMail,
   SignInSuccessMail,
 } from '@/features/mail/templates';
 import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -57,12 +56,30 @@ export class AuthService {
       .select('id, email')
       .eq('email', email)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      this.logger.error({ error: error.message, email }, 'Failed to query profile by email');
+      throw new InternalServerErrorException('Database error while fetching user');
+    }
+
     if (!data) return null;
-    const { data: authData, error: authError } =
-      await this.supabase.auth.admin.getUserById(data.id);
-    if (authError) throw new Error(authError.message);
+
+    const { data: authData, error: authError } = await this.supabase.auth.admin.getUserById(data.id);
+    if (authError) {
+      this.logger.error({ error: authError.message, userId: data.id }, 'Failed to fetch auth user by ID');
+      throw new InternalServerErrorException('Failed to fetch user from auth provider');
+    }
+
     return authData.user;
+  }
+
+  private async getUserById(userId: string) {
+    const { data, error } = await this.supabase.auth.admin.getUserById(userId);
+    if (error) {
+      this.logger.error({ error: error.message, userId }, 'Failed to fetch auth user by ID');
+      throw new InternalServerErrorException('Failed to fetch user from auth provider');
+    }
+    return data.user;
   }
 
   async generateTokens(
@@ -85,20 +102,40 @@ export class AuthService {
   }
 
   async register(dto: CreateUserDto): Promise<RegisterUserInterface> {
-    const { data: authData, error } = await this.supabase.auth.admin.createUser(
-      {
-        email: dto.email,
-        password: dto.password,
-        email_confirm: false,
-      },
-    );
+    let authUser = await this.getUserByEmail(dto.email);
+
+    if (authUser) {
+      if (!authUser.email_confirmed_at) {
+        const { error } = await this.supabaseAnon.auth.resend({
+          type: 'signup',
+          email: dto.email,
+        });
+        if (error) {
+          this.logger.warn({ email: dto.email, error: error.message }, 'Failed to resend verification code');
+          throw new BadRequestException('Failed to resend verification code. Please try again.');
+        }
+        return { data: { id: authUser.id, email: dto.email } };
+      }
+      throw new BadRequestException('Email already registered. Please sign in.');
+    }
+
+    const { data: authData, error } = await this.supabase.auth.admin.createUser({
+      email: dto.email,
+      password: dto.password,
+      email_confirm: false,
+    });
+
     if (error) {
-      if (error.message.includes('already'))
-        throw new BadRequestException('Email already exists.');
+      this.logger.error({ error: error.message, email: dto.email }, 'Failed to create auth user');
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        throw new BadRequestException('Email already registered. Please sign in.');
+      }
       throw new BadRequestException(error.message);
     }
 
     const userId = authData.user.id;
+    authUser = authData.user;
+
     const { error: profileError } = await this.supabase
       .from('profiles')
       .upsert(
@@ -107,59 +144,40 @@ export class AuthService {
           email: dto.email,
           role: 'student',
           full_name: dto.email.split('@')[0],
-          ...(dto.phone ? { phone: dto.phone } : {}),
+          phone: dto.phone,
         },
         { onConflict: 'id' },
       );
+
     if (profileError) {
-      this.logger.error({ profileError }, 'Profile upsert failed');
+      this.logger.error({ profileError: profileError.message, userId }, 'Profile upsert failed, rolling back auth user');
       await this.supabase.auth.admin.deleteUser(userId);
-      throw new BadRequestException('Registration failed.');
+      throw new BadRequestException('Registration failed. Please try again.');
     }
 
-    // Generate OTP for email verification using magiclink type (works for existing users)
-    const { data: linkData, error: linkError } =
-      await this.supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: dto.email,
-      });
-    if (linkError) {
-      this.logger.warn({ linkError }, 'Failed to generate OTP link');
-    }
+    const { error: resendError } = await this.supabaseAnon.auth.resend({
+      type: 'signup',
+      email: dto.email,
+    });
 
-    const otp = linkData?.properties?.email_otp ?? '';
-
-    try {
-      await this.mailService.sendEmail({
-        to: [dto.email],
-        subject: 'Confirm your email',
-        html: RegisterSuccessMail({ name: dto.email.split('@')[0], otp }),
-      });
-    } catch (mailError) {
-      this.logger.warn(
-        { mailError },
-        'Mail delivery failed during registration',
-      );
+    if (resendError) {
+      this.logger.warn({ resendError: resendError.message, email: dto.email }, 'Failed to trigger signup confirmation email');
     }
 
     return { data: { id: userId, email: dto.email } };
   }
 
   async signIn(dto: SignInUserDto): Promise<LoginUserInterface> {
-    const emailToUse = dto.identifier;
-    const authUser = await this.getUserByEmail(emailToUse);
+    const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    // Verify password using anon client
-    const { error: signInError } =
-      await this.supabaseAnon.auth.signInWithPassword({
-        email: authUser.email!,
-        password: dto.password,
-      });
+    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
+      email: authUser.email!,
+      password: dto.password,
+    });
 
-    // If error is NOT "Email not confirmed", password is wrong
     if (signInError) {
-      if (signInError.message.includes('Email not confirmed')) {
+      if (signInError.code === 'email_not_confirmed' || signInError.message.includes('Email not confirmed')) {
         throw new UnauthorizedException('EMAIL_NOT_CONFIRMED');
       }
       throw new UnauthorizedException('Invalid credentials');
@@ -170,10 +188,9 @@ export class AuthService {
       .select('*')
       .eq('id', authUser.id)
       .single();
-    if (profileError || !profile)
-      throw new NotFoundException('Profile not found');
 
-    // Check device limit — return sessions if limit reached
+    if (profileError || !profile) throw new NotFoundException('Profile not found');
+
     const { data: existingDevices } = await this.supabase
       .from('devices')
       .select('id, device_name, platform, last_active_at, created_at')
@@ -234,39 +251,30 @@ export class AuthService {
     if (!authUser) throw new NotFoundException('User not found');
 
     if (authUser.email_confirmed_at) {
-      throw new BadRequestException('Email already confirmed');
+      throw new BadRequestException('Email is already confirmed. Please sign in.');
     }
 
-    const { data: linkData, error: linkError } =
-      await this.supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email,
-      });
-    if (linkError) {
-      throw new BadRequestException('Failed to generate OTP');
-    }
-
-    const otp = linkData?.properties?.email_otp ?? '';
-
-    await this.mailService.sendEmail({
-      to: [email],
-      subject: 'Your verification code',
-      html: RegisterSuccessMail({ name: email.split('@')[0], otp }),
+    const { error } = await this.supabaseAnon.auth.resend({
+      type: 'signup',
+      email,
     });
+
+    if (error) {
+      this.logger.warn({ email, error: error.message }, 'Failed to resend verification code');
+      throw new BadRequestException('Failed to resend verification code. Please try again.');
+    }
   }
 
   async confirmEmail(dto: ConfirmEmailDto): Promise<void> {
     const { error } = await this.supabaseAnon.auth.verifyOtp({
       email: dto.email,
       token: dto.token,
-      type: 'magiclink',
+      type: 'signup',
     });
+
     if (error) {
-      this.logger.error(
-        { error: error.message, email: dto.email },
-        'OTP verification failed',
-      );
-      throw new BadRequestException('Invalid or expired OTP');
+      this.logger.error({ error: error.message, email: dto.email }, 'OTP verification failed');
+      throw new BadRequestException('Invalid or expired OTP. Please request a new one.');
     }
 
     const authUser = await this.getUserByEmail(dto.email);
@@ -276,49 +284,54 @@ export class AuthService {
       .eq('id', authUser?.id ?? '')
       .single();
 
-    await this.mailService.sendEmail({
-      to: [dto.email],
-      subject: 'Confirmation Successful',
-      html: ConfirmEmailSuccessMail({ name: profile?.full_name ?? dto.email }),
-    });
+    try {
+      await this.mailService.sendEmail({
+        to: [dto.email],
+        subject: 'Confirmation Successful',
+        html: ConfirmEmailSuccessMail({ name: profile?.full_name ?? dto.email }),
+      });
+    } catch (mailError) {
+      this.logger.warn({ mailError }, 'Failed to send confirmation success email');
+    }
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error } = await this.supabase.auth.resetPasswordForEmail(
-      dto.identifier,
-    );
-    if (error) throw new BadRequestException(error.message);
-
-    const { data: profile } = await this.supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', authUser.id)
-      .single();
-
-    await this.mailService.sendEmail({
-      to: [dto.identifier],
-      subject: 'Reset your password',
-      html: ResetPasswordMail({
-        name: profile?.full_name ?? dto.identifier,
-        code: '',
-      }),
+    const { error } = await this.supabase.auth.resetPasswordForEmail(dto.identifier, {
+      redirectTo: this.config.get('PASSWORD_RESET_REDIRECT_URL'),
     });
+
+    if (error) {
+      this.logger.error({ error: error.message, email: dto.identifier }, 'Failed to send password reset email');
+      throw new BadRequestException('Failed to send password reset email. Please try again.');
+    }
   }
 
   async resetPassword(dto: ResetPasswordDto): Promise<void> {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error } = await this.supabase.auth.admin.updateUserById(
-      authUser.id,
-      {
-        password: dto.newPassword,
-      },
-    );
-    if (error) throw new BadRequestException(error.message);
+    const { error: verifyError } = await this.supabaseAnon.auth.verifyOtp({
+      email: dto.identifier,
+      token: dto.resetToken,
+      type: 'recovery',
+    });
+
+    if (verifyError) {
+      this.logger.warn({ email: dto.identifier, error: verifyError.message }, 'Password reset OTP verification failed');
+      throw new BadRequestException('Invalid or expired reset code. Please request a new one.');
+    }
+
+    const { error } = await this.supabase.auth.admin.updateUserById(authUser.id, {
+      password: dto.newPassword,
+    });
+
+    if (error) {
+      this.logger.error({ error: error.message, userId: authUser.id }, 'Failed to update password');
+      throw new BadRequestException('Failed to reset password. Please try again.');
+    }
 
     const { data: profile } = await this.supabase
       .from('profiles')
@@ -326,35 +339,38 @@ export class AuthService {
       .eq('id', authUser.id)
       .single();
 
-    await this.mailService.sendEmail({
-      to: [dto.identifier],
-      subject: 'Password Reset Successful',
-      html: ChangePasswordSuccessMail({
-        name: profile?.full_name ?? dto.identifier,
-      }),
-    });
+    try {
+      await this.mailService.sendEmail({
+        to: [dto.identifier],
+        subject: 'Password Reset Successful',
+        html: ChangePasswordSuccessMail({ name: profile?.full_name ?? dto.identifier }),
+      });
+    } catch (mailError) {
+      this.logger.warn({ mailError }, 'Failed to send password reset success email');
+    }
   }
 
   async changePassword(dto: ChangePasswordDto): Promise<void> {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error: signInError } =
-      await this.supabaseAnon.auth.signInWithPassword({
-        email: authUser.email!,
-        password: dto.password,
-      });
-    if (signInError && !signInError.message.includes('Email not confirmed')) {
-      throw new UnauthorizedException('Invalid credentials');
+    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
+      email: authUser.email!,
+      password: dto.password,
+    });
+
+    if (signInError && signInError.code !== 'email_not_confirmed' && !signInError.message.includes('Email not confirmed')) {
+      throw new UnauthorizedException('Current password is incorrect');
     }
 
-    const { error } = await this.supabase.auth.admin.updateUserById(
-      authUser.id,
-      {
-        password: dto.newPassword,
-      },
-    );
-    if (error) throw new BadRequestException(error.message);
+    const { error } = await this.supabase.auth.admin.updateUserById(authUser.id, {
+      password: dto.newPassword,
+    });
+
+    if (error) {
+      this.logger.error({ error: error.message, userId: authUser.id }, 'Failed to change password');
+      throw new BadRequestException('Failed to change password. Please try again.');
+    }
 
     const { data: profile } = await this.supabase
       .from('profiles')
@@ -362,20 +378,19 @@ export class AuthService {
       .eq('id', authUser.id)
       .single();
 
-    await this.mailService.sendEmail({
-      to: [authUser.email!],
-      subject: 'Password Changed Successfully',
-      html: ChangePasswordSuccessMail({
-        name: profile?.full_name ?? authUser.email!,
-      }),
-    });
+    try {
+      await this.mailService.sendEmail({
+        to: [authUser.email!],
+        subject: 'Password Changed Successfully',
+        html: ChangePasswordSuccessMail({ name: profile?.full_name ?? authUser.email! }),
+      });
+    } catch (mailError) {
+      this.logger.warn({ mailError }, 'Failed to send password change success email');
+    }
   }
 
   async signOut(dto: SignOutUserDto): Promise<void> {
-    const { error } = await this.supabase
-      .from('devices')
-      .delete()
-      .eq('id', dto.session_token);
+    const { error } = await this.supabase.from('devices').delete().eq('id', dto.session_token);
     if (error) throw new NotFoundException('Session not found');
   }
 
@@ -385,8 +400,7 @@ export class AuthService {
   }
 
   async refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenInterface> {
-    const { data: userData, error } =
-      await this.supabase.auth.admin.getUserById(dto.user_id);
+    const { data: userData, error } = await this.supabase.auth.admin.getUserById(dto.user_id);
     if (error || !userData.user) throw new NotFoundException('User not found');
 
     const { data: device } = await this.supabase
@@ -395,6 +409,7 @@ export class AuthService {
       .eq('id', dto.session_token)
       .eq('user_id', dto.user_id)
       .maybeSingle();
+
     if (!device) throw new NotFoundException('Session not found');
 
     const { data: profile } = await this.supabase
@@ -403,11 +418,7 @@ export class AuthService {
       .eq('id', dto.user_id)
       .single();
 
-    const tokens = await this.generateTokens(
-      userData.user.id,
-      userData.user.email!,
-      profile?.role ?? 'student',
-    );
+    const tokens = await this.generateTokens(userData.user.id, userData.user.email!, profile?.role ?? 'student');
 
     await this.supabase
       .from('devices')
@@ -418,6 +429,7 @@ export class AuthService {
       .eq('id', dto.session_token);
 
     const access_token_refresh_time = await generateRefreshTime();
+
     return {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
@@ -431,7 +443,12 @@ export class AuthService {
       .from('devices')
       .select('*')
       .eq('user_id', userId);
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      this.logger.error({ error: error.message, userId }, 'Failed to fetch sessions');
+      throw new InternalServerErrorException('Failed to fetch sessions');
+    }
+
     return data ?? [];
   }
 
@@ -441,33 +458,35 @@ export class AuthService {
       .select('*')
       .eq('id', id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!data) throw new NotFoundException('Session not found!');
+
+    if (error) {
+      this.logger.error({ error: error.message, sessionId: id }, 'Failed to fetch session');
+      throw new InternalServerErrorException('Failed to fetch session');
+    }
+
+    if (!data) throw new NotFoundException('Session not found');
     return data;
   }
 
   async deleteAccount(dto: DeleteUserDto): Promise<void> {
-    const { data, error } = await this.supabase.auth.admin.getUserById(
-      dto.user_id,
-    );
+    const { data, error } = await this.supabase.auth.admin.getUserById(dto.user_id);
     if (error || !data.user) throw new NotFoundException('User not found');
 
-    // Verify password before allowing deletion
-    const { error: signInError } =
-      await this.supabaseAnon.auth.signInWithPassword({
-        email: data.user.email!,
-        password: dto.password,
-      });
-    if (signInError && !signInError.message.includes('Email not confirmed')) {
+    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
+      email: data.user.email!,
+      password: dto.password,
+    });
+
+    if (signInError && signInError.code !== 'email_not_confirmed' && !signInError.message.includes('Email not confirmed')) {
       throw new UnauthorizedException('Invalid password');
     }
 
-    // Clean up devices first
     await this.supabase.from('devices').delete().eq('user_id', dto.user_id);
 
-    const { error: deleteError } = await this.supabase.auth.admin.deleteUser(
-      dto.user_id,
-    );
-    if (deleteError) throw new BadRequestException(deleteError.message);
+    const { error: deleteError } = await this.supabase.auth.admin.deleteUser(dto.user_id);
+    if (deleteError) {
+      this.logger.error({ error: deleteError.message, userId: dto.user_id }, 'Failed to delete user');
+      throw new BadRequestException(deleteError.message);
+    }
   }
 }

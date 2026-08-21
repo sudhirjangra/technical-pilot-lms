@@ -1,8 +1,30 @@
 'use client';
 
 import LogoIcon from '@/components/logo-icon';
+import { removeSession } from '@/server/auth.server';
 import { APP_NAME } from '@repo/constants/app';
+import { Avatar, AvatarFallback, AvatarImage } from '@repo/shadcn/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@repo/shadcn/dropdown-menu';
 import { cn } from '@repo/shadcn/lib/utils';
+import {
+  BadgeCheck,
+  BookOpen,
+  CalendarDays,
+  ChevronsUpDown,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Trophy,
+} from '@repo/shadcn/lucide';
 import {
   Sidebar,
   SidebarContent,
@@ -14,79 +36,29 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarTrigger,
+  SidebarSeparator,
   useSidebar,
 } from '@repo/shadcn/sidebar';
-import {
-  BookOpen,
-  CalendarDays,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  Trophy,
-  User,
-} from '@repo/shadcn/lucide';
 import { signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Fragment, useState } from 'react';
 
-const studentNavItems = [
+const navGroups = [
   {
     group: 'Learning',
     items: [
-      {
-        label: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-        exact: true,
-      },
-      {
-        label: 'My Courses',
-        href: '/dashboard/courses',
-        icon: BookOpen,
-        exact: false,
-      },
-      {
-        label: 'Browse Courses',
-        href: '/courses',
-        icon: GraduationCap,
-        exact: false,
-      },
+      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
+      { label: 'My Courses', href: '/dashboard/courses', icon: BookOpen, exact: false },
+      { label: 'Browse Courses', href: '/courses', icon: GraduationCap, exact: false },
     ],
   },
   {
     group: 'Connect',
     items: [
-      {
-        label: 'Doubt Sessions',
-        href: '/dashboard/doubt-sessions',
-        icon: CalendarDays,
-        exact: false,
-      },
-      {
-        label: 'Referrals',
-        href: '/dashboard/referrals',
-        icon: Trophy,
-        exact: false,
-      },
-    ],
-  },
-  {
-    group: 'Account',
-    items: [
-      {
-        label: 'Profile',
-        href: '/profile',
-        icon: User,
-        exact: false,
-      },
-      {
-        label: 'Settings',
-        href: '/profile',
-        icon: Settings,
-        exact: false,
-      },
+      { label: 'Doubt Sessions', href: '/dashboard/doubt-sessions', icon: CalendarDays, exact: false },
+      { label: 'Referrals', href: '/dashboard/referrals', icon: Trophy, exact: false },
     ],
   },
 ];
@@ -96,7 +68,7 @@ function NavGroup({
   items,
 }: {
   group: string;
-  items: (typeof studentNavItems)[0]['items'];
+  items: (typeof navGroups)[0]['items'];
 }) {
   const pathname = usePathname();
   const { state } = useSidebar();
@@ -132,7 +104,9 @@ function NavGroup({
                   <Icon
                     className={cn(
                       'size-4 shrink-0',
-                      isActive ? 'text-sidebar-primary-foreground' : 'text-sidebar-foreground/70 group-hover/item:text-sidebar-accent-foreground',
+                      isActive
+                        ? 'text-sidebar-primary-foreground'
+                        : 'text-sidebar-foreground/70 group-hover/item:text-sidebar-accent-foreground',
                     )}
                   />
                   <span>{item.label}</span>
@@ -148,59 +122,133 @@ function NavGroup({
 
 export function DashboardSidebar() {
   const { state } = useSidebar();
+  const { data: session } = useSession();
   const isCollapsed = state === 'collapsed';
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const user = session?.user;
+  const initials = user?.full_name
+    ? user.full_name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : (user?.email?.[0] ?? 'U').toUpperCase();
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    const token = user?.tokens?.session_token;
+    if (token) {
+      await removeSession({ session_token: token });
+    }
+    await signOut({ callbackUrl: '/auth/sign-in' });
+  };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      {/* Header: Logo + app name */}
+    <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-x-hidden">
       <SidebarHeader className="border-b border-sidebar-border/50 px-3 py-3">
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden group">
+          <div className="shrink-0 transition-transform group-hover:scale-105">
             <LogoIcon width={32} height={32} />
           </div>
           <span
             className={cn(
-              'font-bold text-sm text-sidebar-foreground truncate transition-all duration-200',
+              'font-bold text-sm text-sidebar-foreground truncate transition-all duration-200 group-hover:text-primary',
               isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
             )}
           >
             {APP_NAME}
           </span>
-        </div>
+        </Link>
       </SidebarHeader>
 
-      {/* Nav groups */}
       <SidebarContent className="gap-1 py-3 overflow-y-auto">
-        {studentNavItems.map((group) => (
-          <NavGroup key={group.group} group={group.group} items={group.items} />
+        {navGroups.map((group, i) => (
+          <Fragment key={group.group}>
+            {i > 0 && <SidebarSeparator />}
+            <NavGroup group={group.group} items={group.items} />
+          </Fragment>
         ))}
       </SidebarContent>
 
-        {/* Footer: Sign out and Profile */}
-        <SidebarFooter className="border-t border-sidebar-border/50 p-3">
-          <SidebarMenu>
-            {/* Profile shortcut */}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Profile" className="text-sidebar-foreground/70 hover:bg-accent hover:text-accent-foreground">
-                <Link href="/profile" className="flex items-center gap-2">
-                  <User className="size-4 shrink-0" />
-                  <span>Profile</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {/* Sign Out */}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip="Sign Out"
-                className="text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
-                onClick={() => signOut({ callbackUrl: '/auth/sign-in' })}
+      <SidebarFooter className="border-t border-sidebar-border/50 p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  size="lg"
+                  tooltip={user?.full_name ?? user?.email ?? 'Account'}
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                >
+                  <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                    <AvatarImage src={user?.avatar_url ?? ''} alt={user?.full_name ?? ''} />
+                    <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight overflow-hidden">
+                    <span className="truncate font-semibold">{user?.full_name ?? 'Account'}</span>
+                    <span className="truncate text-xs text-sidebar-foreground/60">{user?.email}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/50" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                side="top"
+                align="end"
+                sideOffset={4}
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 max-w-[calc(var(--sidebar-width)-1rem)] rounded-lg"
               >
-                <LogOut className="size-4 shrink-0" />
-                <span>Sign Out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src={user?.avatar_url ?? ''} alt={user?.full_name ?? ''} />
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs font-semibold">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{user?.full_name ?? 'Account'}</span>
+                      <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                      <BadgeCheck className="size-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile?tab=settings">
+                      <Settings className="size-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  disabled={isSigningOut}
+                  onClick={handleSignOut}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <LogOut className="size-4" />
+                  {isSigningOut ? 'Signing out…' : 'Sign out'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>

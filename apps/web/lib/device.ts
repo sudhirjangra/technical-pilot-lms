@@ -22,13 +22,30 @@ export const getLocationFromIp = async (): Promise<{
   ip: string;
   location: string;
 }> => {
-  const res = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
-  if (!res.ok) return { ip: 'unknown', location: 'unknown' };
-  const data = await res.json();
-  return {
-    ip: data.ip,
-    location: `${data.city}/${data.region}`,
-  };
+  try {
+    const res = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch location');
+
+    const data: unknown = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid location payload');
+
+    const ip = typeof (data as { ip?: unknown }).ip === 'string'
+      ? (data as { ip: string }).ip
+      : 'unknown';
+    const city = typeof (data as { city?: unknown }).city === 'string'
+      ? (data as { city: string }).city
+      : null;
+    const region = typeof (data as { region?: unknown }).region === 'string'
+      ? (data as { region: string }).region
+      : null;
+
+    return {
+      ip,
+      location: city && region ? `${city}/${region}` : 'unknown',
+    };
+  } catch {
+    return { ip: 'unknown', location: 'unknown' };
+  }
 };
 
 /**

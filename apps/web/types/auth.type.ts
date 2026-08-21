@@ -25,9 +25,8 @@ export const SignUpSchema = z.object({
   password: passWordSchema,
   phone: z
     .string()
-    .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)')
-    .optional()
-    .or(z.literal('')),
+    .min(10, 'Phone number must be at least 10 digits')
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)'),
 });
 
 /**
@@ -116,7 +115,7 @@ export const ForgotPasswordSchema = z.object({
  */
 export const ResetPasswordSchema = z.object({
   identifier: z.string(),
-  resetToken: z.string().min(6).max(6),
+  resetToken: z.string().min(6).max(8),
   newPassword: z.string(),
 });
 

@@ -152,19 +152,19 @@ const ResetPasswordForm = ({ session }: { session: Session | null }) => {
               {/* Reset code OTP */}
               <div className="grid gap-2">
                 <Label isRequired htmlFor="resetToken">
-                  6-digit Reset Code
+                  6-8 digit Reset Code
                 </Label>
                 <InputOTP
                   disabled={isExecuting}
-                  maxLength={6}
+                  maxLength={8}
                   minLength={6}
                   pattern={REGEXP_ONLY_DIGITS}
                   onChange={(resetToken) =>
                     setFormData((prev) => ({ ...prev, resetToken }))
                   }
                 >
-                  <InputOTPGroup className="w-full grid grid-cols-6 gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
+                  <InputOTPGroup className="w-full grid grid-cols-8 gap-2">
+                    {Array.from({ length: 8 }).map((_, i) => (
                       <InputOTPSlot
                         key={i}
                         index={i}

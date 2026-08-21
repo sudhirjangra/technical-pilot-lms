@@ -19,12 +19,9 @@ import {
 import { cn } from '@repo/shadcn/lib/utils';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
-import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
-const ConfirmEmailForm = () => {
-  const searchParams = useSearchParams();
-  const email = searchParams.get('email') ?? '';
+const ConfirmEmailForm = ({ email }: { email: string }) => {
 
   const [token, setToken] = useState('');
   const [resendMsg, setResendMsg] = useState('');

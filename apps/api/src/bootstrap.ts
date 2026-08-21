@@ -1,5 +1,6 @@
 import { Env } from '@/common/utils';
 import { swagger } from '@/swagger';
+import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -58,6 +59,9 @@ export const bootstrap = async (app: NestFastifyApplication): Promise<void> => {
       },
     }),
   );
+
+  // Global exception filter for consistent error responses
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Swagger setup to enable API documentation in non-production environments
   if (configService.get('NODE_ENV') !== 'production') {

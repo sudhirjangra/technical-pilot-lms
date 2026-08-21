@@ -59,11 +59,7 @@ const SignUpForm = () => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              // strip empty phone before submitting
-              execute({
-                ...formData,
-                phone: formData.phone.trim() || undefined,
-              });
+              execute(formData);
             }}
           >
             <div className="grid gap-5">
@@ -90,11 +86,10 @@ const SignUpForm = () => {
                 )}
               </div>
 
-              {/* Phone (optional) */}
+              {/* Phone (required) */}
               <div className="grid gap-2">
-                <Label htmlFor="phone">
-                  Mobile Number{' '}
-                  <span className="text-muted-foreground font-normal">(optional)</span>
+                <Label isRequired htmlFor="phone">
+                  Mobile Number
                 </Label>
                 <Input
                   id="phone"
@@ -102,6 +97,7 @@ const SignUpForm = () => {
                   type="tel"
                   placeholder="+919876543210"
                   autoComplete="tel"
+                  required
                   disabled={isExecuting}
                   onChange={handleChange}
                 />
