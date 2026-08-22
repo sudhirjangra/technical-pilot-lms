@@ -483,10 +483,20 @@ export class AuthService {
 
     await this.supabase.from('devices').delete().eq('user_id', dto.user_id);
 
+    await this.supabase.from('courses').delete().eq('created_by', dto.user_id);
+    await this.supabase.from('doubt_slots').delete().eq('created_by', dto.user_id);
+    await this.supabase.from('sub_admin_permissions').delete().eq('granted_by', dto.user_id);
+
+    const { error: profileError } = await this.supabase.from('profiles').delete().eq('id', dto.user_id);
+    if (profileError) {
+      this.logger.error({ error: profileError.message, userId: dto.user_id }, 'Failed to delete profile');
+      throw new BadRequestException(`Failed to delete user profile: ${profileError.message}`);
+    }
+
     const { error: deleteError } = await this.supabase.auth.admin.deleteUser(dto.user_id);
     if (deleteError) {
-      this.logger.error({ error: deleteError.message, userId: dto.user_id }, 'Failed to delete user');
-      throw new BadRequestException(deleteError.message);
+      this.logger.error({ error: deleteError.message, userId: dto.user_id }, 'Failed to delete auth user');
+      throw new BadRequestException(`Failed to delete user: ${deleteError.message}`);
     }
   }
 }
