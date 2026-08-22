@@ -21,7 +21,7 @@ const Page = async () => {
         </div>
       </nav>
       <div className="flex flex-1 flex-col w-full justify-center items-center gap-5">
-        <h2 className="text-2xl font-bold">Institution LMS</h2>
+        <h2 className="text-2xl font-bold">Technical Pilot LMS</h2>
         <p className="text-muted-foreground">Learning Management System</p>
         {session?.user ? (
           <div className="flex flex-col items-center gap-4">

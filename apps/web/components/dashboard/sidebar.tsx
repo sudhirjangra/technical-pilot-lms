@@ -94,13 +94,13 @@ function NavGroup({
                 isActive={isActive}
                 tooltip={item.label}
                 className={cn(
-                  'group/item transition-colors',
+                  'group/item transition-colors w-full',
                   isActive
                     ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                 )}
               >
-                <Link href={item.href}>
+                <Link href={item.href} className="flex-1 min-w-0">
                   <Icon
                     className={cn(
                       'size-4 shrink-0',
@@ -109,7 +109,7 @@ function NavGroup({
                         : 'text-sidebar-foreground/70 group-hover/item:text-sidebar-accent-foreground',
                     )}
                   />
-                  <span>{item.label}</span>
+                  <span className="truncate">{item.label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -136,6 +136,8 @@ export function DashboardSidebar() {
         .slice(0, 2)
     : (user?.email?.[0] ?? 'U').toUpperCase();
 
+  const logoSize = isCollapsed ? 28 : 32;
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     const token = user?.tokens?.session_token;
@@ -146,11 +148,11 @@ export function DashboardSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-x-hidden">
+    <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">
       <SidebarHeader className="border-b border-sidebar-border/50 px-3 py-3">
-        <Link href="/dashboard" className="flex items-center gap-2.5 overflow-hidden group">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="shrink-0 transition-transform group-hover:scale-105">
-            <LogoIcon width={32} height={32} />
+            <LogoIcon width={logoSize} height={logoSize} className="transition-all duration-200" />
           </div>
           <span
             className={cn(
@@ -163,7 +165,7 @@ export function DashboardSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="gap-1 py-3 overflow-y-auto">
+      <SidebarContent className="gap-1 py-3 no-scrollbar">
         {navGroups.map((group, i) => (
           <Fragment key={group.group}>
             {i > 0 && <SidebarSeparator />}
@@ -239,7 +241,7 @@ export function DashboardSidebar() {
                 <DropdownMenuItem
                   disabled={isSigningOut}
                   onClick={handleSignOut}
-                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  className="bg-red-500/10 text-destructive text-red-400 hover:bg-red-500/20 focus:bg-red-500/25 focus:text-red-600"
                 >
                   <LogOut className="size-4" />
                   {isSigningOut ? 'Signing out…' : 'Sign out'}

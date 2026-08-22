@@ -1,4 +1,4 @@
-# Project Directives: Institution LMS
+# Project Directives: Technical Pilot LMS
 IMPORTANT NOTE: Save my tokens by not repharsing my wording or other things. Don't run and wait for build commands.
 ## Core Workflow Rules
 

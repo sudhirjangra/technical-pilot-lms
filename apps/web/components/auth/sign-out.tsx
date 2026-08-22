@@ -24,7 +24,7 @@ const SignOut = () => {
       <AlertDialogTrigger asChild>
         <Button
           type="button"
-          className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-destructive dark:hover:text-white"
+          className="w-full justify-start text-red-600 font-semibold hover:text-red-700 hover:bg-red-100 dark:hover:bg-destructive dark:hover:text-white"
           variant="ghost"
         >
           <LogOut className="mr-2 size-4" />

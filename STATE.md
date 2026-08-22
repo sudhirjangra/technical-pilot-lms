@@ -13,7 +13,7 @@
 - [x] Removed blog tables (content_blog_posts, content_blog_post_comments, private_items)
 - [x] Cleaned home page (removed RichTextEditor, media player cruft)
 - [x] Fixed is-authorized middleware (home page now accessible to guests)
-- [x] Updated APP_NAME/metadata from "Turbo NPN" to "Institution LMS"
+- [x] Updated APP_NAME/metadata from "Turbo NPN" to "Technical Pilot LMS"
 - [x] Removed public file upload test endpoint
 - [x] Created migration 002_drop_unused_tables.sql
 - [x] Full migration 001 with all ARCHITECTURE.md tables + RLS policies
@@ -27,6 +27,8 @@
 ### Phase 1.5: Frontend Auth Error Handling (Done)
 - [x] Sign-in form handles EMAIL_NOT_CONFIRMED → redirects to /auth/confirm-email?email=...
 - [x] Sign-in form handles DEVICE_LIMIT_REACHED → shows sessions picker UI, user removes one, then auto-retries sign-in
+- [x] Device-limit sign-in now forcibly opens a translucent session-management popup from the action result, with device metadata and sign-out controls
+- [x] API exception filter preserves structured device-limit code and session records for the frontend
 - [x] Confirm-email form reads email from URL params (no session required)
 - [x] confirmEmail server action no longer requires auth header (endpoint is @Public)
 - [x] Sign-up no longer attempts signIn after registration → redirects to confirm-email page

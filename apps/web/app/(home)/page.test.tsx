@@ -23,7 +23,7 @@ describe('Page Component', () => {
     const PageResolved = await Page();
     render(PageResolved);
 
-    expect(screen.getByText('Institution LMS')).toBeDefined();
+    expect(screen.getByText('Technical Pilot LMS')).toBeDefined();
     expect(screen.getByText('Sign In')).toBeDefined();
     expect(screen.getByText('Sign Up')).toBeDefined();
   });

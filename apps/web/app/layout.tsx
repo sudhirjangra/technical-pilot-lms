@@ -59,7 +59,7 @@ export const metadata = {
     type: 'website',
     title: APP_NAME,
     description:
-      'Institution LMS — learn through structured courses with videos, assignments, and tests.',
+      'Technical Pilot LMS — learn through structured courses with videos, assignments, and tests.',
     url: APP_URL,
     locale: 'en-US',
   },
@@ -68,9 +68,17 @@ export const metadata = {
     follow: true,
   },
   icons: {
-    icon: '/metadata/favicon.ico',
-    shortcut: '/metadata/favicon-16x16.png',
+    icon: [
+      { url: '/metadata/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/metadata/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/metadata/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/metadata/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/metadata/favicon-32x32.png',
     apple: '/metadata/apple-touch-icon.png',
+    other: [
+      { rel: 'icon', url: '/metadata/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },
+    ],
   },
   manifest: '/metadata/site.webmanifest',
 } satisfies Metadata;
@@ -84,6 +92,22 @@ const RootLayout = async ({
     (await cookies()).get('select-font')?.value ?? '--font-geist';
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  if (isDark) document.documentElement.classList.add('dark');
+                  else document.documentElement.classList.remove('dark');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={cn(
           'antialiased tracking-normal leading-normal',
@@ -105,3 +129,5 @@ const RootLayout = async ({
 };
 
 export default RootLayout;
+
+export const runtime = 'nodejs';

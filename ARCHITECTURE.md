@@ -1,4 +1,4 @@
-# Architecture Specification — Institution LMS
+# Architecture Specification — Technical Pilot LMS
 
 ## 1. System Overview
 

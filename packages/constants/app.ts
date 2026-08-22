@@ -1,4 +1,4 @@
-export const APP_NAME = 'Institution LMS';
+export const APP_NAME = 'Technical Pilot LMS';
 export const APP_VERSION = '1.0.0';
 export const APP_VERSION_PROVIDER = 'v1';
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';

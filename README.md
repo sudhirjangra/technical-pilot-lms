@@ -1,4 +1,4 @@
-# Institution LMS Portal
+# Technical Pilot LMS Portal
 
 A comprehensive Learning Management System for institutional use. Students purchase courses, learn through videos, notes, assignments and tests, track progress, book doubt sessions, and earn referral rewards. Admins manage all content, users, payments, and analytics.
 

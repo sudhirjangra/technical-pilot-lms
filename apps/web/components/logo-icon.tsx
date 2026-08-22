@@ -15,7 +15,7 @@ const LogoIcon = ({
   return (
     <Image
       alt="logo icon"
-      src={src ?? '/assets/logo/icon.svg'}
+      src={src ?? '/assets/logo/icon.png'}
       height={height ?? 50}
       width={width ?? 50}
       priority

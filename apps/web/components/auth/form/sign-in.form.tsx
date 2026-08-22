@@ -5,6 +5,15 @@ import { removeSession, signInWithCredentials } from '@/server/auth.server';
 import { APP_NAME } from '@repo/constants/app';
 import { Button } from '@repo/shadcn/button';
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@repo/shadcn/alert-dialog';
+import {
   Card,
   CardContent,
   CardDescription,
@@ -16,10 +25,11 @@ import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
 import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
+import { Laptop, Loader2, LogOut, Smartphone } from '@repo/shadcn/lucide';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 
 interface DeviceSession {
   id: string;
@@ -36,6 +46,7 @@ const SignInForm = () => {
     password: '',
   });
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
+  const [deviceLimitOpen, setDeviceLimitOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -59,9 +70,11 @@ const SignInForm = () => {
         return;
       }
       if (msg.includes('DEVICE_LIMIT_REACHED')) {
+        setDeviceLimitOpen(true);
         try {
           const parsed = JSON.parse(msg);
-          setDeviceSessions(parsed.sessions ?? []);
+          const sessions = parsed.sessions ?? parsed.data?.sessions ?? [];
+          setDeviceSessions(Array.isArray(sessions) ? sessions : []);
         } catch {
           setDeviceSessions([]);
         }
@@ -69,74 +82,35 @@ const SignInForm = () => {
     },
   });
 
+  useEffect(() => {
+    if (!serverError?.includes('DEVICE_LIMIT_REACHED')) return;
+
+    setDeviceLimitOpen(true);
+    try {
+      const parsed = JSON.parse(serverError);
+      const sessions = parsed.sessions ?? parsed.data?.sessions ?? [];
+      setDeviceSessions(Array.isArray(sessions) ? sessions : []);
+    } catch {
+      setDeviceSessions([]);
+    }
+  }, [serverError]);
+
   const handleRemoveSession = async (sessionId: string) => {
     setRemovingId(sessionId);
     try {
       const result = await removeSession({ session_token: sessionId });
       if (result?.data === 'success') {
-        setDeviceSessions((prev) => prev.filter((s) => s.id !== sessionId));
-        if (deviceSessions.length <= 2) {
+        const remainingSessions = deviceSessions.filter((s) => s.id !== sessionId);
+        setDeviceSessions(remainingSessions);
+        if (remainingSessions.length < 2) {
+          setDeviceLimitOpen(false);
           execute(formData);
-          setDeviceSessions([]);
         }
       }
     } finally {
       setRemovingId(null);
     }
   };
-
-  // Device limit view
-  if (deviceSessions.length > 0) {
-    return (
-      <div className="flex flex-col gap-6 w-full">
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex justify-center mb-3">
-              <LogoIcon width={44} height={44} />
-            </div>
-            <CardTitle className="text-xl">Device Limit Reached</CardTitle>
-            <CardDescription>
-              You have reached the maximum of 2 active sessions. Remove one to
-              continue signing in.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {deviceSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{session.device_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.platform} &middot; Last active:{' '}
-                      {new Date(session.last_active_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={removingId === session.id}
-                    onClick={() => handleRemoveSession(session.id)}
-                  >
-                    {removingId === session.id ? 'Removing…' : 'Remove'}
-                  </Button>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                className="w-full mt-2"
-                onClick={() => setDeviceSessions([])}
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -236,6 +210,73 @@ const SignInForm = () => {
           </form>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deviceLimitOpen} onOpenChange={setDeviceLimitOpen}>
+        <AlertDialogContent className="border-white/20 bg-background/80 shadow-2xl backdrop-blur-xl sm:max-w-xl">
+          <AlertDialogHeader>
+            <div className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+              <LogOut className="size-6" />
+            </div>
+            <AlertDialogTitle>Sign-in limit reached</AlertDialogTitle>
+            <AlertDialogDescription>
+              This account already has 2 active sessions. Sign out an existing
+              device below before continuing on this one.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="max-h-[45vh] space-y-3 overflow-y-auto py-1">
+            {deviceSessions.length > 0 ? (
+              deviceSessions.map((session) => {
+                const DeviceIcon = session.platform === 'web' ? Laptop : Smartphone;
+                return (
+                  <div
+                    key={session.id}
+                    className="flex items-start gap-3 rounded-2xl border border-white/20 bg-white/40 p-4 dark:bg-white/5"
+                  >
+                    <DeviceIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="font-medium">{session.device_name}</p>
+                      <p className="text-xs capitalize text-muted-foreground">
+                        {session.platform} device
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Created: {new Date(session.created_at).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Last active: {new Date(session.last_active_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={removingId === session.id}
+                      onClick={() => handleRemoveSession(session.id)}
+                    >
+                      {removingId === session.id ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-2 size-4" />
+                      )}
+                      Sign out
+                    </Button>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-muted-foreground">
+                Session details could not be loaded. Close this window and try
+                signing in again to refresh the active-session list.
+              </p>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

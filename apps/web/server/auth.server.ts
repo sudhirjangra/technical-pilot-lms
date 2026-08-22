@@ -78,11 +78,39 @@ export const signInWithCredentials = safeAction
     try {
       await signIn('credentials', parsedInput);
     } catch (error) {
+      const authError = error as {
+        cause?: Record<string, unknown>;
+        message?: string;
+      };
+      const cause = authError.cause;
+      const messages = [
+        authError.message,
+        cause?.message,
+        cause?.err instanceof Error ? cause.err.message : undefined,
+      ].filter((message): message is string => typeof message === 'string');
+      const deviceLimitMessage = messages.find((message) =>
+        message.includes('DEVICE_LIMIT_REACHED'),
+      );
+
+      if (deviceLimitMessage) {
+        let sessions: unknown[] = [];
+        for (const message of messages) {
+          try {
+            const parsed = JSON.parse(message);
+            const parsedSessions = parsed.sessions ?? parsed.data?.sessions;
+            if (Array.isArray(parsedSessions)) {
+              sessions = parsedSessions;
+              break;
+            }
+          } catch {}
+        }
+        throw new Error(JSON.stringify({ code: 'DEVICE_LIMIT_REACHED', sessions }));
+      }
+
       if (isRedirectError(error)) throw error; // success — let NextAuth's redirect through
       if (error instanceof AuthError) {
         // NextAuth 5 beta wraps the original error differently across versions.
         // Check all known locations: cause.err.message, cause.message, error.message.
-        const cause = error.cause as Record<string, unknown> | undefined;
         const msg: string =
           (cause?.err instanceof Error ? cause.err.message : null) ??
           (typeof cause?.message === 'string' ? cause.message : null) ??
@@ -99,7 +127,15 @@ export const signInWithCredentials = safeAction
           );
         }
         if (msg.includes('EMAIL_NOT_CONFIRMED')) throw new Error('EMAIL_NOT_CONFIRMED');
-        if (msg.includes('DEVICE_LIMIT_REACHED')) throw new Error(msg);
+        if (msg.includes('DEVICE_LIMIT_REACHED')) {
+          let sessions: unknown[] = [];
+          try {
+            const parsed = JSON.parse(msg);
+            const parsedSessions = parsed.sessions ?? parsed.data?.sessions;
+            if (Array.isArray(parsedSessions)) sessions = parsedSessions;
+          } catch {}
+          throw new Error(JSON.stringify({ code: 'DEVICE_LIMIT_REACHED', sessions }));
+        }
         if (error.type === 'CredentialsSignin') throw new Error(msg || 'Invalid credentials');
         throw new Error(msg || 'Something went wrong');
       }
