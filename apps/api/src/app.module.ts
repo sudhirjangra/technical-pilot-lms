@@ -11,6 +11,7 @@ import { ChaptersModule } from '@/features/chapters/chapters.module';
 import { CoursesModule } from '@/features/courses/courses.module';
 import { DoubtSessionsModule } from '@/features/doubt-sessions/doubt-sessions.module';
 import { EnrollmentsModule } from '@/features/enrollments/enrollments.module';
+import { VideosModule } from '@/features/videos/videos.module';
 import { FileModule } from '@/features/file/file.module';
 import { LessonsModule } from '@/features/lessons/lessons.module';
 import { PaymentsModule } from '@/features/payments/payments.module';
@@ -67,6 +68,7 @@ import { MailModule } from './features/mail/mail.module';
     ProgressModule,
     PermissionsModule,
     DoubtSessionsModule,
+    VideosModule,
   ],
 })
 export class AppModule {}

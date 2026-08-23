@@ -59,22 +59,35 @@ export class ProgressService {
     return data;
   }
 
-  /** Update progress — student can only update their own */
+  /** Get progress for a single lesson (returns null if not started) */
+  async getByLesson(lessonId: string, studentId: string) {
+    const { data } = await this.supabase
+      .from('progress')
+      .select('last_position_seconds, progress_percent, status')
+      .eq('lesson_id', lessonId)
+      .eq('student_id', studentId)
+      .maybeSingle();
+    return data;
+  }
+
+  /** Upsert progress — creates record on first save, updates on subsequent saves */
   async update(lessonId: string, studentId: string, dto: UpdateProgressDto) {
-    const updatePayload: Record<string, unknown> = { ...dto };
+    const payload: Record<string, unknown> = {
+      student_id: studentId,
+      lesson_id: lessonId,
+      ...dto,
+    };
     if (dto.status === 'completed') {
-      updatePayload.completed_at = new Date().toISOString();
-      updatePayload.progress_percent = 100;
+      payload.completed_at = new Date().toISOString();
+      payload.progress_percent = 100;
     }
 
     const { data, error } = await this.supabase
       .from('progress')
-      .update(updatePayload)
-      .eq('lesson_id', lessonId)
-      .eq('student_id', studentId)
+      .upsert(payload, { onConflict: 'student_id,lesson_id' })
       .select('*')
       .single();
-    if (error || !data) throw new NotFoundException('Progress record not found');
+    if (error) throw new BadRequestException(error.message);
     return data;
   }
 

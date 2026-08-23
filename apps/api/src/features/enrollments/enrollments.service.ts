@@ -84,6 +84,33 @@ export class EnrollmentsService {
     return data;
   }
 
+  /** Student self-enroll in a free (price=0) course */
+  async enrollFree(studentId: string, courseId: string) {
+    const { data: course, error: courseErr } = await this.supabase
+      .from('courses')
+      .select('id, status, price, discount_price')
+      .eq('id', courseId)
+      .single();
+    if (courseErr || !course) throw new NotFoundException('Course not found');
+    if (course.status !== 'published') throw new BadRequestException('Course is not available for enrollment');
+
+    const effectivePrice = course.discount_price ?? course.price;
+    if (Number(effectivePrice) !== 0) {
+      throw new BadRequestException('Course is not free — complete payment to enroll');
+    }
+
+    const { data, error } = await this.supabase
+      .from('enrollments')
+      .insert({ student_id: studentId, course_id: courseId, status: 'active' })
+      .select('*')
+      .single();
+    if (error) {
+      if (error.code === '23505') throw new ConflictException('Already enrolled in this course');
+      throw new BadRequestException(error.message);
+    }
+    return data;
+  }
+
   /** Verify a student is enrolled in a specific course (active enrollment) */
   async verifyEnrollment(studentId: string, courseId: string): Promise<boolean> {
     const { data } = await this.supabase

@@ -24,6 +24,8 @@ export const EnvSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
   PASSWORD_RESET_REDIRECT_URL: z.string().url().optional(),
+  VDOCIPHER_API_SECRET: z.string().min(1),
+  VDOCIPHER_OTP_TTL_SECONDS: z.coerce.number().default(300),
 });
 
 /**

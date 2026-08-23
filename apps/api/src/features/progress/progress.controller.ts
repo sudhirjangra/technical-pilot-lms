@@ -24,6 +24,15 @@ export class ProgressController {
     return this.progressService.initOrGet(dto, req.user.id);
   }
 
+  /** Student: get progress for a single lesson */
+  @Get('lesson/:lessonId')
+  getLessonProgress(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.progressService.getByLesson(lessonId, req.user.id);
+  }
+
   /** Student: update lesson progress (video position, completion) */
   @Patch(':lessonId')
   updateProgress(

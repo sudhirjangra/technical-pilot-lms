@@ -50,11 +50,36 @@
 - [x] Sidebar: added SidebarSeparator between nav groups
 
 ## Immediate Next Step
-- Add RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET to .env
-- Run migration 004 in Supabase
-- Test payment flow via Swagger (create order → verify payment)
-- Test enrollment + progress APIs
-- Build admin dashboard frontend (course management UI)
+- Test resume + progress tracking end-to-end: play 30s, reload page, confirm video starts at saved position
+- Test completion: watch >90% of a video, confirm progress.status = 'completed'
+- Verify security curtain appears on tab switch
+
+### Phase 3.1: Video Resume + Security Hardening (Done)
+- [x] GET /progress/lesson/:lessonId endpoint (NestJS) — returns last_position_seconds
+- [x] Next.js proxy routes: GET + PATCH /api/progress/[lessonId]
+- [x] VideoPlayer: fetches resume position → appends starttime= to iframe URL
+- [x] VideoPlayer: VdoCipher postMessage SDK listener (timeupdate/ended events) → debounced PATCH
+- [x] VideoPlayer: upsert progress (not update) — creates record on first save
+- [x] VideoPlayer: 3-position randomly-moving HTML watermark overlay (complementing server-side VdoCipher watermark)
+- [x] VideoPlayer: SecurityCurtain (black overlay) on tab switch / visibility change
+- [x] VideoPlayer: postMessage pause/play to player on visibility change
+- [x] VideoPlayer: keyboard shortcut blocking (PrintScreen, Win+Shift+S, Win+G, Cmd+Shift+3/4/5)
+- [x] VideoPlayer: saves position on unmount, on visibility hide
+- [x] VideoPlayer: auto-completes at 90% watch threshold
+
+### Phase 3.0: VdoCipher Video Streaming (Done)
+- [x] Migration 008: rename vimeo_video_id → vdocipher_video_id in video_lessons, drop vimeo_uri, add video_sessions table
+- [x] VideosModule (NestJS) — OTP endpoint with enrollment guard, concurrent session check, watermark, per-user rate limit (10/min), audit log
+- [x] Admin endpoints: create/update/delete/get video_lesson records
+- [x] OTP proxy route in Next.js (apps/web/app/api/video-otp/[lessonId]) — access token never reaches client
+- [x] VideoPlayer component — VdoCipher iframe, DRM-required allow="encrypted-media", loading/error states
+- [x] Lesson viewer page: /dashboard/courses/[courseId]/lessons/[lessonId]
+- [x] Course progress list links video lessons to viewer page
+- [x] Env vars: VDOCIPHER_API_SECRET, VDOCIPHER_OTP_TTL_SECONDS added to schema + .env.example
+- [x] Admin UI: "Link Video" / "Edit Video" button on video-type lessons in course detail page
+- [x] Admin UI: GET /videos/course/:courseId endpoint + server action for pre-loading video IDs
+- [x] Swagger: global bearer auth applied — token now sent on all requests after Authorize click
+- [x] Swagger URL: http://localhost:8000/api-docs (sign in → copy tokens.access_token → Authorize)
 
 ### Phase 2.0: Course CRUD (Done)
 - [x] Categories module — full CRUD, public read, admin write

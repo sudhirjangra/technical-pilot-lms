@@ -70,4 +70,15 @@ export class EnrollmentsController {
     const enrolled = await this.enrollmentsService.verifyEnrollment(req.user.id, courseId);
     return { enrolled };
   }
+
+  /** Student: enroll in a free (price=0) course without payment */
+  @Post('free/:courseId')
+  @Audit('enrollment.free')
+  async enrollFree(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.enrollmentsService.enrollFree(req.user.id, courseId);
+    return { message: 'Enrolled successfully', data };
+  }
 }

@@ -78,6 +78,22 @@ const ProgressSchema = z.object({
   overall_percent: z.number(),
 });
 
+export async function enrollFreeCourse(courseId: string): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+  const [error] = await safeFetch(
+    z.any(),
+    `/enrollments/free/${courseId}`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.user.tokens.access_token}` },
+      cache: 'no-store',
+    },
+  );
+  if (error) return { error: typeof error === 'string' ? error : 'Enrollment failed' };
+  return {};
+}
+
 export async function getCourseProgress(courseId: string) {
   const session = await auth();
   if (!session?.user) return null;

@@ -2,10 +2,11 @@
 -- PostgreSQL database dump
 --
 
-\restrict SK1Rqw3x9gRy00r1PEMX3ICZ3CP2TowB4Q7UGfUj3YD2BOls9vLlKPvsJ3UA0tG
+\restrict kfIgsd6kttE24YM3V50hKSVYmutIC6C0L4p5in8YfrqtyOakk7XXrYdD8OaQZGs
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-1.pgdg24.04+2)
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -23,6 +24,13 @@ SET row_security = off;
 --
 
 CREATE SCHEMA public;
+
+
+--
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON SCHEMA public IS 'standard public schema';
 
 
 --
@@ -272,7 +280,7 @@ CREATE TABLE public.courses (
     price numeric(10,2) DEFAULT 0 NOT NULL,
     discount_price numeric(10,2),
     status public.course_status DEFAULT 'draft'::public.course_status NOT NULL,
-    created_by uuid NOT NULL,
+    created_by uuid,
     published_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
@@ -316,7 +324,7 @@ CREATE TABLE public.doubt_bookings (
 
 CREATE TABLE public.doubt_slots (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_by uuid NOT NULL,
+    created_by uuid,
     date date NOT NULL,
     start_time time without time zone NOT NULL,
     end_time time without time zone NOT NULL,
@@ -474,7 +482,7 @@ CREATE TABLE public.sub_admin_permissions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     permissions text[] DEFAULT '{}'::text[] NOT NULL,
-    granted_by uuid NOT NULL,
+    granted_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -538,12 +546,26 @@ CREATE TABLE public.tests (
 CREATE TABLE public.video_lessons (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     lesson_id uuid NOT NULL,
-    vimeo_video_id text NOT NULL,
-    vimeo_uri text NOT NULL,
+    vdocipher_video_id text NOT NULL,
     duration_seconds integer,
     thumbnail_url text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: video_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.video_sessions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    lesson_id uuid NOT NULL,
+    ip_address text NOT NULL,
+    user_agent text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL
 );
 
 
@@ -568,8 +590,21 @@ COPY public.assignments (id, lesson_id, title, instructions, max_score, due_days
 --
 
 COPY public.audit_logs (id, user_id, action, resource_type, resource_id, ip_address, user_agent, metadata, created_at) FROM stdin;
-8adb0214-e1a8-4783-97a9-227b2fd8c616	fd160f1c-8449-4e78-94a6-304b8549bd75	doubt_slot.create	doubtsessions	\N	127.0.0.1	node	{"path": "/doubt-sessions/slots", "method": "POST"}	2026-07-31 18:50:59.513368+00
-c1876b02-7bde-4541-bcf2-c1edd954613f	fd160f1c-8449-4e78-94a6-304b8549bd75	course.create	courses	3d4b0d08-6696-419a-a23e-83e909ebfe95	127.0.0.1	node	{"path": "/courses", "method": "POST"}	2026-08-17 15:36:19.391269+00
+fbd5f824-dd09-47b4-8f71-9a545b0b291a	7e60fc74-55f0-45ad-9be4-f3fc283e7583	course.create	courses	6c96fbfb-cfc0-4369-b347-5bae621db709	127.0.0.1	node	{"path": "/courses", "method": "POST"}	2026-08-23 03:32:05.614637+00
+d463bd1e-f1c6-45a1-82e5-f34b57a191d6	7e60fc74-55f0-45ad-9be4-f3fc283e7583	video_lesson.create	videos	c6654397-d0d2-4932-bbf7-e7c3d3d9b373	127.0.0.1	node	{"path": "/videos/lesson", "method": "POST"}	2026-08-23 03:49:46.476399+00
+08a86f09-cff6-42df-947d-f203f5421678	c9ca39a2-7b90-42b6-bec9-4a725913d208	enrollment.free	enrollments	c966cdfb-195e-45c3-a92b-86a6dc4da273	127.0.0.1	node	{"path": "/enrollments/free/6c96fbfb-cfc0-4369-b347-5bae621db709", "method": "POST"}	2026-08-23 04:17:09.290402+00
+bad23a98-5393-4597-af0d-03a2c4e09090	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:25:24.400923+00
+faa97368-aa66-4238-9ab0-ca18c6bc1fb1	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:25:54.498278+00
+6fa22453-cf64-49c1-a149-d0f3378c9bf6	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:26:37.379219+00
+d2bad816-8ff1-4165-9897-393a55010011	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:27:05.870029+00
+22a29065-a45c-45ef-ad4f-f59b31380fc4	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:28:11.39039+00
+3a7d8f59-4752-4732-9aaf-b9fa8e3bfc53	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:28:56.666948+00
+406e3694-e2e8-4bf7-afc2-1dd0556f4262	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:29:23.183071+00
+46dd552d-c5dc-45d3-b4cf-027bd6ddc8f7	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:31:51.298313+00
+37b8f8b8-303a-4180-9c98-1337d89db20f	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:35:02.341395+00
+bac69086-7ad9-4a43-a227-c32fef2c75cd	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:35:07.665694+00
+44b42bf1-7605-46c2-b944-2353a3ef4743	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:38:23.258327+00
+ce0cd068-3189-416f-98c9-cc7fa6115959	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:39:15.679363+00
 \.
 
 
@@ -578,7 +613,7 @@ c1876b02-7bde-4541-bcf2-c1edd954613f	fd160f1c-8449-4e78-94a6-304b8549bd75	course
 --
 
 COPY public.categories (id, name, slug, description, thumbnail_url, sort_order, is_active) FROM stdin;
-c97af9d7-c129-4480-8b7e-7872d5897dc2	test	test	test	\N	1	t
+19a3cbdc-4617-4ae5-98cc-d981db020514	Vdo Cipher	vdocipher	\N	\N	0	t
 \.
 
 
@@ -587,6 +622,7 @@ c97af9d7-c129-4480-8b7e-7872d5897dc2	test	test	test	\N	1	t
 --
 
 COPY public.chapters (id, course_id, title, description, sort_order, is_published, created_at, updated_at) FROM stdin;
+6e973688-8715-492b-a85a-2ced4c79dc6b	6c96fbfb-cfc0-4369-b347-5bae621db709	vdo-cipher-dev	development	1	t	2026-08-23 03:46:27.319947+00	2026-08-23 03:46:27.319947+00
 \.
 
 
@@ -595,7 +631,7 @@ COPY public.chapters (id, course_id, title, description, sort_order, is_publishe
 --
 
 COPY public.courses (id, category_id, title, slug, description, thumbnail_url, price, discount_price, status, created_by, published_at, created_at, updated_at) FROM stdin;
-3d4b0d08-6696-419a-a23e-83e909ebfe95	c97af9d7-c129-4480-8b7e-7872d5897dc2	test	test	test	\N	0.00	\N	published	fd160f1c-8449-4e78-94a6-304b8549bd75	\N	2026-08-17 15:36:19.199195+00	2026-08-17 15:36:19.199195+00
+6c96fbfb-cfc0-4369-b347-5bae621db709	19a3cbdc-4617-4ae5-98cc-d981db020514	vdo-cipher-dev	vdo-cipher-abc	This is just for development.	\N	0.00	\N	published	7e60fc74-55f0-45ad-9be4-f3fc283e7583	\N	2026-08-23 03:32:05.308505+00	2026-08-23 03:32:05.308505+00
 \.
 
 
@@ -604,6 +640,8 @@ COPY public.courses (id, category_id, title, slug, description, thumbnail_url, p
 --
 
 COPY public.devices (id, user_id, device_fingerprint, device_name, platform, last_active_at, created_at) FROM stdin;
+317fd3fc-c4d3-4ab9-a5a8-3ba58c2247e9	7e60fc74-55f0-45ad-9be4-f3fc283e7583	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjdlNjBmYzc0LTU1ZjAtNDVhZC05YmU0LWYzZmMyODNlNzU4MyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzQ1NTQyMSwiZXhwIjoxNzkwMDQ3NDIxfQ.5HYgyoCwcdNYE8hRfvu_3HHUhNxFZ-8T8O_nPU46VSw	string	web	2026-08-23 03:23:41.600136+00	2026-08-23 03:23:41.600136+00
+adbdf466-9b36-4ea8-b9cd-d6fb5b0d2835	c9ca39a2-7b90-42b6-bec9-4a725913d208	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM5Y2EzOWEyLTdiOTAtNDJiNi1iZWM5LTRhNzI1OTEzZDIwOCIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4NzQ1NzE1OCwiZXhwIjoxNzkwMDQ5MTU4fQ.ZTzIJQOolJEOJr0tdEo3ZSHRQ0nGTHaHvEfV0VP-l0Y	unknown	web	2026-08-23 03:52:38.415426+00	2026-08-23 03:52:38.415426+00
 \.
 
 
@@ -620,7 +658,6 @@ COPY public.doubt_bookings (id, slot_id, student_id, status, booked_at, cancelle
 --
 
 COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_minutes, max_bookings, current_bookings, status, updated_at, created_at) FROM stdin;
-b290b53a-faf1-43bb-8d36-a65f07af1dee	fd160f1c-8449-4e78-94a6-304b8549bd75	2026-08-01	10:00:00	10:30:00	30	1	0	available	2026-08-21 10:22:40.302693+00	2026-08-21 10:22:54.672342+00
 \.
 
 
@@ -629,6 +666,7 @@ b290b53a-faf1-43bb-8d36-a65f07af1dee	fd160f1c-8449-4e78-94a6-304b8549bd75	2026-0
 --
 
 COPY public.enrollments (id, student_id, course_id, enrolled_at, status, completed_at, updated_at) FROM stdin;
+c966cdfb-195e-45c3-a92b-86a6dc4da273	c9ca39a2-7b90-42b6-bec9-4a725913d208	6c96fbfb-cfc0-4369-b347-5bae621db709	2026-08-23 04:17:09.089429+00	active	\N	2026-08-23 04:17:09.089429+00
 \.
 
 
@@ -637,6 +675,7 @@ COPY public.enrollments (id, student_id, course_id, enrolled_at, status, complet
 --
 
 COPY public.lessons (id, chapter_id, title, description, lesson_type, sort_order, is_published, duration_seconds, created_at, updated_at) FROM stdin;
+13163db6-8242-4b3e-8ff7-68fa89b65e31	6e973688-8715-492b-a85a-2ced4c79dc6b	Frist Video	\N	video	1	t	\N	2026-08-23 03:49:09.110297+00	2026-08-23 03:49:09.110297+00
 \.
 
 
@@ -661,7 +700,8 @@ COPY public.pdf_notes (id, lesson_id, file_path, file_size_bytes, page_count, cr
 --
 
 COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at) FROM stdin;
-fd160f1c-8449-4e78-94a6-304b8549bd75	technicalpilot@atomicmail.io	student	technicalpilot	\N	\N	t	2026-07-31 10:28:02.126219+00	2026-08-17 19:10:12.142173+00
+7e60fc74-55f0-45ad-9be4-f3fc283e7583	technicalpilot@atomicmail.io	admin	technicalpilot	9898989898	\N	t	2026-08-22 08:14:11.882448+00	2026-08-22 09:17:54.265208+00
+c9ca39a2-7b90-42b6-bec9-4a725913d208	luck28kudida@atomicmail.io	student	luck28kudida	9898878776	\N	t	2026-08-23 03:51:52.979661+00	2026-08-23 03:51:53.277309+00
 \.
 
 
@@ -725,7 +765,30 @@ COPY public.tests (id, lesson_id, title, time_limit_seconds, passing_score_perce
 -- Data for Name: video_lessons; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.video_lessons (id, lesson_id, vimeo_video_id, vimeo_uri, duration_seconds, thumbnail_url, created_at, updated_at) FROM stdin;
+COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, thumbnail_url, created_at, updated_at) FROM stdin;
+c6654397-d0d2-4932-bbf7-e7c3d3d9b373	13163db6-8242-4b3e-8ff7-68fa89b65e31	44948cf638d74342a2cb231889d11eb3	\N	\N	2026-08-23 03:49:46.165137+00	2026-08-23 03:49:46.165137+00
+\.
+
+
+--
+-- Data for Name: video_sessions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.video_sessions (id, user_id, lesson_id, ip_address, user_agent, created_at, expires_at) FROM stdin;
+21df614b-95b1-408b-a7e9-11e34dff8dfc	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:20:00.710958+00	2026-08-23 05:20:00.593+00
+a158530b-ee1c-4654-9607-bd81a9ae6853	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:21:21.000392+00	2026-08-23 05:21:20.88+00
+975776c8-9478-4577-9661-692ffac0fcc0	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:25:23.800974+00	2026-08-23 05:25:23.671+00
+5bfd3ec0-a150-4551-bb7e-9d0f06ac3900	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:25:53.987285+00	2026-08-23 05:25:53.876+00
+ff344567-0d81-4a11-98b5-6bb0fc0ec6bc	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:26:36.79193+00	2026-08-23 05:26:36.681+00
+7b3fcb59-bc54-438f-ae95-787a1c8d6937	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:27:05.344954+00	2026-08-23 05:27:05.237+00
+c993d656-827b-42ea-bad6-f1d7b42d8d41	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:28:10.838518+00	2026-08-23 05:28:10.727+00
+7fc72979-d649-4a90-8806-08f6b52a8e69	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:28:56.053937+00	2026-08-23 05:28:55.943+00
+501b79d4-9703-49d9-947d-3726e1cc7a28	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:29:22.576913+00	2026-08-23 05:29:22.467+00
+a68e085f-e57b-4a26-a9c3-5186152608ee	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:31:50.654153+00	2026-08-23 05:31:50.54+00
+314ba012-89a5-4698-be5c-480c8d20bdd7	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:35:01.75073+00	2026-08-23 05:35:01.628+00
+42f37e5f-1cb4-4d39-bbe2-8034fa8fadf0	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:35:07.158355+00	2026-08-23 05:35:07.054+00
+ce24c1c4-2cb0-4051-953d-ebc102c9a323	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:38:22.650099+00	2026-08-23 05:38:22.531+00
+94cb16a7-16d9-4f97-a3f7-64914d62cc82	c9ca39a2-7b90-42b6-bec9-4a725913d208	13163db6-8242-4b3e-8ff7-68fa89b65e31	127.0.0.1	node	2026-08-23 04:39:15.170591+00	2026-08-23 05:39:15.06+00
 \.
 
 
@@ -983,6 +1046,14 @@ ALTER TABLE ONLY public.video_lessons
 
 ALTER TABLE ONLY public.video_lessons
     ADD CONSTRAINT video_lessons_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: video_sessions video_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_sessions
+    ADD CONSTRAINT video_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1259,6 +1330,13 @@ CREATE INDEX idx_video_lessons_lesson_id ON public.video_lessons USING btree (le
 
 
 --
+-- Name: video_sessions_user_id_lesson_id_expires_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX video_sessions_user_id_lesson_id_expires_at_idx ON public.video_sessions USING btree (user_id, lesson_id, expires_at);
+
+
+--
 -- Name: assignment_submissions assignment_submissions_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -1444,7 +1522,7 @@ ALTER TABLE ONLY public.courses
 --
 
 ALTER TABLE ONLY public.courses
-    ADD CONSTRAINT courses_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id);
+    ADD CONSTRAINT courses_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 
 --
@@ -1476,7 +1554,7 @@ ALTER TABLE ONLY public.doubt_bookings
 --
 
 ALTER TABLE ONLY public.doubt_slots
-    ADD CONSTRAINT doubt_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id);
+    ADD CONSTRAINT doubt_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 
 --
@@ -1572,7 +1650,7 @@ ALTER TABLE ONLY public.questions
 --
 
 ALTER TABLE ONLY public.sub_admin_permissions
-    ADD CONSTRAINT sub_admin_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.profiles(id);
+    ADD CONSTRAINT sub_admin_permissions_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 
 --
@@ -1637,6 +1715,22 @@ ALTER TABLE ONLY public.tests
 
 ALTER TABLE ONLY public.video_lessons
     ADD CONSTRAINT video_lessons_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id) ON DELETE CASCADE;
+
+
+--
+-- Name: video_sessions video_sessions_lesson_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_sessions
+    ADD CONSTRAINT video_sessions_lesson_id_fkey FOREIGN KEY (lesson_id) REFERENCES public.lessons(id) ON DELETE CASCADE;
+
+
+--
+-- Name: video_sessions video_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.video_sessions
+    ADD CONSTRAINT video_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
 --
@@ -1912,6 +2006,13 @@ CREATE POLICY "Enrolled students read video lessons" ON public.video_lessons FOR
 
 
 --
+-- Name: video_sessions Service role manages video sessions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Service role manages video sessions" ON public.video_sessions USING ((public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role])));
+
+
+--
 -- Name: test_answers Students insert own answers; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1960,6 +2061,13 @@ CREATE POLICY "Students manage own attempts" ON public.test_attempts USING ((aut
 --
 
 CREATE POLICY "Students manage own submissions" ON public.assignment_submissions USING ((auth.uid() = student_id));
+
+
+--
+-- Name: video_sessions Students read own video sessions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Students read own video sessions" ON public.video_sessions FOR SELECT USING ((auth.uid() = user_id));
 
 
 --
@@ -2281,8 +2389,14 @@ ALTER TABLE public.tests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_lessons ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: video_sessions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.video_sessions ENABLE ROW LEVEL SECURITY;
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SK1Rqw3x9gRy00r1PEMX3ICZ3CP2TowB4Q7UGfUj3YD2BOls9vLlKPvsJ3UA0tG
+\unrestrict kfIgsd6kttE24YM3V50hKSVYmutIC6C0L4p5in8YfrqtyOakk7XXrYdD8OaQZGs
 

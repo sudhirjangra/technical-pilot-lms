@@ -1,9 +1,12 @@
 'use client';
 
-import { PublicCourse } from '@/server/student/courses.server';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { PublicCourse, enrollFreeCourse } from '@/server/student/courses.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
+import { toast } from '@repo/shadcn/sonner';
 import Link from 'next/link';
 
 export function CourseViewClient({
@@ -15,6 +18,24 @@ export function CourseViewClient({
   isEnrolled: boolean;
   isLoggedIn: boolean;
 }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const effectivePrice = course.discount_price ?? course.price;
+  const isFree = Number(effectivePrice) === 0;
+
+  const handleEnrollFree = async () => {
+    setLoading(true);
+    const result = await enrollFreeCourse(course.id);
+    setLoading(false);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Enrolled successfully!');
+      router.refresh();
+    }
+  };
+
   return (
     <section className="min-h-dvh container py-8 max-w-4xl mx-auto">
       <Link href="/courses" className="text-muted-foreground hover:underline text-sm">
@@ -41,7 +62,9 @@ export function CourseViewClient({
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                {course.discount_price ? (
+                {isFree ? (
+                  <span className="text-3xl font-bold text-green-600">Free</span>
+                ) : course.discount_price ? (
                   <>
                     <span className="text-3xl font-bold">₹{course.discount_price}</span>
                     <span className="text-lg text-muted-foreground line-through">₹{course.price}</span>
@@ -60,7 +83,13 @@ export function CourseViewClient({
                     <Button size="lg">Continue Learning</Button>
                   </Link>
                 ) : isLoggedIn ? (
-                  <Button size="lg">Enroll Now</Button>
+                  isFree ? (
+                    <Button size="lg" onClick={handleEnrollFree} disabled={loading}>
+                      {loading ? 'Enrolling...' : 'Enroll for Free'}
+                    </Button>
+                  ) : (
+                    <Button size="lg">Pay ₹{effectivePrice} to Enroll</Button>
+                  )
                 ) : (
                   <Link href="/auth/sign-in">
                     <Button size="lg" variant="outline">Sign in to Enroll</Button>

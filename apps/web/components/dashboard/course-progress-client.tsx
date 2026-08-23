@@ -26,6 +26,7 @@ interface ChapterProgress {
 }
 
 export function CourseProgressClient({
+  courseId,
   progress,
 }: {
   courseId: string;
@@ -65,8 +66,16 @@ export function CourseProgressClient({
             <CardContent className="space-y-1">
               {chapter.lessons.map((lesson, li) => {
                 const status = lesson.progress?.status ?? 'not_started';
+                const isVideo = lesson.lesson_type === 'video';
+                const href = isVideo
+                  ? `/dashboard/courses/${courseId}/lessons/${lesson.id}`
+                  : undefined;
                 return (
-                  <div key={lesson.id} className="flex items-center justify-between py-2 px-3 rounded hover:bg-muted/50">
+                  <div
+                    key={lesson.id}
+                    className={`flex items-center justify-between py-2 px-3 rounded hover:bg-muted/50 ${isVideo ? 'cursor-pointer' : ''}`}
+                    onClick={() => isVideo && href && (window.location.href = href)}
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground w-6">{li + 1}.</span>
                       <span className="text-sm">{lesson.title}</span>

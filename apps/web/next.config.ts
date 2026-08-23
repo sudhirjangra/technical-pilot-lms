@@ -36,7 +36,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://api.razorpay.com",
-              "frame-src 'self' https://api.razorpay.com https://player.vimeo.com",
+              "frame-src 'self' https://api.razorpay.com https://player.vimeo.com https://player.vdocipher.com",
             ].join('; '),
           },
         ],
