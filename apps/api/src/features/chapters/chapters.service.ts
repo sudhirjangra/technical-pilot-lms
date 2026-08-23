@@ -44,7 +44,9 @@ export class ChaptersService {
   async findByCourse(courseId: string) {
     const { data, error } = await this.supabase
       .from('chapters')
-      .select('*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)')
+      .select(
+        '*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)',
+      )
       .eq('course_id', courseId)
       .order('sort_order', { ascending: true });
     if (error) throw new BadRequestException(error.message);
@@ -54,7 +56,9 @@ export class ChaptersService {
   async findOne(id: string) {
     const { data, error } = await this.supabase
       .from('chapters')
-      .select('*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)')
+      .select(
+        '*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)',
+      )
       .eq('id', id)
       .single();
     if (error) throw new NotFoundException('Chapter not found');
@@ -69,7 +73,8 @@ export class ChaptersService {
       .select()
       .single();
     if (error) {
-      if (error.code === 'PGRST116') throw new NotFoundException('Chapter not found');
+      if (error.code === 'PGRST116')
+        throw new NotFoundException('Chapter not found');
       throw new BadRequestException(error.message);
     }
     return data;

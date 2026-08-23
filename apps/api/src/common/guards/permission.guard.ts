@@ -1,3 +1,4 @@
+import { PERMISSIONS_KEY } from '@/common/decorators/permissions.decorator';
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import {
   CanActivate,
@@ -8,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { PERMISSIONS_KEY } from '@/common/decorators/permissions.decorator';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -18,10 +18,10 @@ export class PermissionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const required = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!required || required.length === 0) return true;
 
     const { user } = context.switchToHttp().getRequest();

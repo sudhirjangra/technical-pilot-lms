@@ -1,5 +1,6 @@
 'use client';
 
+import Script from 'next/script';
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface VideoPlayerProps {
@@ -18,52 +19,61 @@ interface WatermarkPos {
   opacity: number;
 }
 
+// How often we auto-save position to server (ms)
 const SAVE_INTERVAL_MS = 8000;
+// Mark lesson completed when this fraction of video watched
 const COMPLETION_THRESHOLD = 0.9;
 
-// Multi-position watermark that moves every few seconds
+declare global {
+  interface Window {
+    VdoPlayer?: {
+      getInstance: (iframe: HTMLIFrameElement) => VdoPlayerInstance;
+    };
+    onVdoPlayerV2APIReady?: () => void;
+  }
+}
+
+interface VdoPlayerInstance {
+  video: {
+    currentTime: number;
+    duration: number;
+    paused: boolean;
+    play: () => Promise<void>;
+    pause: () => Promise<void>;
+    addEventListener: (event: string, handler: () => void) => void;
+    removeEventListener: (event: string, handler: () => void) => void;
+  };
+  api: {
+    getTotalPlayed: () => Promise<number>;
+    getTotalCovered: () => Promise<number>;
+  };
+}
+
+// Multi-position randomly-moving overlay watermark
 function WatermarkOverlay({ email }: { email: string }) {
   const [positions, setPositions] = useState<WatermarkPos[]>([
-    { x: 10, y: 10, opacity: 0.22 },
-    { x: 55, y: 45, opacity: 0.18 },
-    { x: 20, y: 75, opacity: 0.20 },
+    { x: 8, y: 8, opacity: 0.22 },
+    { x: 52, y: 42, opacity: 0.18 },
+    { x: 18, y: 72, opacity: 0.20 },
   ]);
-  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const move = () => {
+    const interval = setInterval(() => {
       setPositions([
-        { x: Math.random() * 60 + 5, y: Math.random() * 30 + 5, opacity: 0.18 + Math.random() * 0.1 },
-        { x: Math.random() * 60 + 5, y: Math.random() * 30 + 40, opacity: 0.16 + Math.random() * 0.1 },
-        { x: Math.random() * 60 + 5, y: Math.random() * 30 + 65, opacity: 0.17 + Math.random() * 0.1 },
+        { x: Math.random() * 65 + 5, y: Math.random() * 28 + 4, opacity: 0.18 + Math.random() * 0.1 },
+        { x: Math.random() * 65 + 5, y: Math.random() * 28 + 38, opacity: 0.16 + Math.random() * 0.1 },
+        { x: Math.random() * 65 + 5, y: Math.random() * 28 + 68, opacity: 0.17 + Math.random() * 0.1 },
       ]);
-    };
-
-    const interval = setInterval(move, 3500);
-
-    const onVisibility = () => {
-      if (document.hidden) {
-        setVisible(false);
-      } else {
-        setVisible(true);
-      }
-    };
-
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
+    }, 3500);
+    return () => clearInterval(interval);
   }, []);
 
-  if (!visible) return null;
-
-  const label = email.length > 32 ? email.slice(0, 29) + '…' : email;
+  const label = email.length > 36 ? email.slice(0, 33) + '…' : email;
   const date = new Date().toLocaleDateString('en-IN');
 
   return (
     <div
-      className="absolute inset-0 pointer-events-none select-none"
+      className="absolute inset-0 pointer-events-none select-none overflow-hidden"
       style={{ zIndex: 10 }}
       aria-hidden="true"
     >
@@ -81,7 +91,7 @@ function WatermarkOverlay({ email }: { email: string }) {
             fontWeight: 600,
             letterSpacing: '0.03em',
             whiteSpace: 'nowrap',
-            textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
             userSelect: 'none',
             pointerEvents: 'none',
           }}
@@ -93,35 +103,20 @@ function WatermarkOverlay({ email }: { email: string }) {
   );
 }
 
-// Black curtain shown on visibility loss (tab switch / window blur)
-function SecurityCurtain({ show }: { show: boolean }) {
-  if (!show) return null;
-  return (
-    <div
-      className="absolute inset-0 bg-black flex items-center justify-center"
-      style={{ zIndex: 20 }}
-    >
-      <p className="text-white text-sm opacity-70 select-none">
-        Switch back to continue watching
-      </p>
-    </div>
-  );
-}
-
 export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
   const [otpData, setOtpData] = useState<OtpData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resumeAt, setResumeAt] = useState(0);
   const [hidden, setHidden] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
 
-  const positionRef = useRef(0);
-  const durationRef = useRef(0);
-  const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const savedRef = useRef(0); // last saved position — avoid redundant writes
+  const playerRef = useRef<VdoPlayerInstance | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSavedRef = useRef(0);
 
-  // ── Fetch resume position ─────────────────────────────────────────────────
+  // ── Fetch resume position from server ────────────────────────────────────
   useEffect(() => {
     fetch(`/api/progress/${lessonId}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
@@ -134,39 +129,42 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
   }, [lessonId]);
 
   // ── Fetch OTP ─────────────────────────────────────────────────────────────
-  const fetchOtp = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/video-otp/${lessonId}`, {
-        method: 'POST',
-        cache: 'no-store',
-      });
-      if (res.status === 403) { setError('You are not enrolled in this course.'); return; }
-      if (res.status === 404) { setError('Video not available.'); return; }
-      if (!res.ok) { setError('Playback unavailable. Try refreshing.'); return; }
-      const json = await res.json();
-      setOtpData(json);
-    } catch {
-      setError('Network error. Please check your connection.');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    async function fetchOtp() {
+      try {
+        const res = await fetch(`/api/video-otp/${lessonId}`, {
+          method: 'POST',
+          cache: 'no-store',
+        });
+        if (res.status === 403) { setError('You are not enrolled in this course.'); return; }
+        if (res.status === 404) { setError('Video not available.'); return; }
+        if (!res.ok) { setError('Playback unavailable. Try refreshing.'); return; }
+        setOtpData(await res.json());
+      } catch {
+        setError('Network error. Please check your connection.');
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchOtp();
   }, [lessonId]);
 
-  useEffect(() => { fetchOtp(); }, [fetchOtp]);
+  // ── Save progress helper ─────────────────────────────────────────────────
+  const saveProgress = useCallback((posSeconds: number, completed: boolean) => {
+    const pos = Math.floor(posSeconds);
+    if (!completed && Math.abs(pos - lastSavedRef.current) < 4) return;
+    lastSavedRef.current = pos;
 
-  // ── Save progress ─────────────────────────────────────────────────────────
-  const saveProgress = useCallback((pos: number, completed: boolean) => {
-    if (Math.abs(pos - savedRef.current) < 3 && !completed) return; // skip tiny diffs
-    savedRef.current = pos;
+    const player = playerRef.current;
+    const duration = player?.video?.duration ?? 0;
     const dto: Record<string, unknown> = {
-      last_position_seconds: Math.floor(pos),
+      last_position_seconds: pos,
       status: completed ? 'completed' : 'in_progress',
     };
-    if (durationRef.current > 0) {
-      dto.progress_percent = Math.min(100, Math.round((pos / durationRef.current) * 100));
+    if (duration > 0) {
+      dto.progress_percent = Math.min(100, Math.round((pos / duration) * 100));
     }
+
     fetch(`/api/progress/${lessonId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -174,80 +172,126 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
     }).catch(() => null);
   }, [lessonId]);
 
-  // ── Periodic save every SAVE_INTERVAL_MS ─────────────────────────────────
+  // ── Wire VdoCipher SDK after both iframe + api.js are ready ──────────────
+  const initPlayer = useCallback(() => {
+    if (!iframeRef.current || !window.VdoPlayer) return;
+
+    const player = window.VdoPlayer.getInstance(iframeRef.current);
+    playerRef.current = player;
+
+    // Seek to saved position once metadata is loaded
+    if (resumeAt > 5) {
+      const onLoaded = () => {
+        player.video.currentTime = resumeAt;
+        player.video.removeEventListener('loadedmetadata', onLoaded);
+      };
+      player.video.addEventListener('loadedmetadata', onLoaded);
+    }
+
+    // Track position changes
+    const onTimeUpdate = () => {
+      const pos = player.video.currentTime;
+      const dur = player.video.duration;
+      if (dur > 0 && pos / dur >= COMPLETION_THRESHOLD) {
+        saveProgress(pos, true);
+      }
+    };
+    player.video.addEventListener('timeupdate', onTimeUpdate);
+
+    // Save on natural end
+    const onEnded = () => {
+      saveProgress(player.video.currentTime, true);
+    };
+    player.video.addEventListener('ended', onEnded);
+
+    return () => {
+      player.video.removeEventListener('timeupdate', onTimeUpdate);
+      player.video.removeEventListener('ended', onEnded);
+    };
+  }, [resumeAt, saveProgress]);
+
+  // Re-init when both otp data is set and api.js has loaded
+  useEffect(() => {
+    if (!otpData || !apiReady) return;
+    let cleanup: (() => void) | undefined;
+    // iframe needs a tick to be in the DOM after otpData is set
+    const t = setTimeout(() => {
+      cleanup = initPlayer();
+    }, 500);
+    return () => {
+      clearTimeout(t);
+      cleanup?.();
+    };
+  }, [otpData, apiReady, initPlayer]);
+
+  // ── Periodic save ────────────────────────────────────────────────────────
   useEffect(() => {
     saveTimerRef.current = setInterval(() => {
-      if (positionRef.current > 0) saveProgress(positionRef.current, false);
+      const player = playerRef.current;
+      if (player && !player.video.paused) {
+        saveProgress(player.video.currentTime, false);
+      }
     }, SAVE_INTERVAL_MS);
     return () => {
       if (saveTimerRef.current) clearInterval(saveTimerRef.current);
     };
   }, [saveProgress]);
 
-  // ── VdoCipher postMessage events ──────────────────────────────────────────
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // VdoCipher sends messages from player.vdocipher.com
-      if (!event.origin.includes('vdocipher.com')) return;
-      const msg = event.data;
-      if (!msg || typeof msg !== 'object') return;
-
-      if (msg.event === 'timeupdate' && typeof msg.currentTime === 'number') {
-        positionRef.current = msg.currentTime;
-        if (typeof msg.duration === 'number' && msg.duration > 0) {
-          durationRef.current = msg.duration;
-        }
-        // Auto-complete at 90%
-        if (
-          durationRef.current > 0 &&
-          msg.currentTime / durationRef.current >= COMPLETION_THRESHOLD
-        ) {
-          saveProgress(msg.currentTime, true);
-        }
-      }
-
-      if (msg.event === 'ended') {
-        saveProgress(positionRef.current, true);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [saveProgress]);
-
-  // ── Visibility / focus — hide video when tab loses focus ─────────────────
+  // ── Visibility / focus — black screen + pause on hide ────────────────────
   useEffect(() => {
     const onVisibility = () => {
       const isHidden = document.hidden;
       setHidden(isHidden);
-      // Pause via postMessage to player
-      if (iframeRef.current?.contentWindow) {
-        iframeRef.current.contentWindow.postMessage(
-          { event: isHidden ? 'pause' : 'play' },
-          'https://player.vdocipher.com',
-        );
-      }
-      // Save position on hide
-      if (isHidden && positionRef.current > 0) {
-        saveProgress(positionRef.current, false);
+      const player = playerRef.current;
+      if (player) {
+        if (isHidden) {
+          player.video.pause();
+          saveProgress(player.video.currentTime, false);
+        }
+        // Don't auto-play on return — user should resume manually
       }
     };
 
+    const onBlur = () => {
+      setHidden(true);
+      const player = playerRef.current;
+      if (player) {
+        player.video.pause();
+        saveProgress(player.video.currentTime, false);
+      }
+    };
+
+    const onFocus = () => {
+      setHidden(false);
+    };
+
     document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [saveProgress]);
 
-  // ── Block common screenshot/recording keyboard shortcuts ─────────────────
+  // ── Block screenshot keyboard shortcuts ──────────────────────────────────
   useEffect(() => {
     const block = (e: KeyboardEvent) => {
-      // PrintScreen, Win+Shift+S, Win+G (Xbox game bar), Cmd+Shift+3/4/5
+      // PrintScreen (all OS), Win+Shift+S, Cmd+Shift+3/4/5 (macOS)
       if (
         e.key === 'PrintScreen' ||
         (e.shiftKey && e.metaKey && ['3', '4', '5', 's', 'S'].includes(e.key)) ||
-        (e.shiftKey && e.ctrlKey && ['s', 'S'].includes(e.key))
+        (e.shiftKey && (e.ctrlKey || e.metaKey) && ['s', 'S'].includes(e.key))
       ) {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // Flash the curtain briefly as deterrent
+        setHidden(true);
+        setTimeout(() => setHidden(false), 1500);
+        const player = playerRef.current;
+        if (player) player.video.pause();
       }
     };
     document.addEventListener('keydown', block, { capture: true });
@@ -257,7 +301,11 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
   // ── Save on unmount ───────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (positionRef.current > 0) saveProgress(positionRef.current, false);
+      const player = playerRef.current;
+      if (player) {
+        const pos = player.video.currentTime;
+        if (pos > 0) saveProgress(pos, false);
+      }
     };
   }, [saveProgress]);
 
@@ -279,26 +327,54 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
 
   if (!otpData) return null;
 
-  const iframeSrc =
-    `https://player.vdocipher.com/v2/?otp=${otpData.otp}&playbackInfo=${otpData.playbackInfo}` +
-    (resumeAt > 5 ? `&starttime=${resumeAt}` : '');
+  const iframeSrc = `https://player.vdocipher.com/v2/?otp=${otpData.otp}&playbackInfo=${otpData.playbackInfo}`;
 
   return (
-    <div
-      className="relative w-full rounded-lg overflow-hidden bg-black"
-      style={{ paddingTop: '56.25%' }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      <iframe
-        ref={iframeRef}
-        src={iframeSrc}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-        allow="encrypted-media *"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
+    <>
+      {/* VdoCipher player SDK — loaded once per page */}
+      <Script
+        src="https://player.vdocipher.com/v2/api.js"
+        strategy="afterInteractive"
+        onReady={() => setApiReady(true)}
+        onLoad={() => setApiReady(true)}
       />
-      {userEmail && <WatermarkOverlay email={userEmail} />}
-      <SecurityCurtain show={hidden} />
-    </div>
+
+      <div
+        className="relative w-full rounded-lg overflow-hidden bg-black"
+        style={{ paddingTop: '56.25%' }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <iframe
+          ref={iframeRef}
+          src={iframeSrc}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            border: 'none',
+          }}
+          allow="encrypted-media *"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+
+        {/* HTML watermark overlay — rendered on top of iframe */}
+        {userEmail && <WatermarkOverlay email={userEmail} />}
+
+        {/* Security curtain — covers video on tab switch / screenshot key / window blur */}
+        {hidden && (
+          <div
+            className="absolute inset-0 bg-black flex items-center justify-center"
+            style={{ zIndex: 20 }}
+          >
+            <p className="text-white/60 text-sm select-none">
+              Click here to continue watching
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

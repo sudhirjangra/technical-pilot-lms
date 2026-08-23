@@ -1,9 +1,12 @@
+import {
+  SUPABASE_ADMIN,
+  SUPABASE_ANON,
+} from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Logger } from 'nestjs-pino';
-import { SUPABASE_ADMIN, SUPABASE_ANON } from '@/common/modules/supabase.module';
-import { MailService } from '@/features/mail/mail.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from 'nestjs-pino';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -23,8 +26,20 @@ describe('AuthController', () => {
       update: jest.fn().mockReturnThis(),
       auth: {
         admin: {
-          createUser: jest.fn().mockResolvedValue({ data: { user: { id: 'test-id', email: 'test@test.com' } }, error: null }),
-          getUserById: jest.fn().mockResolvedValue({ data: { user: { id: 'test-id', email: 'test@test.com', email_confirmed_at: null } }, error: null }),
+          createUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-id', email: 'test@test.com' } },
+            error: null,
+          }),
+          getUserById: jest.fn().mockResolvedValue({
+            data: {
+              user: {
+                id: 'test-id',
+                email: 'test@test.com',
+                email_confirmed_at: null,
+              },
+            },
+            error: null,
+          }),
           updateUserById: jest.fn().mockResolvedValue({ error: null }),
           deleteUser: jest.fn().mockResolvedValue({ error: null }),
           signOut: jest.fn().mockResolvedValue({ error: null }),
@@ -60,7 +75,8 @@ describe('AuthController', () => {
                 REFRESH_TOKEN_SECRET: 'test-refresh-secret',
                 ACCESS_TOKEN_EXPIRATION: '15m',
                 REFRESH_TOKEN_EXPIRATION: '7d',
-                PASSWORD_RESET_REDIRECT_URL: 'http://localhost:3000/reset-password',
+                PASSWORD_RESET_REDIRECT_URL:
+                  'http://localhost:3000/reset-password',
               };
               return values[key];
             }),

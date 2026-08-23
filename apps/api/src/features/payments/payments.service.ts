@@ -21,7 +21,9 @@ export class PaymentsService {
     private readonly config: ConfigService,
   ) {
     this.razorpayKeyId = this.config.getOrThrow<string>('RAZORPAY_KEY_ID');
-    this.razorpayKeySecret = this.config.getOrThrow<string>('RAZORPAY_KEY_SECRET');
+    this.razorpayKeySecret = this.config.getOrThrow<string>(
+      'RAZORPAY_KEY_SECRET',
+    );
   }
 
   /** Create a Razorpay order and store pending payment record */
@@ -33,7 +35,8 @@ export class PaymentsService {
       .eq('id', dto.course_id)
       .single();
     if (courseErr || !course) throw new NotFoundException('Course not found');
-    if (course.status !== 'published') throw new BadRequestException('Course is not available for purchase');
+    if (course.status !== 'published')
+      throw new BadRequestException('Course is not available for purchase');
 
     // Check not already enrolled
     const { data: existing } = await this.supabase
@@ -42,10 +45,13 @@ export class PaymentsService {
       .eq('student_id', studentId)
       .eq('course_id', dto.course_id)
       .single();
-    if (existing) throw new BadRequestException('Already enrolled in this course');
+    if (existing)
+      throw new BadRequestException('Already enrolled in this course');
 
     const amount = course.discount_price ?? course.price;
-    const discountAmount = course.discount_price ? course.price - course.discount_price : 0;
+    const discountAmount = course.discount_price
+      ? course.price - course.discount_price
+      : 0;
 
     // Create Razorpay order via API
     const orderPayload = {
@@ -66,7 +72,9 @@ export class PaymentsService {
 
     if (!razorpayRes.ok) {
       const err = await razorpayRes.json();
-      throw new BadRequestException(err.error?.description ?? 'Failed to create payment order');
+      throw new BadRequestException(
+        err.error?.description ?? 'Failed to create payment order',
+      );
     }
 
     const order = await razorpayRes.json();
@@ -122,20 +130,27 @@ export class PaymentsService {
       .eq('status', 'pending')
       .select('*')
       .single();
-    if (error || !payment) throw new BadRequestException('Payment record not found or already processed');
+    if (error || !payment)
+      throw new BadRequestException(
+        'Payment record not found or already processed',
+      );
 
     // Create enrollment
-    await this.supabase.from('enrollments').upsert(
-      { student_id: studentId, course_id: payment.course_id },
-      { onConflict: 'student_id,course_id' },
-    );
+    await this.supabase
+      .from('enrollments')
+      .upsert(
+        { student_id: studentId, course_id: payment.course_id },
+        { onConflict: 'student_id,course_id' },
+      );
 
     return { message: 'Payment verified, enrollment activated', payment };
   }
 
   /** Razorpay webhook handler — server-to-server signature verification */
   async handleWebhook(body: Record<string, unknown>, signature: string) {
-    const webhookSecret = this.config.getOrThrow<string>('RAZORPAY_WEBHOOK_SECRET');
+    const webhookSecret = this.config.getOrThrow<string>(
+      'RAZORPAY_WEBHOOK_SECRET',
+    );
     const expectedSignature = createHmac('sha256', webhookSecret)
       .update(JSON.stringify(body))
       .digest('hex');
@@ -148,7 +163,9 @@ export class PaymentsService {
     const payload = body['payload'] as Record<string, unknown>;
 
     if (event === 'payment.captured') {
-      const paymentEntity = (payload['payment'] as Record<string, unknown>)['entity'] as Record<string, unknown>;
+      const paymentEntity = (payload['payment'] as Record<string, unknown>)[
+        'entity'
+      ] as Record<string, unknown>;
       const orderId = paymentEntity['order_id'] as string;
       const paymentId = paymentEntity['id'] as string;
 
@@ -163,10 +180,12 @@ export class PaymentsService {
 
       if (payment) {
         // Ensure enrollment exists
-        await this.supabase.from('enrollments').upsert(
-          { student_id: payment.student_id, course_id: payment.course_id },
-          { onConflict: 'student_id,course_id' },
-        );
+        await this.supabase
+          .from('enrollments')
+          .upsert(
+            { student_id: payment.student_id, course_id: payment.course_id },
+            { onConflict: 'student_id,course_id' },
+          );
       }
     }
 
@@ -174,7 +193,11 @@ export class PaymentsService {
   }
 
   /** Admin: list all payments with filters */
-  async findAll(filters?: { status?: string; course_id?: string; student_id?: string }) {
+  async findAll(filters?: {
+    status?: string;
+    course_id?: string;
+    student_id?: string;
+  }) {
     let query = this.supabase
       .from('payments')
       .select('*, profiles(id, full_name, email), courses(id, title)')
@@ -208,19 +231,26 @@ export class PaymentsService {
       .eq('id', paymentId)
       .eq('status', 'completed')
       .single();
-    if (error || !payment) throw new NotFoundException('Completed payment not found');
+    if (error || !payment)
+      throw new NotFoundException('Completed payment not found');
 
     const refundAmount = dto.amount ?? payment.amount;
 
     // Call Razorpay refund API
-    const res = await fetch(`https://api.razorpay.com/v1/payments/${payment.razorpay_payment_id}/refund`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${Buffer.from(`${this.razorpayKeyId}:${this.razorpayKeySecret}`).toString('base64')}`,
+    const res = await fetch(
+      `https://api.razorpay.com/v1/payments/${payment.razorpay_payment_id}/refund`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${Buffer.from(`${this.razorpayKeyId}:${this.razorpayKeySecret}`).toString('base64')}`,
+        },
+        body: JSON.stringify({
+          amount: Math.round(refundAmount * 100),
+          notes: { reason: dto.reason },
+        }),
       },
-      body: JSON.stringify({ amount: Math.round(refundAmount * 100), notes: { reason: dto.reason } }),
-    });
+    );
 
     if (!res.ok) {
       const err = await res.json();

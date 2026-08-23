@@ -20,10 +20,16 @@ export const SUPABASE_ANON = 'SUPABASE_ANON';
       provide: 'SUPABASE_HEALTH_CHECK',
       useFactory: async (adminClient: SupabaseClient) => {
         try {
-          const { error } = await adminClient.from('profiles').select('id').limit(1);
+          const { error } = await adminClient
+            .from('profiles')
+            .select('id')
+            .limit(1);
           return { healthy: !error, error: error?.message };
         } catch (e) {
-          return { healthy: false, error: e instanceof Error ? e.message : 'Unknown error' };
+          return {
+            healthy: false,
+            error: e instanceof Error ? e.message : 'Unknown error',
+          };
         }
       },
       inject: [SUPABASE_ADMIN],

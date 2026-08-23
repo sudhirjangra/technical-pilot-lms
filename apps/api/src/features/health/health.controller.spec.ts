@@ -1,12 +1,14 @@
-import { ConfigService } from '@nestjs/config';
-import { DiskHealthIndicator } from '@nestjs/terminus';
-import { HealthCheckService } from '@nestjs/terminus';
-import { HttpHealthIndicator } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
-import { MemoryHealthIndicator } from '@nestjs/terminus';
-import { TerminusModule } from '@nestjs/terminus';
+import { ConfigService } from '@nestjs/config';
+import {
+  DiskHealthIndicator,
+  HealthCheckService,
+  HttpHealthIndicator,
+  MemoryHealthIndicator,
+  TerminusModule,
+  TypeOrmHealthIndicator,
+} from '@nestjs/terminus';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { HealthController } from './health.controller';
 
 describe('HealthController', () => {
@@ -26,25 +28,41 @@ describe('HealthController', () => {
         {
           provide: HttpHealthIndicator,
           useValue: {
-            pingCheck: jest.fn().mockReturnValue(() => Promise.resolve({ http: { status: 'up' } })),
+            pingCheck: jest
+              .fn()
+              .mockReturnValue(() =>
+                Promise.resolve({ http: { status: 'up' } }),
+              ),
           },
         },
         {
           provide: TypeOrmHealthIndicator,
           useValue: {
-            pingCheck: jest.fn().mockReturnValue(() => Promise.resolve({ database: { status: 'up' } })),
+            pingCheck: jest
+              .fn()
+              .mockReturnValue(() =>
+                Promise.resolve({ database: { status: 'up' } }),
+              ),
           },
         },
         {
           provide: DiskHealthIndicator,
           useValue: {
-            checkStorage: jest.fn().mockReturnValue(() => Promise.resolve({ disk: { status: 'up' } })),
+            checkStorage: jest
+              .fn()
+              .mockReturnValue(() =>
+                Promise.resolve({ disk: { status: 'up' } }),
+              ),
           },
         },
         {
           provide: MemoryHealthIndicator,
           useValue: {
-            checkHeap: jest.fn().mockReturnValue(() => Promise.resolve({ memory: { status: 'up' } })),
+            checkHeap: jest
+              .fn()
+              .mockReturnValue(() =>
+                Promise.resolve({ memory: { status: 'up' } }),
+              ),
           },
         },
         {

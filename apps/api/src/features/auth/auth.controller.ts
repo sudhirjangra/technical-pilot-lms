@@ -121,7 +121,10 @@ export class AuthController {
     @Param('userId') userId: string,
     @Req() req: any,
   ): Promise<SessionsResponse> {
-    if (req.user.id !== userId && (req.user.role ?? '').toUpperCase() !== 'ADMIN') {
+    if (
+      req.user.id !== userId &&
+      (req.user.role ?? '').toUpperCase() !== 'ADMIN'
+    ) {
       throw new ForbiddenException('Cannot access other users sessions');
     }
     const data = await this.authService.getSessions(userId);

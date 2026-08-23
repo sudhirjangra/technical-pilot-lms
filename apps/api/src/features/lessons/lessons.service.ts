@@ -69,7 +69,8 @@ export class LessonsService {
       .select()
       .single();
     if (error) {
-      if (error.code === 'PGRST116') throw new NotFoundException('Lesson not found');
+      if (error.code === 'PGRST116')
+        throw new NotFoundException('Lesson not found');
       throw new BadRequestException(error.message);
     }
     return data;
@@ -83,10 +84,7 @@ export class LessonsService {
   }
 
   async remove(id: string) {
-    const { error } = await this.supabase
-      .from('lessons')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.supabase.from('lessons').delete().eq('id', id);
     if (error) throw new BadRequestException(error.message);
   }
 }

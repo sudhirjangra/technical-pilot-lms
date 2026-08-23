@@ -36,7 +36,9 @@ import * as nodemailer from 'nodemailer';
         }
 
         // Dev fallback — no network connections, emails are silently discarded
-        console.warn('⚠️ SMTP not configured. Emails will NOT be sent (dev mode).');
+        console.warn(
+          '⚠️ SMTP not configured. Emails will NOT be sent (dev mode).',
+        );
         return {
           transport: nodemailer.createTransport({ jsonTransport: true }),
           defaults: { from: 'dev@localhost' },

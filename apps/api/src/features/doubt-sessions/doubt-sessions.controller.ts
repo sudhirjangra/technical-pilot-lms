@@ -1,5 +1,8 @@
-import { Public, Roles } from '@/common/decorators';
-import { Audit, AuditLogInterceptor } from '@/common/interceptors/audit-log.interceptor';
+import { Roles } from '@/common/decorators';
+import {
+  Audit,
+  AuditLogInterceptor,
+} from '@/common/interceptors/audit-log.interceptor';
 import {
   Body,
   Controller,
@@ -14,8 +17,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { BookSlotDto, CreateSlotDto, UpdateBookingDto, UpdateSlotDto } from './dto';
 import { DoubtSessionsService } from './doubt-sessions.service';
+import {
+  BookSlotDto,
+  CreateSlotDto,
+  UpdateBookingDto,
+  UpdateSlotDto,
+} from './dto';
 
 @ApiTags('Doubt Sessions')
 @Controller('doubt-sessions')
@@ -41,7 +49,10 @@ export class DoubtSessionsController {
   @Patch('slots/:id')
   @Roles('ADMIN')
   @Audit('doubt_slot.update')
-  updateSlot(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSlotDto) {
+  updateSlot(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSlotDto,
+  ) {
     return this.service.updateSlot(id, dto);
   }
 
@@ -61,7 +72,10 @@ export class DoubtSessionsController {
   @Patch('bookings/:id')
   @Roles('ADMIN')
   @Audit('doubt_booking.update')
-  updateBooking(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBookingDto) {
+  updateBooking(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
     return this.service.updateBooking(id, dto);
   }
 
@@ -79,7 +93,10 @@ export class DoubtSessionsController {
   }
 
   @Post('bookings/:id/cancel')
-  cancelBooking(@Param('id', ParseUUIDPipe) id: string, @Req() req: { user: { id: string } }) {
+  cancelBooking(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: { user: { id: string } },
+  ) {
     return this.service.cancelBooking(id, req.user.id);
   }
 

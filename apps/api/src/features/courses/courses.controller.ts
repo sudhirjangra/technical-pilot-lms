@@ -1,5 +1,5 @@
 import { Public, Roles, User } from '@/common/decorators';
-import { Audit } from '@/common/interceptors';
+import { Audit, AuditLogInterceptor } from '@/common/interceptors';
 import {
   Body,
   Controller,
@@ -12,7 +12,6 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { AuditLogInterceptor } from '@/common/interceptors';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 

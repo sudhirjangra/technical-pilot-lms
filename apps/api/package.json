@@ -50,6 +50,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@nestjs/throttler": "^6.3.0",
+    "@repo/config": "workspace:*",
     "@repo/constants": "workspace:*",
     "@repo/eslint-config": "workspace:*",
     "@repo/ts-config": "workspace:*",

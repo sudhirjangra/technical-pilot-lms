@@ -9,8 +9,8 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { LessonsService } from './lessons.service';
 import { CreateLessonDto, ReorderLessonsDto, UpdateLessonDto } from './dto';
+import { LessonsService } from './lessons.service';
 
 @Controller('lessons')
 export class LessonsController {

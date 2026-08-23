@@ -30,7 +30,8 @@ export class VideosService {
       .eq('id', dto.lesson_id)
       .single();
     if (!lesson) throw new NotFoundException('Lesson not found');
-    if (lesson.lesson_type !== 'video') throw new BadRequestException('Lesson type must be video');
+    if (lesson.lesson_type !== 'video')
+      throw new BadRequestException('Lesson type must be video');
 
     const { data, error } = await this.supabase
       .from('video_lessons')
@@ -84,9 +85,11 @@ export class VideosService {
       .select('id, is_published, chapters!inner(course_id)')
       .eq('id', lessonId)
       .single();
-    if (!lessonRow || !lessonRow.is_published) throw new NotFoundException('Lesson not available');
+    if (!lessonRow || !lessonRow.is_published)
+      throw new NotFoundException('Lesson not available');
 
-    const courseId = (lessonRow.chapters as unknown as { course_id: string }).course_id;
+    const courseId = (lessonRow.chapters as unknown as { course_id: string })
+      .course_id;
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
@@ -108,20 +111,26 @@ export class VideosService {
       .neq('ip_address', ip);
 
     if ((activeSessions ?? 0) >= MAX_CONCURRENT_SESSIONS) {
-      throw new ForbiddenException('Too many concurrent sessions — possible account sharing');
+      throw new ForbiddenException(
+        'Too many concurrent sessions — possible account sharing',
+      );
     }
 
     // 4. Record this session (fire-and-forget — don't block OTP on DB write)
     const sessionExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    this.supabase.from('video_sessions').insert({
-      user_id: userId,
-      lesson_id: lessonId,
-      ip_address: ip,
-      user_agent: userAgent,
-      expires_at: sessionExpiry,
-    }).then(({ error }) => {
-      if (error) console.error('video_sessions insert failed:', error.message);
-    });
+    this.supabase
+      .from('video_sessions')
+      .insert({
+        user_id: userId,
+        lesson_id: lessonId,
+        ip_address: ip,
+        user_agent: userAgent,
+        expires_at: sessionExpiry,
+      })
+      .then(({ error }) => {
+        if (error)
+          console.error('video_sessions insert failed:', error.message);
+      });
 
     // 5. Request OTP from VdoCipher with watermark
     const ttl = this.config.get<number>('VDOCIPHER_OTP_TTL_SECONDS') ?? 300;
@@ -149,8 +158,14 @@ export class VideosService {
         },
       );
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: unknown; status?: number } };
-      console.error('VdoCipher OTP error:', axiosErr.response?.status, JSON.stringify(axiosErr.response?.data));
+      const axiosErr = err as {
+        response?: { data?: unknown; status?: number };
+      };
+      console.error(
+        'VdoCipher OTP error:',
+        axiosErr.response?.status,
+        JSON.stringify(axiosErr.response?.data),
+      );
       throw new BadRequestException(
         `VdoCipher error: ${JSON.stringify(axiosErr.response?.data ?? 'unknown')}`,
       );
@@ -183,8 +198,9 @@ export class VideosService {
 
     if (!chapters) return [];
 
-    const lessonIds = (chapters as unknown as { lessons: { id: string }[] }[])
-      .flatMap((ch) => ch.lessons.map((l) => l.id));
+    const lessonIds = (
+      chapters as unknown as { lessons: { id: string }[] }[]
+    ).flatMap((ch) => ch.lessons.map((l) => l.id));
 
     if (lessonIds.length === 0) return [];
 

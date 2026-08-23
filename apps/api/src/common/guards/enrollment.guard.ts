@@ -38,7 +38,8 @@ export class EnrollmentGuard implements CanActivate {
         .select('chapters(course_id)')
         .eq('id', params.lessonId)
         .single();
-      courseId = (lesson?.chapters as unknown as { course_id: string })?.course_id;
+      courseId = (lesson?.chapters as unknown as { course_id: string })
+        ?.course_id;
     }
 
     // Derive courseId from chapterId if present
@@ -51,7 +52,8 @@ export class EnrollmentGuard implements CanActivate {
       courseId = chapter?.course_id;
     }
 
-    if (!courseId) throw new ForbiddenException('Unable to determine course context');
+    if (!courseId)
+      throw new ForbiddenException('Unable to determine course context');
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
@@ -61,7 +63,10 @@ export class EnrollmentGuard implements CanActivate {
       .eq('status', 'active')
       .single();
 
-    if (!enrollment) throw new ForbiddenException('Active enrollment required to access this content');
+    if (!enrollment)
+      throw new ForbiddenException(
+        'Active enrollment required to access this content',
+      );
     return true;
   }
 }

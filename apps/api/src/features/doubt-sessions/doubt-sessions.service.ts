@@ -7,7 +7,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { BookSlotDto, CreateSlotDto, UpdateBookingDto, UpdateSlotDto } from './dto';
+import {
+  BookSlotDto,
+  CreateSlotDto,
+  UpdateBookingDto,
+  UpdateSlotDto,
+} from './dto';
 
 @Injectable()
 export class DoubtSessionsService {
@@ -65,7 +70,10 @@ export class DoubtSessionsService {
   }
 
   async deleteSlot(id: string) {
-    const { error } = await this.supabase.from('doubt_slots').delete().eq('id', id);
+    const { error } = await this.supabase
+      .from('doubt_slots')
+      .delete()
+      .eq('id', id);
     if (error) throw new BadRequestException(error.message);
   }
 
@@ -77,8 +85,10 @@ export class DoubtSessionsService {
       .eq('id', dto.slot_id)
       .single();
     if (slotErr || !slot) throw new NotFoundException('Slot not found');
-    if (slot.status !== 'available') throw new BadRequestException('Slot is not available');
-    if (slot.current_bookings >= slot.max_bookings) throw new BadRequestException('Slot is full');
+    if (slot.status !== 'available')
+      throw new BadRequestException('Slot is not available');
+    if (slot.current_bookings >= slot.max_bookings)
+      throw new BadRequestException('Slot is full');
 
     // Create booking
     const { data: booking, error } = await this.supabase
@@ -87,7 +97,8 @@ export class DoubtSessionsService {
       .select('*')
       .single();
     if (error) {
-      if (error.code === '23505') throw new ConflictException('Already booked this slot');
+      if (error.code === '23505')
+        throw new ConflictException('Already booked this slot');
       throw new BadRequestException(error.message);
     }
 
@@ -112,7 +123,8 @@ export class DoubtSessionsService {
       .eq('student_id', studentId)
       .single();
     if (bErr || !booking) throw new NotFoundException('Booking not found');
-    if (booking.status === 'cancelled') throw new BadRequestException('Already cancelled');
+    if (booking.status === 'cancelled')
+      throw new BadRequestException('Already cancelled');
 
     await this.supabase
       .from('doubt_bookings')
@@ -120,7 +132,10 @@ export class DoubtSessionsService {
       .eq('id', bookingId);
 
     // Decrement slot counter, reopen if was full
-    const slot = booking.doubt_slots as { id: string; current_bookings: number };
+    const slot = booking.doubt_slots as {
+      id: string;
+      current_bookings: number;
+    };
     const newCount = Math.max(0, slot.current_bookings - 1);
     await this.supabase
       .from('doubt_slots')
@@ -131,7 +146,9 @@ export class DoubtSessionsService {
   async getMyBookings(studentId: string) {
     const { data, error } = await this.supabase
       .from('doubt_bookings')
-      .select('*, doubt_slots(id, date, start_time, end_time, duration_minutes, status)')
+      .select(
+        '*, doubt_slots(id, date, start_time, end_time, duration_minutes, status)',
+      )
       .eq('student_id', studentId)
       .order('booked_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
@@ -141,7 +158,9 @@ export class DoubtSessionsService {
   async getSlotBookings(slotId: string) {
     const { data, error } = await this.supabase
       .from('doubt_bookings')
-      .select('*, profiles!doubt_bookings_student_id_fkey(id, full_name, email)')
+      .select(
+        '*, profiles!doubt_bookings_student_id_fkey(id, full_name, email)',
+      )
       .eq('slot_id', slotId)
       .order('booked_at');
     if (error) throw new BadRequestException(error.message);

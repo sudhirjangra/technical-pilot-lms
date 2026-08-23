@@ -1,16 +1,14 @@
-import { Inject } from '@nestjs/common';
 import { Public } from '@/common/decorators';
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import {
   DiskHealthIndicator,
   HealthCheck,
   HealthCheckService,
-  HttpHealthIndicator,
   HealthIndicatorResult,
+  HttpHealthIndicator,
   MemoryHealthIndicator,
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
-import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Controller for health checks of various system components.
@@ -34,7 +32,11 @@ export class HealthController {
     private db: TypeOrmHealthIndicator,
     private readonly disk: DiskHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
-    @Inject('SUPABASE_HEALTH_CHECK') private readonly supabaseHealth: Promise<{ healthy: boolean; error?: string }>,
+    @Inject('SUPABASE_HEALTH_CHECK')
+    private readonly supabaseHealth: Promise<{
+      healthy: boolean;
+      error?: string;
+    }>,
   ) {}
 
   /**
@@ -105,7 +107,9 @@ export class HealthController {
     return this.health.check([
       () => {
         const indicator: HealthIndicatorResult = {
-          supabase: result.healthy ? { status: 'up' } : { status: 'down', error: result.error },
+          supabase: result.healthy
+            ? { status: 'up' }
+            : { status: 'down', error: result.error },
         };
         if (!result.healthy) {
           throw new Error(result.error ?? 'Supabase connection failed');

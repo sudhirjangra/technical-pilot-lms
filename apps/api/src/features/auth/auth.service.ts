@@ -4,7 +4,10 @@ import {
   RefreshTokenInterface,
   RegisterUserInterface,
 } from '@/common/interfaces';
-import { SUPABASE_ADMIN, SUPABASE_ANON } from '@/common/modules/supabase.module';
+import {
+  SUPABASE_ADMIN,
+  SUPABASE_ANON,
+} from '@/common/modules/supabase.module';
 import { Env, generateRefreshTime } from '@/common/utils';
 import {
   ChangePasswordDto,
@@ -34,6 +37,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { authConfig } from '@repo/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Logger } from 'nestjs-pino';
 
@@ -58,16 +62,27 @@ export class AuthService {
       .maybeSingle();
 
     if (error) {
-      this.logger.error({ error: error.message, email }, 'Failed to query profile by email');
-      throw new InternalServerErrorException('Database error while fetching user');
+      this.logger.error(
+        { error: error.message, email },
+        'Failed to query profile by email',
+      );
+      throw new InternalServerErrorException(
+        'Database error while fetching user',
+      );
     }
 
     if (!data) return null;
 
-    const { data: authData, error: authError } = await this.supabase.auth.admin.getUserById(data.id);
+    const { data: authData, error: authError } =
+      await this.supabase.auth.admin.getUserById(data.id);
     if (authError) {
-      this.logger.error({ error: authError.message, userId: data.id }, 'Failed to fetch auth user by ID');
-      throw new InternalServerErrorException('Failed to fetch user from auth provider');
+      this.logger.error(
+        { error: authError.message, userId: data.id },
+        'Failed to fetch auth user by ID',
+      );
+      throw new InternalServerErrorException(
+        'Failed to fetch user from auth provider',
+      );
     }
 
     return authData.user;
@@ -76,8 +91,13 @@ export class AuthService {
   private async getUserById(userId: string) {
     const { data, error } = await this.supabase.auth.admin.getUserById(userId);
     if (error) {
-      this.logger.error({ error: error.message, userId }, 'Failed to fetch auth user by ID');
-      throw new InternalServerErrorException('Failed to fetch user from auth provider');
+      this.logger.error(
+        { error: error.message, userId },
+        'Failed to fetch auth user by ID',
+      );
+      throw new InternalServerErrorException(
+        'Failed to fetch user from auth provider',
+      );
     }
     return data.user;
   }
@@ -111,24 +131,41 @@ export class AuthService {
           email: dto.email,
         });
         if (error) {
-          this.logger.warn({ email: dto.email, error: error.message }, 'Failed to resend verification code');
-          throw new BadRequestException('Failed to resend verification code. Please try again.');
+          this.logger.warn(
+            { email: dto.email, error: error.message },
+            'Failed to resend verification code',
+          );
+          throw new BadRequestException(
+            'Failed to resend verification code. Please try again.',
+          );
         }
         return { data: { id: authUser.id, email: dto.email } };
       }
-      throw new BadRequestException('Email already registered. Please sign in.');
+      throw new BadRequestException(
+        'Email already registered. Please sign in.',
+      );
     }
 
-    const { data: authData, error } = await this.supabase.auth.admin.createUser({
-      email: dto.email,
-      password: dto.password,
-      email_confirm: false,
-    });
+    const { data: authData, error } = await this.supabase.auth.admin.createUser(
+      {
+        email: dto.email,
+        password: dto.password,
+        email_confirm: false,
+      },
+    );
 
     if (error) {
-      this.logger.error({ error: error.message, email: dto.email }, 'Failed to create auth user');
-      if (error.message.includes('already registered') || error.message.includes('already exists')) {
-        throw new BadRequestException('Email already registered. Please sign in.');
+      this.logger.error(
+        { error: error.message, email: dto.email },
+        'Failed to create auth user',
+      );
+      if (
+        error.message.includes('already registered') ||
+        error.message.includes('already exists')
+      ) {
+        throw new BadRequestException(
+          'Email already registered. Please sign in.',
+        );
       }
       throw new BadRequestException(error.message);
     }
@@ -136,21 +173,22 @@ export class AuthService {
     const userId = authData.user.id;
     authUser = authData.user;
 
-    const { error: profileError } = await this.supabase
-      .from('profiles')
-      .upsert(
-        {
-          id: userId,
-          email: dto.email,
-          role: 'student',
-          full_name: dto.email.split('@')[0],
-          phone: dto.phone,
-        },
-        { onConflict: 'id' },
-      );
+    const { error: profileError } = await this.supabase.from('profiles').upsert(
+      {
+        id: userId,
+        email: dto.email,
+        role: 'student',
+        full_name: dto.email.split('@')[0],
+        phone: dto.phone,
+      },
+      { onConflict: 'id' },
+    );
 
     if (profileError) {
-      this.logger.error({ profileError: profileError.message, userId }, 'Profile upsert failed, rolling back auth user');
+      this.logger.error(
+        { profileError: profileError.message, userId },
+        'Profile upsert failed, rolling back auth user',
+      );
       await this.supabase.auth.admin.deleteUser(userId);
       throw new BadRequestException('Registration failed. Please try again.');
     }
@@ -161,7 +199,10 @@ export class AuthService {
     });
 
     if (resendError) {
-      this.logger.warn({ resendError: resendError.message, email: dto.email }, 'Failed to trigger signup confirmation email');
+      this.logger.warn(
+        { resendError: resendError.message, email: dto.email },
+        'Failed to trigger signup confirmation email',
+      );
     }
 
     return { data: { id: userId, email: dto.email } };
@@ -171,13 +212,17 @@ export class AuthService {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
-      email: authUser.email!,
-      password: dto.password,
-    });
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: authUser.email!,
+        password: dto.password,
+      });
 
     if (signInError) {
-      if (signInError.code === 'email_not_confirmed' || signInError.message.includes('Email not confirmed')) {
+      if (
+        signInError.code === 'email_not_confirmed' ||
+        signInError.message.includes('Email not confirmed')
+      ) {
         throw new UnauthorizedException('EMAIL_NOT_CONFIRMED');
       }
       throw new UnauthorizedException('Invalid credentials');
@@ -189,22 +234,27 @@ export class AuthService {
       .eq('id', authUser.id)
       .single();
 
-    if (profileError || !profile) throw new NotFoundException('Profile not found');
+    if (profileError || !profile)
+      throw new NotFoundException('Profile not found');
 
     const { data: existingDevices } = await this.supabase
       .from('devices')
       .select('id, device_name, platform, last_active_at, created_at')
       .eq('user_id', authUser.id);
 
-    if ((existingDevices?.length ?? 0) >= 2) {
+    if ((existingDevices?.length ?? 0) >= authConfig.maxDevicesPerUser) {
       throw new BadRequestException({
         code: 'DEVICE_LIMIT_REACHED',
-        message: 'Max device limit reached (2). Remove a session to continue.',
+        message: `Max device limit reached (${authConfig.maxDevicesPerUser}). Remove a session to continue.`,
         sessions: existingDevices,
       });
     }
 
-    const tokens = await this.generateTokens(authUser.id, authUser.email!, profile.role ?? 'student');
+    const tokens = await this.generateTokens(
+      authUser.id,
+      authUser.email!,
+      profile.role ?? 'student',
+    );
 
     const { data: device } = await this.supabase
       .from('devices')
@@ -251,7 +301,9 @@ export class AuthService {
     if (!authUser) throw new NotFoundException('User not found');
 
     if (authUser.email_confirmed_at) {
-      throw new BadRequestException('Email is already confirmed. Please sign in.');
+      throw new BadRequestException(
+        'Email is already confirmed. Please sign in.',
+      );
     }
 
     const { error } = await this.supabaseAnon.auth.resend({
@@ -260,8 +312,13 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.warn({ email, error: error.message }, 'Failed to resend verification code');
-      throw new BadRequestException('Failed to resend verification code. Please try again.');
+      this.logger.warn(
+        { email, error: error.message },
+        'Failed to resend verification code',
+      );
+      throw new BadRequestException(
+        'Failed to resend verification code. Please try again.',
+      );
     }
   }
 
@@ -273,8 +330,13 @@ export class AuthService {
     });
 
     if (error) {
-      this.logger.error({ error: error.message, email: dto.email }, 'OTP verification failed');
-      throw new BadRequestException('Invalid or expired OTP. Please request a new one.');
+      this.logger.error(
+        { error: error.message, email: dto.email },
+        'OTP verification failed',
+      );
+      throw new BadRequestException(
+        'Invalid or expired OTP. Please request a new one.',
+      );
     }
 
     const authUser = await this.getUserByEmail(dto.email);
@@ -288,10 +350,15 @@ export class AuthService {
       await this.mailService.sendEmail({
         to: [dto.email],
         subject: 'Confirmation Successful',
-        html: ConfirmEmailSuccessMail({ name: profile?.full_name ?? dto.email }),
+        html: ConfirmEmailSuccessMail({
+          name: profile?.full_name ?? dto.email,
+        }),
       });
     } catch (mailError) {
-      this.logger.warn({ mailError }, 'Failed to send confirmation success email');
+      this.logger.warn(
+        { mailError },
+        'Failed to send confirmation success email',
+      );
     }
   }
 
@@ -299,13 +366,21 @@ export class AuthService {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error } = await this.supabase.auth.resetPasswordForEmail(dto.identifier, {
-      redirectTo: this.config.get('PASSWORD_RESET_REDIRECT_URL'),
-    });
+    const { error } = await this.supabase.auth.resetPasswordForEmail(
+      dto.identifier,
+      {
+        redirectTo: this.config.get('PASSWORD_RESET_REDIRECT_URL'),
+      },
+    );
 
     if (error) {
-      this.logger.error({ error: error.message, email: dto.identifier }, 'Failed to send password reset email');
-      throw new BadRequestException('Failed to send password reset email. Please try again.');
+      this.logger.error(
+        { error: error.message, email: dto.identifier },
+        'Failed to send password reset email',
+      );
+      throw new BadRequestException(
+        'Failed to send password reset email. Please try again.',
+      );
     }
   }
 
@@ -320,17 +395,30 @@ export class AuthService {
     });
 
     if (verifyError) {
-      this.logger.warn({ email: dto.identifier, error: verifyError.message }, 'Password reset OTP verification failed');
-      throw new BadRequestException('Invalid or expired reset code. Please request a new one.');
+      this.logger.warn(
+        { email: dto.identifier, error: verifyError.message },
+        'Password reset OTP verification failed',
+      );
+      throw new BadRequestException(
+        'Invalid or expired reset code. Please request a new one.',
+      );
     }
 
-    const { error } = await this.supabase.auth.admin.updateUserById(authUser.id, {
-      password: dto.newPassword,
-    });
+    const { error } = await this.supabase.auth.admin.updateUserById(
+      authUser.id,
+      {
+        password: dto.newPassword,
+      },
+    );
 
     if (error) {
-      this.logger.error({ error: error.message, userId: authUser.id }, 'Failed to update password');
-      throw new BadRequestException('Failed to reset password. Please try again.');
+      this.logger.error(
+        { error: error.message, userId: authUser.id },
+        'Failed to update password',
+      );
+      throw new BadRequestException(
+        'Failed to reset password. Please try again.',
+      );
     }
 
     const { data: profile } = await this.supabase
@@ -343,10 +431,15 @@ export class AuthService {
       await this.mailService.sendEmail({
         to: [dto.identifier],
         subject: 'Password Reset Successful',
-        html: ChangePasswordSuccessMail({ name: profile?.full_name ?? dto.identifier }),
+        html: ChangePasswordSuccessMail({
+          name: profile?.full_name ?? dto.identifier,
+        }),
       });
     } catch (mailError) {
-      this.logger.warn({ mailError }, 'Failed to send password reset success email');
+      this.logger.warn(
+        { mailError },
+        'Failed to send password reset success email',
+      );
     }
   }
 
@@ -354,22 +447,35 @@ export class AuthService {
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
-    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
-      email: authUser.email!,
-      password: dto.password,
-    });
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: authUser.email!,
+        password: dto.password,
+      });
 
-    if (signInError && signInError.code !== 'email_not_confirmed' && !signInError.message.includes('Email not confirmed')) {
+    if (
+      signInError &&
+      signInError.code !== 'email_not_confirmed' &&
+      !signInError.message.includes('Email not confirmed')
+    ) {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    const { error } = await this.supabase.auth.admin.updateUserById(authUser.id, {
-      password: dto.newPassword,
-    });
+    const { error } = await this.supabase.auth.admin.updateUserById(
+      authUser.id,
+      {
+        password: dto.newPassword,
+      },
+    );
 
     if (error) {
-      this.logger.error({ error: error.message, userId: authUser.id }, 'Failed to change password');
-      throw new BadRequestException('Failed to change password. Please try again.');
+      this.logger.error(
+        { error: error.message, userId: authUser.id },
+        'Failed to change password',
+      );
+      throw new BadRequestException(
+        'Failed to change password. Please try again.',
+      );
     }
 
     const { data: profile } = await this.supabase
@@ -382,15 +488,23 @@ export class AuthService {
       await this.mailService.sendEmail({
         to: [authUser.email!],
         subject: 'Password Changed Successfully',
-        html: ChangePasswordSuccessMail({ name: profile?.full_name ?? authUser.email! }),
+        html: ChangePasswordSuccessMail({
+          name: profile?.full_name ?? authUser.email!,
+        }),
       });
     } catch (mailError) {
-      this.logger.warn({ mailError }, 'Failed to send password change success email');
+      this.logger.warn(
+        { mailError },
+        'Failed to send password change success email',
+      );
     }
   }
 
   async signOut(dto: SignOutUserDto): Promise<void> {
-    const { error } = await this.supabase.from('devices').delete().eq('id', dto.session_token);
+    const { error } = await this.supabase
+      .from('devices')
+      .delete()
+      .eq('id', dto.session_token);
     if (error) throw new NotFoundException('Session not found');
   }
 
@@ -400,7 +514,8 @@ export class AuthService {
   }
 
   async refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenInterface> {
-    const { data: userData, error } = await this.supabase.auth.admin.getUserById(dto.user_id);
+    const { data: userData, error } =
+      await this.supabase.auth.admin.getUserById(dto.user_id);
     if (error || !userData.user) throw new NotFoundException('User not found');
 
     const { data: device } = await this.supabase
@@ -418,7 +533,11 @@ export class AuthService {
       .eq('id', dto.user_id)
       .single();
 
-    const tokens = await this.generateTokens(userData.user.id, userData.user.email!, profile?.role ?? 'student');
+    const tokens = await this.generateTokens(
+      userData.user.id,
+      userData.user.email!,
+      profile?.role ?? 'student',
+    );
 
     await this.supabase
       .from('devices')
@@ -445,7 +564,10 @@ export class AuthService {
       .eq('user_id', userId);
 
     if (error) {
-      this.logger.error({ error: error.message, userId }, 'Failed to fetch sessions');
+      this.logger.error(
+        { error: error.message, userId },
+        'Failed to fetch sessions',
+      );
       throw new InternalServerErrorException('Failed to fetch sessions');
     }
 
@@ -460,7 +582,10 @@ export class AuthService {
       .maybeSingle();
 
     if (error) {
-      this.logger.error({ error: error.message, sessionId: id }, 'Failed to fetch session');
+      this.logger.error(
+        { error: error.message, sessionId: id },
+        'Failed to fetch session',
+      );
       throw new InternalServerErrorException('Failed to fetch session');
     }
 
@@ -469,34 +594,62 @@ export class AuthService {
   }
 
   async deleteAccount(dto: DeleteUserDto): Promise<void> {
-    const { data, error } = await this.supabase.auth.admin.getUserById(dto.user_id);
+    const { data, error } = await this.supabase.auth.admin.getUserById(
+      dto.user_id,
+    );
     if (error || !data.user) throw new NotFoundException('User not found');
 
-    const { error: signInError } = await this.supabaseAnon.auth.signInWithPassword({
-      email: data.user.email!,
-      password: dto.password,
-    });
+    const { error: signInError } =
+      await this.supabaseAnon.auth.signInWithPassword({
+        email: data.user.email!,
+        password: dto.password,
+      });
 
-    if (signInError && signInError.code !== 'email_not_confirmed' && !signInError.message.includes('Email not confirmed')) {
+    if (
+      signInError &&
+      signInError.code !== 'email_not_confirmed' &&
+      !signInError.message.includes('Email not confirmed')
+    ) {
       throw new UnauthorizedException('Invalid password');
     }
 
     await this.supabase.from('devices').delete().eq('user_id', dto.user_id);
 
     await this.supabase.from('courses').delete().eq('created_by', dto.user_id);
-    await this.supabase.from('doubt_slots').delete().eq('created_by', dto.user_id);
-    await this.supabase.from('sub_admin_permissions').delete().eq('granted_by', dto.user_id);
+    await this.supabase
+      .from('doubt_slots')
+      .delete()
+      .eq('created_by', dto.user_id);
+    await this.supabase
+      .from('sub_admin_permissions')
+      .delete()
+      .eq('granted_by', dto.user_id);
 
-    const { error: profileError } = await this.supabase.from('profiles').delete().eq('id', dto.user_id);
+    const { error: profileError } = await this.supabase
+      .from('profiles')
+      .delete()
+      .eq('id', dto.user_id);
     if (profileError) {
-      this.logger.error({ error: profileError.message, userId: dto.user_id }, 'Failed to delete profile');
-      throw new BadRequestException(`Failed to delete user profile: ${profileError.message}`);
+      this.logger.error(
+        { error: profileError.message, userId: dto.user_id },
+        'Failed to delete profile',
+      );
+      throw new BadRequestException(
+        `Failed to delete user profile: ${profileError.message}`,
+      );
     }
 
-    const { error: deleteError } = await this.supabase.auth.admin.deleteUser(dto.user_id);
+    const { error: deleteError } = await this.supabase.auth.admin.deleteUser(
+      dto.user_id,
+    );
     if (deleteError) {
-      this.logger.error({ error: deleteError.message, userId: dto.user_id }, 'Failed to delete auth user');
-      throw new BadRequestException(`Failed to delete user: ${deleteError.message}`);
+      this.logger.error(
+        { error: deleteError.message, userId: dto.user_id },
+        'Failed to delete auth user',
+      );
+      throw new BadRequestException(
+        `Failed to delete user: ${deleteError.message}`,
+      );
     }
   }
 }

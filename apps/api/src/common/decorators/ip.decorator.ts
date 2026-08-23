@@ -12,5 +12,10 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
  */
 export const Ip = createParamDecorator((_, ctx: ExecutionContext): string => {
   const request = ctx.switchToHttp().getRequest();
-  return request.headers['x-forwarded-for'] || request.ip || request.socket?.remoteAddress || 'unknown';
+  return (
+    request.headers['x-forwarded-for'] ||
+    request.ip ||
+    request.socket?.remoteAddress ||
+    'unknown'
+  );
 });

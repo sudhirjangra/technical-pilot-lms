@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 
 interface FastifyReplyLike {
@@ -47,8 +54,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       message = 'Database query failed';
       errorCode = 'QUERY_FAILED';
-      details = { code: exception.code, details: exception.details, hint: exception.hint };
-      this.logger.error({ error: exception.message, code: exception.code }, 'Database query failed');
+      details = {
+        code: exception.code,
+        details: exception.details,
+        hint: exception.hint,
+      };
+      this.logger.error(
+        { error: exception.message, code: exception.code },
+        'Database query failed',
+      );
     } else if (exception instanceof Error) {
       message = exception.message;
       errorCode = exception.name;
@@ -66,7 +80,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
 
     this.logger.warn(
-      { statusCode: status, path: request.url, method: request.method, errorCode, message },
+      {
+        statusCode: status,
+        path: request.url,
+        method: request.method,
+        errorCode,
+        message,
+      },
       'Request failed',
     );
 

@@ -24,7 +24,7 @@ export function DashboardClient({
       {/* Welcome header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {user.full_name ?? user.email?.split('@')[0]} 👋
+          Welcome back, {user.full_name ?? user.email?.split('@')[0]}
         </h1>
         <p className="text-muted-foreground mt-1">
           Here&apos;s a summary of your learning progress.

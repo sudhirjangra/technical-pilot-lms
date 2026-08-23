@@ -15,7 +15,16 @@ export const swagger = async (app: NestFastifyApplication): Promise<void> => {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
   // Apply bearer auth globally to all operations so Swagger UI sends the token
-  const httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'];
+  const httpMethods = [
+    'get',
+    'post',
+    'put',
+    'patch',
+    'delete',
+    'head',
+    'options',
+    'trace',
+  ];
   for (const pathItem of Object.values(document.paths)) {
     for (const method of httpMethods) {
       const op = (pathItem as Record<string, unknown>)[method];

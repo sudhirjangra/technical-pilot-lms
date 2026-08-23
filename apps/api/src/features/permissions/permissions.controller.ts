@@ -1,5 +1,8 @@
 import { Roles, User } from '@/common/decorators';
-import { Audit, AuditLogInterceptor } from '@/common/interceptors/audit-log.interceptor';
+import {
+  Audit,
+  AuditLogInterceptor,
+} from '@/common/interceptors/audit-log.interceptor';
 import {
   Body,
   Controller,
@@ -11,7 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { SetPermissionsDto, ALL_PERMISSIONS } from './dto';
+import { ALL_PERMISSIONS, SetPermissionsDto } from './dto';
 import { PermissionsService } from './permissions.service';
 
 @ApiTags('Permissions')

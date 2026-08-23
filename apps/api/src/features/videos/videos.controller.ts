@@ -1,6 +1,8 @@
-import { Audit } from '@/common/interceptors/audit-log.interceptor';
-import { Ip, User } from '@/common/decorators';
-import { Roles } from '@/common/decorators';
+import { Ip, Roles, User } from '@/common/decorators';
+import {
+  Audit,
+  AuditLogInterceptor,
+} from '@/common/interceptors/audit-log.interceptor';
 import {
   Body,
   Controller,
@@ -13,10 +15,9 @@ import {
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { AuditLogInterceptor } from '@/common/interceptors/audit-log.interceptor';
+import { Throttle } from '@nestjs/throttler';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 import { VideosService } from './videos.service';
-import { Throttle } from '@nestjs/throttler';
 
 @Controller('videos')
 @UseInterceptors(AuditLogInterceptor)

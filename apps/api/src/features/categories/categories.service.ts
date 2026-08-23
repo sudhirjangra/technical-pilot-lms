@@ -21,7 +21,8 @@ export class CategoriesService {
       .select()
       .single();
     if (error) {
-      if (error.code === '23505') throw new BadRequestException('Slug already exists');
+      if (error.code === '23505')
+        throw new BadRequestException('Slug already exists');
       throw new BadRequestException(error.message);
     }
     return data;
@@ -58,8 +59,10 @@ export class CategoriesService {
       .select()
       .single();
     if (error) {
-      if (error.code === '23505') throw new BadRequestException('Slug already exists');
-      if (error.code === 'PGRST116') throw new NotFoundException('Category not found');
+      if (error.code === '23505')
+        throw new BadRequestException('Slug already exists');
+      if (error.code === 'PGRST116')
+        throw new NotFoundException('Category not found');
       throw new BadRequestException(error.message);
     }
     return data;

@@ -21,7 +21,8 @@ export class CoursesService {
       .select('*, categories(id, name, slug)')
       .single();
     if (error) {
-      if (error.code === '23505') throw new BadRequestException('Course slug already exists');
+      if (error.code === '23505')
+        throw new BadRequestException('Course slug already exists');
       throw new BadRequestException(error.message);
     }
     return data;
@@ -90,18 +91,17 @@ export class CoursesService {
       .select('*, categories(id, name, slug)')
       .single();
     if (error) {
-      if (error.code === '23505') throw new BadRequestException('Course slug already exists');
-      if (error.code === 'PGRST116') throw new NotFoundException('Course not found');
+      if (error.code === '23505')
+        throw new BadRequestException('Course slug already exists');
+      if (error.code === 'PGRST116')
+        throw new NotFoundException('Course not found');
       throw new BadRequestException(error.message);
     }
     return data;
   }
 
   async remove(id: string) {
-    const { error } = await this.supabase
-      .from('courses')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.supabase.from('courses').delete().eq('id', id);
     if (error) throw new BadRequestException(error.message);
   }
 }

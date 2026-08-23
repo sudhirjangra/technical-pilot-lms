@@ -1,11 +1,16 @@
 import { ArrayNotEmpty, IsArray, IsString, IsUUID } from 'class-validator';
 
 export const ALL_PERMISSIONS = [
-  'courses:read', 'courses:write', 'courses:publish',
-  'students:read', 'students:manage_devices',
-  'payments:read', 'payments:refund',
+  'courses:read',
+  'courses:write',
+  'courses:publish',
+  'students:read',
+  'students:manage_devices',
+  'payments:read',
+  'payments:refund',
   'doubt_sessions:manage',
-  'reports:read', 'reports:export',
+  'reports:read',
+  'reports:export',
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];

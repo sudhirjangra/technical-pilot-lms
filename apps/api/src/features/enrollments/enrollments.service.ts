@@ -23,7 +23,8 @@ export class EnrollmentsService {
       .eq('id', dto.course_id)
       .single();
     if (courseErr || !course) throw new NotFoundException('Course not found');
-    if (course.status !== 'published') throw new BadRequestException('Course is not available for enrollment');
+    if (course.status !== 'published')
+      throw new BadRequestException('Course is not available for enrollment');
 
     const { data, error } = await this.supabase
       .from('enrollments')
@@ -31,7 +32,10 @@ export class EnrollmentsService {
       .select('*')
       .single();
     if (error) {
-      if (error.code === '23505') throw new ConflictException('Student is already enrolled in this course');
+      if (error.code === '23505')
+        throw new ConflictException(
+          'Student is already enrolled in this course',
+        );
       throw new BadRequestException(error.message);
     }
     return data;
@@ -92,11 +96,14 @@ export class EnrollmentsService {
       .eq('id', courseId)
       .single();
     if (courseErr || !course) throw new NotFoundException('Course not found');
-    if (course.status !== 'published') throw new BadRequestException('Course is not available for enrollment');
+    if (course.status !== 'published')
+      throw new BadRequestException('Course is not available for enrollment');
 
     const effectivePrice = course.discount_price ?? course.price;
     if (Number(effectivePrice) !== 0) {
-      throw new BadRequestException('Course is not free — complete payment to enroll');
+      throw new BadRequestException(
+        'Course is not free — complete payment to enroll',
+      );
     }
 
     const { data, error } = await this.supabase
@@ -105,14 +112,18 @@ export class EnrollmentsService {
       .select('*')
       .single();
     if (error) {
-      if (error.code === '23505') throw new ConflictException('Already enrolled in this course');
+      if (error.code === '23505')
+        throw new ConflictException('Already enrolled in this course');
       throw new BadRequestException(error.message);
     }
     return data;
   }
 
   /** Verify a student is enrolled in a specific course (active enrollment) */
-  async verifyEnrollment(studentId: string, courseId: string): Promise<boolean> {
+  async verifyEnrollment(
+    studentId: string,
+    courseId: string,
+  ): Promise<boolean> {
     const { data } = await this.supabase
       .from('enrollments')
       .select('id')

@@ -3,6 +3,7 @@
 import LogoIcon from '@/components/logo-icon';
 import { removeSession, signInWithCredentials } from '@/server/auth.server';
 import { APP_NAME } from '@repo/constants/app';
+import { authConfig } from '@repo/config';
 import { Button } from '@repo/shadcn/button';
 import {
   AlertDialog,
@@ -48,6 +49,12 @@ const SignInForm = () => {
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [deviceLimitOpen, setDeviceLimitOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const cardMaxWidth = `max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg`;
+  const cardPadding = `pt-3 sm:pt-4 px-4 sm:px-6`;
+  const formGap = `gap-4 sm:gap-5`;
+  const inputGap = `gap-1.5 sm:gap-2`;
+  const buttonHeight = `h-10 sm:h-11`;
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormData((prevState) => ({
@@ -102,7 +109,7 @@ const SignInForm = () => {
       if (result?.data === 'success') {
         const remainingSessions = deviceSessions.filter((s) => s.id !== sessionId);
         setDeviceSessions(remainingSessions);
-        if (remainingSessions.length < 2) {
+        if (remainingSessions.length < authConfig.maxDevicesPerUser) {
           setDeviceLimitOpen(false);
           execute(formData);
         }
@@ -113,17 +120,17 @@ const SignInForm = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      <Card>
-        <CardHeader className="text-center pb-2">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full">
+      <Card className={`w-full ${cardMaxWidth}`}>
+        <CardHeader className="text-center pb-2 sm:pb-3">
           {/* Logo */}
-          <div className="flex justify-center mb-4">
-            <LogoIcon width={48} height={48} />
+          <div className="flex justify-center mb-3 sm:mb-4">
+            <LogoIcon width={44} height={44} className="w-11 h-11 sm:w-12 sm:h-12" />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription
             className={cn(
-              'text-sm',
+              'text-sm sm:text-base',
               serverError && !serverError.includes('DEVICE_LIMIT')
                 ? 'text-destructive'
                 : '',
@@ -135,17 +142,17 @@ const SignInForm = () => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-4">
+        <CardContent className={cardPadding}>
           <form
             onSubmit={(e) => {
               e.preventDefault();
               execute(formData);
             }}
           >
-            <div className="grid gap-5">
+            <div className={`grid ${formGap}`}>
               {/* Email */}
-              <div className="grid gap-2">
-                <Label isRequired htmlFor="identifier">
+              <div className={`grid ${inputGap}`}>
+                <Label isRequired htmlFor="identifier" className="text-sm sm:text-base">
                   Email
                 </Label>
                 <Input
@@ -158,6 +165,7 @@ const SignInForm = () => {
                   required
                   disabled={isExecuting}
                   onChange={handleChange}
+                  className={`${buttonHeight} text-sm sm:text-base`}
                 />
                 {validationErrors?.identifier?._errors?.[0] && (
                   <p className="text-xs text-destructive">
@@ -167,14 +175,14 @@ const SignInForm = () => {
               </div>
 
               {/* Password */}
-              <div className="grid gap-2">
+              <div className={`grid ${inputGap}`}>
                 <div className="flex items-center justify-between">
-                  <Label isRequired htmlFor="password">
+                  <Label isRequired htmlFor="password" className="text-sm sm:text-base">
                     Password
                   </Label>
                   <Link
                     href="/auth/forgot-password"
-                    className="text-xs text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
+                    className="text-xs sm:text-sm text-muted-foreground underline-offset-4 hover:underline hover:text-foreground transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -185,6 +193,7 @@ const SignInForm = () => {
                   required
                   disabled={isExecuting}
                   onChange={handleChange}
+                  className={`${buttonHeight} text-sm sm:text-base`}
                 />
                 {validationErrors?.password?._errors?.[0] && (
                   <p className="text-xs text-destructive">
@@ -194,10 +203,10 @@ const SignInForm = () => {
               </div>
 
               {/* Submit */}
-              <SubmitButton isLoading={isExecuting} name="Sign In" />
+              <SubmitButton isLoading={isExecuting} name="Sign In" className={`${buttonHeight} text-sm sm:text-base mt-1 sm:mt-2`} />
 
               {/* Sign up link */}
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-sm sm:text-base text-muted-foreground mt-4 sm:mt-6">
                 Don&apos;t have an account?{' '}
                 <Link
                   href="/auth/sign-up"
@@ -212,30 +221,30 @@ const SignInForm = () => {
       </Card>
 
       <AlertDialog open={deviceLimitOpen} onOpenChange={setDeviceLimitOpen}>
-        <AlertDialogContent className="border-white/20 bg-background/80 shadow-2xl backdrop-blur-xl sm:max-w-xl">
-          <AlertDialogHeader>
-            <div className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <LogOut className="size-6" />
+        <AlertDialogContent className="border-white/20 bg-background/80 shadow-2xl backdrop-blur-xl max-w-sm sm:max-w-md md:max-w-lg w-full mx-4 sm:mx-auto">
+          <AlertDialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6">
+            <div className="mb-2 flex size-10 sm:size-12 items-center justify-center rounded-xl sm:rounded-2xl bg-destructive/10 text-destructive">
+              <LogOut className="size-5 sm:size-6" />
             </div>
-            <AlertDialogTitle>Sign-in limit reached</AlertDialogTitle>
-            <AlertDialogDescription>
-              This account already has 2 active sessions. Sign out an existing
+            <AlertDialogTitle className="text-lg sm:text-xl font-semibold">Sign-in limit reached</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sm:text-base">
+              This account already has {authConfig.maxDevicesPerUser} active sessions. Sign out an existing
               device below before continuing on this one.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <div className="max-h-[45vh] space-y-3 overflow-y-auto py-1">
+          <div className="max-h-[40vh] sm:max-h-[45vh] space-y-2 sm:space-y-3 overflow-y-auto py-1 px-4 sm:px-6">
             {deviceSessions.length > 0 ? (
               deviceSessions.map((session) => {
                 const DeviceIcon = session.platform === 'web' ? Laptop : Smartphone;
                 return (
                   <div
                     key={session.id}
-                    className="flex items-start gap-3 rounded-2xl border border-white/20 bg-white/40 p-4 dark:bg-white/5"
+                    className="flex items-start gap-2.5 sm:gap-3 rounded-xl sm:rounded-2xl border border-white/20 bg-white/40 p-3 sm:p-4 dark:bg-white/5"
                   >
-                    <DeviceIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="font-medium">{session.device_name}</p>
+                    <DeviceIcon className="mt-0.5 size-4.5 sm:size-5 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+                      <p className="font-medium text-sm sm:text-base truncate">{session.device_name}</p>
                       <p className="text-xs capitalize text-muted-foreground">
                         {session.platform} device
                       </p>
@@ -251,11 +260,12 @@ const SignInForm = () => {
                       size="sm"
                       disabled={removingId === session.id}
                       onClick={() => handleRemoveSession(session.id)}
+                      className="h-8 sm:h-9 px-3 sm:px-4 text-xs sm:text-sm shrink-0"
                     >
                       {removingId === session.id ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        <Loader2 className="mr-1.5 sm:mr-2 size-3.5 sm:size-4 animate-spin" />
                       ) : (
-                        <LogOut className="mr-2 size-4" />
+                        <LogOut className="mr-1.5 sm:mr-2 size-3.5 sm:size-4" />
                       )}
                       Sign out
                     </Button>
@@ -263,16 +273,18 @@ const SignInForm = () => {
                 );
               })
             ) : (
-              <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-muted-foreground">
+              <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 sm:p-4 text-sm text-muted-foreground text-center">
                 Session details could not be loaded. Close this window and try
                 signing in again to refresh the active-session list.
               </p>
             )}
           </div>
 
-          <AlertDialogFooter>
+          <AlertDialogFooter className="px-4 sm:px-6 pb-4 sm:pb-6 flex-col-reverse sm:flex-row gap-2 sm:gap-3">
             <AlertDialogCancel asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" className="w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base">
+                Cancel
+              </Button>
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -20,7 +20,9 @@ export class PermissionsService {
       (p) => !(ALL_PERMISSIONS as readonly string[]).includes(p),
     );
     if (invalid.length > 0) {
-      throw new BadRequestException(`Invalid permissions: ${invalid.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid permissions: ${invalid.join(', ')}`,
+      );
     }
 
     // Verify user is a sub_admin
@@ -99,7 +101,10 @@ export class PermissionsService {
   }
 
   async demoteToStudent(userId: string) {
-    await this.supabase.from('sub_admin_permissions').delete().eq('user_id', userId);
+    await this.supabase
+      .from('sub_admin_permissions')
+      .delete()
+      .eq('user_id', userId);
     const { error } = await this.supabase
       .from('profiles')
       .update({ role: 'student' })

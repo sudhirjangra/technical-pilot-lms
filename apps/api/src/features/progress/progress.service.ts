@@ -25,7 +25,8 @@ export class ProgressService {
       .single();
     if (lessonErr || !lesson) throw new NotFoundException('Lesson not found');
 
-    const courseId = (lesson.chapters as unknown as { course_id: string }).course_id;
+    const courseId = (lesson.chapters as unknown as { course_id: string })
+      .course_id;
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
@@ -34,13 +35,20 @@ export class ProgressService {
       .eq('course_id', courseId)
       .eq('status', 'active')
       .single();
-    if (!enrollment) throw new ForbiddenException('Active enrollment required to access this content');
+    if (!enrollment)
+      throw new ForbiddenException(
+        'Active enrollment required to access this content',
+      );
 
     // Upsert progress record
     const { data, error } = await this.supabase
       .from('progress')
       .upsert(
-        { student_id: studentId, lesson_id: dto.lesson_id, status: 'not_started' },
+        {
+          student_id: studentId,
+          lesson_id: dto.lesson_id,
+          status: 'not_started',
+        },
         { onConflict: 'student_id,lesson_id', ignoreDuplicates: true },
       )
       .select('*')
@@ -96,14 +104,16 @@ export class ProgressService {
     // Get all lessons for the course
     const { data: chapters } = await this.supabase
       .from('chapters')
-      .select('id, title, sort_order, lessons(id, title, sort_order, lesson_type)')
+      .select(
+        'id, title, sort_order, lessons(id, title, sort_order, lesson_type)',
+      )
       .eq('course_id', courseId)
       .order('sort_order');
 
     if (!chapters) return { chapters: [], overall_percent: 0 };
 
-    const lessonIds = chapters.flatMap(
-      (ch: { lessons: { id: string }[] }) => ch.lessons.map((l) => l.id),
+    const lessonIds = chapters.flatMap((ch: { lessons: { id: string }[] }) =>
+      ch.lessons.map((l) => l.id),
     );
 
     if (lessonIds.length === 0) return { chapters, overall_percent: 0 };
@@ -115,23 +125,29 @@ export class ProgressService {
       .in('lesson_id', lessonIds);
 
     const progressMap = new Map(
-      (progressRecords ?? []).map((p: { lesson_id: string }) => [p.lesson_id, p]),
+      (progressRecords ?? []).map((p: { lesson_id: string }) => [
+        p.lesson_id,
+        p,
+      ]),
     );
 
     const completedCount = (progressRecords ?? []).filter(
       (p: { status: string }) => p.status === 'completed',
     ).length;
-    const overallPercent = lessonIds.length > 0
-      ? Math.round((completedCount / lessonIds.length) * 100)
-      : 0;
+    const overallPercent =
+      lessonIds.length > 0
+        ? Math.round((completedCount / lessonIds.length) * 100)
+        : 0;
 
-    const enrichedChapters = chapters.map((ch: { lessons: { id: string }[] }) => ({
-      ...ch,
-      lessons: ch.lessons.map((l) => ({
-        ...l,
-        progress: progressMap.get(l.id) ?? null,
-      })),
-    }));
+    const enrichedChapters = chapters.map(
+      (ch: { lessons: { id: string }[] }) => ({
+        ...ch,
+        lessons: ch.lessons.map((l) => ({
+          ...l,
+          progress: progressMap.get(l.id) ?? null,
+        })),
+      }),
+    );
 
     return { chapters: enrichedChapters, overall_percent: overallPercent };
   }

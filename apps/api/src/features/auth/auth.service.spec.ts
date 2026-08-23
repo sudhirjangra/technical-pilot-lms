@@ -1,9 +1,12 @@
+import {
+  SUPABASE_ADMIN,
+  SUPABASE_ANON,
+} from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Logger } from 'nestjs-pino';
-import { SUPABASE_ADMIN, SUPABASE_ANON } from '@/common/modules/supabase.module';
-import { MailService } from '@/features/mail/mail.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from 'nestjs-pino';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
@@ -22,8 +25,20 @@ describe('AuthService', () => {
       update: jest.fn().mockReturnThis(),
       auth: {
         admin: {
-          createUser: jest.fn().mockResolvedValue({ data: { user: { id: 'test-id', email: 'test@test.com' } }, error: null }),
-          getUserById: jest.fn().mockResolvedValue({ data: { user: { id: 'test-id', email: 'test@test.com', email_confirmed_at: null } }, error: null }),
+          createUser: jest.fn().mockResolvedValue({
+            data: { user: { id: 'test-id', email: 'test@test.com' } },
+            error: null,
+          }),
+          getUserById: jest.fn().mockResolvedValue({
+            data: {
+              user: {
+                id: 'test-id',
+                email: 'test@test.com',
+                email_confirmed_at: null,
+              },
+            },
+            error: null,
+          }),
           updateUserById: jest.fn().mockResolvedValue({ error: null }),
           deleteUser: jest.fn().mockResolvedValue({ error: null }),
           signOut: jest.fn().mockResolvedValue({ error: null }),

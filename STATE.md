@@ -57,15 +57,17 @@
 ### Phase 3.1: Video Resume + Security Hardening (Done)
 - [x] GET /progress/lesson/:lessonId endpoint (NestJS) — returns last_position_seconds
 - [x] Next.js proxy routes: GET + PATCH /api/progress/[lessonId]
-- [x] VideoPlayer: fetches resume position → appends starttime= to iframe URL
-- [x] VideoPlayer: VdoCipher postMessage SDK listener (timeupdate/ended events) → debounced PATCH
-- [x] VideoPlayer: upsert progress (not update) — creates record on first save
-- [x] VideoPlayer: 3-position randomly-moving HTML watermark overlay (complementing server-side VdoCipher watermark)
-- [x] VideoPlayer: SecurityCurtain (black overlay) on tab switch / visibility change
-- [x] VideoPlayer: postMessage pause/play to player on visibility change
-- [x] VideoPlayer: keyboard shortcut blocking (PrintScreen, Win+Shift+S, Win+G, Cmd+Shift+3/4/5)
-- [x] VideoPlayer: saves position on unmount, on visibility hide
+- [x] VideoPlayer: fetches resume position on mount; sets player.video.currentTime on loadedmetadata
+- [x] VideoPlayer: VdoCipher api.js SDK (VdoPlayer.getInstance) — real API, not postMessage hacks
+- [x] VideoPlayer: timeupdate/ended event listeners via player.video.addEventListener
+- [x] VideoPlayer: upsert progress on PATCH — creates on first call, updates on subsequent
+- [x] VideoPlayer: 3-position randomly-moving HTML watermark overlay + server-side VdoCipher watermark
+- [x] VideoPlayer: black curtain on tab switch (visibilitychange), window blur, PrintScreen key
+- [x] VideoPlayer: player.video.pause() called on visibility loss/window blur
+- [x] VideoPlayer: keyboard shortcut blocking (PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5)
+- [x] VideoPlayer: saves on unmount, on visibility hide, periodic every 8s
 - [x] VideoPlayer: auto-completes at 90% watch threshold
+- [x] CSP: added player.vdocipher.com to script-src and *.vdocipher.com to connect-src
 
 ### Phase 3.0: VdoCipher Video Streaming (Done)
 - [x] Migration 008: rename vimeo_video_id → vdocipher_video_id in video_lessons, drop vimeo_uri, add video_sessions table

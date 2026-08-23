@@ -27,6 +27,7 @@ apps/
 ├── api/          — NestJS backend (serves web + mobile)
 ├── web/          — Next.js frontend (student + admin)
 packages/
+├── config/       — Shared configuration (device limits, timeouts, UI sizing)
 ├── supabase/     — Shared Supabase client, types, migrations
 ├── shadcn/       — UI components (ShadCN + custom)
 ├── constants/    — Shared constants
@@ -54,6 +55,24 @@ packages/
 - Supabase Storage policies restrict PDF downloads to enrolled students.
 - Video player implements dynamic watermark (student email overlay).
 - Session timeout on inactivity (configurable by admin).
+
+## Configuration Principles
+
+- **No hardcoded values** for limits, timeouts, or UI sizing that may need adjustment.
+- All configurable values live in `@repo/config` (packages/config) with Zod-validated schema.
+- Environment variables override defaults (e.g., `MAX_DEVICES_PER_USER=3`).
+- Frontend and backend share the same config package for consistency.
+- Changing a limit (device count, session timeout, token expiry) requires only updating `.env` or the config defaults — no code changes.
+
+## Responsive UI Principles
+
+- **Mobile-first, professional responsive design** for all screens (320px–1920px+).
+- Use Tailwind responsive prefixes: base (mobile), `sm:` (≥640px), `md:` (≥768px), `lg:` (≥1024px), `xl:` (≥1280px).
+- Compact spacing, smaller text, and touch-friendly targets on mobile; relaxed spacing and larger elements on desktop.
+- Cards/forms: `max-w-xs` → `sm:max-w-sm` → `md:max-w-md` → `lg:max-w-lg` for progressive width.
+- Interactive elements minimum 44×44px touch target on mobile.
+- Avoid horizontal scrolling; use `w-full`, `max-w-full`, `overflow-x-auto` where needed.
+- Test at 320px, 375px, 768px, 1024px, 1440px breakpoints minimum.
 
 ## Environment
 

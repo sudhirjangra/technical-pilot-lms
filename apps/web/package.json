@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@repo/config": "workspace:*",
     "@repo/shadcn": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@supabase/auth-ui-react": "^0.4.7",

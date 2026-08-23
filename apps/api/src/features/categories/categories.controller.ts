@@ -27,7 +27,9 @@ export class CategoriesController {
   @Public()
   @Get()
   async findAll(@Query('includeInactive') includeInactive?: string) {
-    const data = await this.categoriesService.findAll(includeInactive === 'true');
+    const data = await this.categoriesService.findAll(
+      includeInactive === 'true',
+    );
     return { message: 'Categories fetched successfully', data };
   }
 

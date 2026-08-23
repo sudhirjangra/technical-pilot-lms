@@ -20,7 +20,10 @@ export class ProgressController {
 
   /** Student: start tracking a lesson (verifies enrollment) */
   @Post()
-  initProgress(@Body() dto: CreateProgressDto, @Req() req: { user: { id: string } }) {
+  initProgress(
+    @Body() dto: CreateProgressDto,
+    @Req() req: { user: { id: string } },
+  ) {
     return this.progressService.initOrGet(dto, req.user.id);
   }
 

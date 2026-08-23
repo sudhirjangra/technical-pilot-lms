@@ -1,6 +1,6 @@
+import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import { Env } from '@/common/utils';
 import { swagger } from '@/swagger';
-import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import helmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';

@@ -1,5 +1,8 @@
 import { Public, Roles } from '@/common/decorators';
-import { AuditLogInterceptor, Audit } from '@/common/interceptors/audit-log.interceptor';
+import {
+  Audit,
+  AuditLogInterceptor,
+} from '@/common/interceptors/audit-log.interceptor';
 import {
   Body,
   Controller,
@@ -25,14 +28,20 @@ export class PaymentsController {
   /** Student: create payment order for a course */
   @Post('order')
   @Audit('payment.order_created')
-  createOrder(@Body() dto: CreateOrderDto, @Req() req: { user: { id: string } }) {
+  createOrder(
+    @Body() dto: CreateOrderDto,
+    @Req() req: { user: { id: string } },
+  ) {
     return this.paymentsService.createOrder(dto, req.user.id);
   }
 
   /** Student: verify payment after Razorpay checkout */
   @Post('verify')
   @Audit('payment.verified')
-  verifyPayment(@Body() dto: VerifyPaymentDto, @Req() req: { user: { id: string } }) {
+  verifyPayment(
+    @Body() dto: VerifyPaymentDto,
+    @Req() req: { user: { id: string } },
+  ) {
     return this.paymentsService.verifyPayment(dto, req.user.id);
   }
 
@@ -60,7 +69,11 @@ export class PaymentsController {
     @Query('course_id') course_id?: string,
     @Query('student_id') student_id?: string,
   ) {
-    const data = await this.paymentsService.findAll({ status, course_id, student_id });
+    const data = await this.paymentsService.findAll({
+      status,
+      course_id,
+      student_id,
+    });
     return { data };
   }
 
@@ -68,7 +81,10 @@ export class PaymentsController {
   @Post(':id/refund')
   @Roles('ADMIN')
   @Audit('payment.refunded')
-  refund(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RefundPaymentDto) {
+  refund(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RefundPaymentDto,
+  ) {
     return this.paymentsService.refund(id, dto);
   }
 }

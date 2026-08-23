@@ -1,5 +1,8 @@
-import { Public, Roles } from '@/common/decorators';
-import { AuditLogInterceptor, Audit } from '@/common/interceptors/audit-log.interceptor';
+import { Roles } from '@/common/decorators';
+import {
+  Audit,
+  AuditLogInterceptor,
+} from '@/common/interceptors/audit-log.interceptor';
 import {
   Body,
   Controller,
@@ -67,7 +70,10 @@ export class EnrollmentsController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @Req() req: { user: { id: string } },
   ) {
-    const enrolled = await this.enrollmentsService.verifyEnrollment(req.user.id, courseId);
+    const enrolled = await this.enrollmentsService.verifyEnrollment(
+      req.user.id,
+      courseId,
+    );
     return { enrolled };
   }
 
@@ -78,7 +84,10 @@ export class EnrollmentsController {
     @Param('courseId', ParseUUIDPipe) courseId: string,
     @Req() req: { user: { id: string } },
   ) {
-    const data = await this.enrollmentsService.enrollFree(req.user.id, courseId);
+    const data = await this.enrollmentsService.enrollFree(
+      req.user.id,
+      courseId,
+    );
     return { message: 'Enrolled successfully', data };
   }
 }
