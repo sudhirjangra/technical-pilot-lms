@@ -14,6 +14,7 @@ const Providers = async ({ children }: Readonly<ProvidersProps>) => {
       attribute="class"
       defaultTheme="system"
       enableSystem
+      disableTransitionOnChange
     >
       <SessionProvider session={session}>
         <NuqsAdapter>{children}</NuqsAdapter>

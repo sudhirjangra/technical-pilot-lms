@@ -1,4 +1,5 @@
 import { auth } from '@/auth';
+import HeroAviation from '@/components/hero-aviation';
 import LogoIcon from '@/components/logo-icon';
 import Session from '@/components/session';
 import { redirect } from 'next/navigation';
@@ -20,7 +21,8 @@ const Page = async () => {
           <Session />
         </div>
       </nav>
-      <div className="flex flex-1 flex-col w-full justify-center items-center gap-5">
+      <div className="flex flex-1 flex-col w-full justify-center items-center gap-5 py-10">
+        <HeroAviation />
         <h2 className="text-2xl font-bold">Technical Pilot LMS</h2>
         <p className="text-muted-foreground">Learning Management System</p>
         {session?.user ? (

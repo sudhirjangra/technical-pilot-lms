@@ -273,6 +273,43 @@
       mask-size: 200vmax;
     }
   }
+
+  /* Hero aviation scene */
+  --animate-orbit: orbit 24s linear infinite;
+  --animate-orbit-reverse: orbit-reverse 16s linear infinite;
+  --animate-radar-sweep: orbit 6s linear infinite;
+  --animate-ring-pulse: ring-pulse 3.2s ease-out infinite;
+  --animate-float-y: float-y 6s ease-in-out infinite;
+
+  @keyframes orbit {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes orbit-reverse {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+  @keyframes ring-pulse {
+    0% {
+      transform: scale(0.55);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.35);
+      opacity: 0;
+    }
+  }
+  @keyframes float-y {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
 }
 
 /* Utility for Container */
@@ -303,21 +340,31 @@
   }
 
   /* View Transition Animations */
-  ::view-transition-new(root) {
-    z-index: 500000;
-    mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="white"/></svg>')
-      center / 0 no-repeat;
-    animation: scale 1s;
+  ::view-transition-group(root) {
+    isolation: isolate;
   }
 
-  ::view-transition-old(root),
-  .dark::view-transition-old(root) {
-    z-index: -1;
+  /* Old snapshot stays fully painted underneath while the new one is masked in. */
+  ::view-transition-old(root) {
+    z-index: 1;
     animation: none;
+    mix-blend-mode: normal;
   }
-  .dark::view-transition-new(root) {
-    z-index: 500000;
-    animation: scale 1s;
+
+  ::view-transition-new(root) {
+    z-index: 2;
+    mix-blend-mode: normal;
+    mask: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="white"/></svg>')
+      center / 0 no-repeat;
+    animation: scale 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mask: none;
+    }
   }
 
   /* No Scrollbar Utility */
