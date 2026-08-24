@@ -4,19 +4,28 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 export function ModeSwitcher() {
   const { setTheme, resolvedTheme } = useTheme();
 
-  const isDark = resolvedTheme === 'dark';
-
   const toggleTheme = React.useCallback(async () => {
-    // setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-    if (!document.startViewTransition)
-      return setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-    await document.startViewTransition(() =>
-      setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
-    ).ready;
+    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    if (!document.startViewTransition || prefersReducedMotion) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    // flushSync forces next-themes to commit the `.dark` class before the
+    // browser captures the "new" snapshot, otherwise it captures the old theme.
+    await document.startViewTransition(() => {
+      flushSync(() => setTheme(nextTheme));
+    }).ready;
   }, [resolvedTheme, setTheme]);
 
   const [mounted, setMounted] = useState(false);
