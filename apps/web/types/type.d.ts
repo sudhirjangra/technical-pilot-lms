@@ -30,6 +30,7 @@ declare module 'next-auth' {
     email: string;
     role: 'admin' | 'sub_admin' | 'student';
     full_name?: string | null;
+    date_of_birth?: string | null;
     phone?: string | null;
     avatar_url?: string | null;
     is_active: boolean;

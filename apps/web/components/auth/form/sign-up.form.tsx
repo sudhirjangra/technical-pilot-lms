@@ -23,6 +23,8 @@ import { ChangeEvent, useState } from 'react';
 const SignUpForm = () => {
   const [formData, setFormData] = useState({
     email: '',
+    full_name: '',
+    date_of_birth: '',
     password: '',
     phone: '',
   });
@@ -63,6 +65,39 @@ const SignUpForm = () => {
             }}
           >
             <div className="grid gap-5">
+              <div className="grid gap-2">
+                <Label isRequired htmlFor="full_name">Full name</Label>
+                <Input
+                  id="full_name"
+                  name="full_name"
+                  type="text"
+                  placeholder="Your full name"
+                  autoComplete="name"
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.full_name?._errors?.[0] && (
+                  <p className="text-xs text-destructive">{validationErrors.full_name._errors[0]}</p>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <Label isRequired htmlFor="date_of_birth">Date of birth</Label>
+                <Input
+                  id="date_of_birth"
+                  name="date_of_birth"
+                  type="date"
+                  autoComplete="bday"
+                  required
+                  disabled={isExecuting}
+                  onChange={handleChange}
+                />
+                {validationErrors?.date_of_birth?._errors?.[0] && (
+                  <p className="text-xs text-destructive">{validationErrors.date_of_birth._errors[0]}</p>
+                )}
+              </div>
+
               {/* Email */}
               <div className="grid gap-2">
                 <Label isRequired htmlFor="email">

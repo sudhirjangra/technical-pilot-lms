@@ -11,6 +11,8 @@ export const EnvSchema = z.object({
   ACCESS_TOKEN_EXPIRATION: z.string().min(1).max(60),
   REFRESH_TOKEN_SECRET: z.string().min(10).max(128),
   REFRESH_TOKEN_EXPIRATION: z.string().min(1).max(365),
+  MAX_DEVICES_PER_USER: z.coerce.number().int().min(1).max(10).default(2),
+  SESSION_TIMEOUT_DAYS: z.coerce.number().int().min(1).max(90).default(3),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(10),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(10),

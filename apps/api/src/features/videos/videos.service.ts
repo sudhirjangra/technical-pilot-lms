@@ -67,7 +67,6 @@ export class VideosService {
   async generateOtp(
     lessonId: string,
     userId: string,
-    userEmail: string,
     ip: string,
     userAgent: string,
   ): Promise<{ otp: string; playbackInfo: string }> {
@@ -138,7 +137,7 @@ export class VideosService {
 
     const watermark = {
       type: 'rtext',
-      text: `${userEmail} | ${new Date().toLocaleDateString('en-IN')}`,
+      text: 'Technical Pilot. All rights reserved 2026.',
       alpha: '0.5',
       color: '0xFF0000',
       size: '12',

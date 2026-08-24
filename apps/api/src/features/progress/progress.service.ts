@@ -131,13 +131,30 @@ export class ProgressService {
       ]),
     );
 
-    const completedCount = (progressRecords ?? []).filter(
-      (p: { status: string }) => p.status === 'completed',
-    ).length;
-    const overallPercent =
-      lessonIds.length > 0
-        ? Math.round((completedCount / lessonIds.length) * 100)
-        : 0;
+    const videoLessons = chapters.flatMap(
+      (ch: { lessons: { id: string; lesson_type: string }[] }) =>
+        ch.lessons.filter((lesson) => lesson.lesson_type === 'video'),
+    );
+    const videoProgress = videoLessons.map((lesson) => {
+      const progress = progressMap.get(lesson.id) as
+        | { progress_percent?: number; status?: string }
+        | undefined;
+      return progress?.status === 'completed'
+        ? 100
+        : Math.min(100, Math.max(0, progress?.progress_percent ?? 0));
+    });
+    const overallPercent = videoProgress.length
+      ? Math.round(
+          videoProgress.reduce((sum, value) => sum + value, 0) /
+            videoProgress.length,
+        )
+      : 0;
+    const overallStatus =
+      overallPercent === 100
+        ? 'completed'
+        : overallPercent > 0
+          ? 'in_progress'
+          : 'not_started';
 
     const enrichedChapters = chapters.map(
       (ch: { lessons: { id: string }[] }) => ({
@@ -149,7 +166,11 @@ export class ProgressService {
       }),
     );
 
-    return { chapters: enrichedChapters, overall_percent: overallPercent };
+    return {
+      chapters: enrichedChapters,
+      overall_percent: overallPercent,
+      overall_status: overallStatus,
+    };
   }
 
   /** Admin: get progress summary for a student */

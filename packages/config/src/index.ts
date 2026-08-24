@@ -18,7 +18,7 @@ export const uiConfigSchema = z.object({
 export const appConfigSchema = z.object({
   name: z.string().default('Technical Pilot LMS'),
   version: z.string().default('1.0.0'),
-  logoUrl: z.string().url().default(''),
+  logoUrl: z.union([z.string().url(), z.literal('')]).default(''),
 });
 
 export type AuthConfig = z.infer<typeof authConfigSchema>;
@@ -53,7 +53,7 @@ function parseEnvNumber(envVar: string | undefined, fallback: number): number {
 }
 
 function getAuthConfig(): AuthConfig {
-  return {
+  return authConfigSchema.parse({
     maxDevicesPerUser: parseEnvNumber(process.env.MAX_DEVICES_PER_USER, defaultAuthConfig.maxDevicesPerUser),
     sessionTimeoutDays: parseEnvNumber(process.env.SESSION_TIMEOUT_DAYS, defaultAuthConfig.sessionTimeoutDays),
     accessTokenExpirationMinutes: parseEnvNumber(
@@ -64,25 +64,25 @@ function getAuthConfig(): AuthConfig {
       process.env.REFRESH_TOKEN_EXPIRATION_DAYS,
       defaultAuthConfig.refreshTokenExpirationDays
     ),
-  };
+  });
 }
 
 function getUiConfig(): UiConfig {
-  return {
+  return uiConfigSchema.parse({
     signInCardMaxWidth: process.env.SIGN_IN_CARD_MAX_WIDTH ?? defaultUiConfig.signInCardMaxWidth,
     signInCardPadding: process.env.SIGN_IN_CARD_PADDING ?? defaultUiConfig.signInCardPadding,
     formGap: process.env.FORM_GAP ?? defaultUiConfig.formGap,
     inputGap: process.env.INPUT_GAP ?? defaultUiConfig.inputGap,
     buttonHeight: process.env.BUTTON_HEIGHT ?? defaultUiConfig.buttonHeight,
-  };
+  });
 }
 
 function getAppConfig(): AppConfig {
-  return {
+  return appConfigSchema.parse({
     name: process.env.APP_NAME ?? defaultAppConfig.name,
     version: process.env.APP_VERSION ?? defaultAppConfig.version,
     logoUrl: process.env.APP_LOGO_URL ?? defaultAppConfig.logoUrl,
-  };
+  });
 }
 
 export const authConfig = getAuthConfig();

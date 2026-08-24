@@ -37,7 +37,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { authConfig } from '@repo/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Logger } from 'nestjs-pino';
 
@@ -178,7 +177,8 @@ export class AuthService {
         id: userId,
         email: dto.email,
         role: 'student',
-        full_name: dto.email.split('@')[0],
+        full_name: dto.full_name,
+        date_of_birth: dto.date_of_birth,
         phone: dto.phone,
       },
       { onConflict: 'id' },
@@ -242,10 +242,11 @@ export class AuthService {
       .select('id, device_name, platform, last_active_at, created_at')
       .eq('user_id', authUser.id);
 
-    if ((existingDevices?.length ?? 0) >= authConfig.maxDevicesPerUser) {
+    const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
+    if ((existingDevices?.length ?? 0) >= maxDevices) {
       throw new BadRequestException({
         code: 'DEVICE_LIMIT_REACHED',
-        message: `Max device limit reached (${authConfig.maxDevicesPerUser}). Remove a session to continue.`,
+        message: `Max device limit reached (${maxDevices}). Remove a session to continue.`,
         sessions: existingDevices,
       });
     }
@@ -267,7 +268,9 @@ export class AuthService {
       .select('id')
       .single();
 
-    const session_refresh_time = await generateRefreshTime();
+    const session_refresh_time = await generateRefreshTime(
+      this.config.get<number>('SESSION_TIMEOUT_DAYS', 3),
+    );
 
     try {
       await this.mailService.sendEmail({

@@ -22,6 +22,8 @@ const passWordSchema = z
  */
 export const SignUpSchema = z.object({
   email: z.string().email(),
+  full_name: z.string().trim().min(2, 'Full name must be at least 2 characters'),
+  date_of_birth: z.string().date('Enter a valid date of birth'),
   password: passWordSchema,
   phone: z
     .string()

@@ -31,6 +31,7 @@ export interface Database {
           email: string;
           role: UserRole;
           full_name: string | null;
+          date_of_birth: string | null;
           phone: string | null;
           avatar_url: string | null;
           is_active: boolean;
@@ -42,6 +43,7 @@ export interface Database {
           email: string;
           role?: UserRole;
           full_name?: string | null;
+          date_of_birth?: string | null;
           phone?: string | null;
           avatar_url?: string | null;
           is_active?: boolean;
@@ -53,6 +55,7 @@ export interface Database {
           email?: string;
           role?: UserRole;
           full_name?: string | null;
+          date_of_birth?: string | null;
           phone?: string | null;
           avatar_url?: string | null;
           is_active?: boolean;

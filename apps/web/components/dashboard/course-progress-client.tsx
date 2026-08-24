@@ -30,7 +30,11 @@ export function CourseProgressClient({
   progress,
 }: {
   courseId: string;
-  progress: { chapters: ChapterProgress[]; overall_percent: number } | null;
+  progress: {
+    chapters: ChapterProgress[];
+    overall_percent: number;
+    overall_status: 'not_started' | 'in_progress' | 'completed';
+  } | null;
 }) {
   if (!progress) {
     return (
@@ -53,6 +57,9 @@ export function CourseProgressClient({
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Course Progress</h1>
           <div className="flex items-center gap-3">
+            <Badge variant={progress.overall_status === 'completed' ? 'default' : 'secondary'}>
+              {progress.overall_status === 'completed' ? 'Completed' : progress.overall_status === 'in_progress' ? 'In Progress' : 'Not Started'}
+            </Badge>
             <span className="text-sm font-medium">{progress.overall_percent}% complete</span>
             <Progress value={progress.overall_percent} className="w-32" />
           </div>

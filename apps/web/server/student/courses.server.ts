@@ -76,6 +76,7 @@ export async function checkEnrollment(courseId: string): Promise<boolean> {
 const ProgressSchema = z.object({
   chapters: z.array(z.any()),
   overall_percent: z.number(),
+  overall_status: z.enum(['not_started', 'in_progress', 'completed']),
 });
 
 export async function enrollFreeCourse(courseId: string): Promise<{ error?: string }> {

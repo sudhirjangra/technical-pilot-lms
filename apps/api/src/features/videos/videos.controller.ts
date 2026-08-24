@@ -74,14 +74,13 @@ export class VideosController {
   @Post(':lessonId/otp')
   async generateOtp(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
-    @User() user: { id: string; email: string },
+    @User() user: { id: string },
     @Ip() ip: string,
     @Headers('user-agent') userAgent: string,
   ) {
     const data = await this.videosService.generateOtp(
       lessonId,
       user.id,
-      user.email,
       ip ?? 'unknown',
       userAgent ?? '',
     );

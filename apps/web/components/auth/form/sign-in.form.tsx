@@ -3,7 +3,7 @@
 import LogoIcon from '@/components/logo-icon';
 import { removeSession, signInWithCredentials } from '@/server/auth.server';
 import { APP_NAME } from '@repo/constants/app';
-import { authConfig } from '@repo/config';
+import { uiConfig } from '@repo/config';
 import { Button } from '@repo/shadcn/button';
 import {
   AlertDialog,
@@ -50,11 +50,11 @@ const SignInForm = () => {
   const [deviceLimitOpen, setDeviceLimitOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  const cardMaxWidth = `max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg`;
-  const cardPadding = `pt-3 sm:pt-4 px-4 sm:px-6`;
-  const formGap = `gap-4 sm:gap-5`;
-  const inputGap = `gap-1.5 sm:gap-2`;
-  const buttonHeight = `h-10 sm:h-11`;
+  const cardMaxWidth = 'w-full';
+  const cardPadding = 'pt-3 sm:pt-4 px-4 sm:px-6';
+  const formGap = 'gap-4 sm:gap-5';
+  const inputGap = 'gap-1.5 sm:gap-2';
+  const buttonHeight = 'h-10 sm:h-11';
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormData((prevState) => ({
@@ -109,10 +109,8 @@ const SignInForm = () => {
       if (result?.data === 'success') {
         const remainingSessions = deviceSessions.filter((s) => s.id !== sessionId);
         setDeviceSessions(remainingSessions);
-        if (remainingSessions.length < authConfig.maxDevicesPerUser) {
-          setDeviceLimitOpen(false);
-          execute(formData);
-        }
+        setDeviceLimitOpen(false);
+        execute(formData);
       }
     } finally {
       setRemovingId(null);
@@ -121,7 +119,7 @@ const SignInForm = () => {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full">
-      <Card className={`w-full ${cardMaxWidth}`}>
+      <Card className={cardMaxWidth} style={{ maxWidth: uiConfig.signInCardMaxWidth }}>
         <CardHeader className="text-center pb-2 sm:pb-3">
           {/* Logo */}
           <div className="flex justify-center mb-3 sm:mb-4">
@@ -228,7 +226,7 @@ const SignInForm = () => {
             </div>
             <AlertDialogTitle className="text-lg sm:text-xl font-semibold">Sign-in limit reached</AlertDialogTitle>
             <AlertDialogDescription className="text-sm sm:text-base">
-              This account already has {authConfig.maxDevicesPerUser} active sessions. Sign out an existing
+              This account has reached its active session limit. Sign out an existing
               device below before continuing on this one.
             </AlertDialogDescription>
           </AlertDialogHeader>

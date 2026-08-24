@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface VideoPlayerProps {
   lessonId: string;
-  userEmail?: string;
 }
 
 interface OtpData {
@@ -50,7 +49,7 @@ interface VdoPlayerInstance {
 }
 
 // Multi-position randomly-moving overlay watermark
-function WatermarkOverlay({ email }: { email: string }) {
+function WatermarkOverlay() {
   const [positions, setPositions] = useState<WatermarkPos[]>([
     { x: 8, y: 8, opacity: 0.22 },
     { x: 52, y: 42, opacity: 0.18 },
@@ -68,8 +67,7 @@ function WatermarkOverlay({ email }: { email: string }) {
     return () => clearInterval(interval);
   }, []);
 
-  const label = email.length > 36 ? email.slice(0, 33) + '…' : email;
-  const date = new Date().toLocaleDateString('en-IN');
+  const label = 'Technical Pilot. All rights reserved 2026.';
 
   return (
     <div
@@ -96,14 +94,14 @@ function WatermarkOverlay({ email }: { email: string }) {
             pointerEvents: 'none',
           }}
         >
-          {label} · {date}
+          {label}
         </span>
       ))}
     </div>
   );
 }
 
-export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
+export function VideoPlayer({ lessonId }: VideoPlayerProps) {
   const [otpData, setOtpData] = useState<OtpData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -252,27 +250,10 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
       }
     };
 
-    const onBlur = () => {
-      setHidden(true);
-      const player = playerRef.current;
-      if (player) {
-        player.video.pause();
-        saveProgress(player.video.currentTime, false);
-      }
-    };
-
-    const onFocus = () => {
-      setHidden(false);
-    };
-
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('focus', onFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
-      window.removeEventListener('focus', onFocus);
     };
   }, [saveProgress]);
 
@@ -361,7 +342,7 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
         />
 
         {/* HTML watermark overlay — rendered on top of iframe */}
-        {userEmail && <WatermarkOverlay email={userEmail} />}
+        <WatermarkOverlay />
 
         {/* Security curtain — covers video on tab switch / screenshot key / window blur */}
         {hidden && (
@@ -370,7 +351,7 @@ export function VideoPlayer({ lessonId, userEmail = '' }: VideoPlayerProps) {
             style={{ zIndex: 20 }}
           >
             <p className="text-white/60 text-sm select-none">
-              Click here to continue watching
+              Playback paused while this page is hidden
             </p>
           </div>
         )}

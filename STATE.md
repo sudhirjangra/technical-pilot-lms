@@ -50,9 +50,11 @@
 - [x] Sidebar: added SidebarSeparator between nav groups
 
 ## Immediate Next Step
-- Test resume + progress tracking end-to-end: play 30s, reload page, confirm video starts at saved position
-- Test completion: watch >90% of a video, confirm progress.status = 'completed'
-- Verify security curtain appears on tab switch
+- Apply migration 008_profile_details.sql in Supabase
+- Test registration with full name and date of birth, then verify the profile view
+- Test video resume/completion and confirm course progress averages all video lessons
+- Verify the security curtain appears on tab switch without triggering on player clicks
+- Verify the API honors MAX_DEVICES_PER_USER from apps/api/.env
 
 ### Phase 3.1: Video Resume + Security Hardening (Done)
 - [x] GET /progress/lesson/:lessonId endpoint (NestJS) — returns last_position_seconds

@@ -22,7 +22,7 @@ export default async function LessonPage({
       </a>
 
       <div className="mt-6">
-        <VideoPlayer lessonId={lessonId} userEmail={session.user.email ?? ''} />
+        <VideoPlayer lessonId={lessonId} />
       </div>
     </section>
   );

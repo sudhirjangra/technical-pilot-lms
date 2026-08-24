@@ -60,6 +60,7 @@ export const authorizeSignIn = async (
     email: user.email,
     role: user.role,
     full_name: user.full_name,
+    date_of_birth: user.date_of_birth,
     phone: user.phone,
     avatar_url: user.avatar_url,
     is_active: user.is_active,

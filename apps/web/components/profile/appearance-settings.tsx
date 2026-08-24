@@ -20,9 +20,21 @@ import {
   SelectValue,
 } from '@repo/shadcn/select';
 import { useTheme } from '@repo/shadcn/themes-provider';
+import * as React from 'react';
 
 const AppearanceSettings = ({ select_font }: { select_font: string }) => {
   const { setTheme, resolvedTheme } = useTheme();
+
+  const toggleTheme = React.useCallback(
+    async (value: string) => {
+      if (!document.startViewTransition)
+        return setTheme(value);
+      await document.startViewTransition(() =>
+        setTheme(value),
+      ).ready;
+    },
+    [setTheme],
+  );
 
   return (
     <div className="space-y-6">
@@ -36,7 +48,7 @@ const AppearanceSettings = ({ select_font }: { select_font: string }) => {
             <RadioGroup
               className="grid grid-cols-2 gap-5 max-w-sm p-0"
               value={resolvedTheme === 'dark' ? 'dark' : 'light'}
-              onValueChange={(value) => setTheme(value)}
+              onValueChange={(value) => toggleTheme(value)}
             >
               <div className={cn('relative rounded-sm overflow-hidden')}>
                 <div className="absolute inset-x-0 p-2 flex items-center">

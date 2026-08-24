@@ -45,6 +45,7 @@ const Page = async () => {
                 <h3>Email: {user.email}</h3>
                 <h4>Role: {user.role}</h4>
                 <h4>Phone: {user.phone ?? 'Not provided'}</h4>
+                <h4>Date of birth: {user.date_of_birth ?? 'Not provided'}</h4>
                 <h4>Active: {user.is_active ? 'Yes' : 'No'}</h4>
               </CardContent>
             </Card>
