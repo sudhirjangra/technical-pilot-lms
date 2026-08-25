@@ -28,7 +28,7 @@ export const isAuthorized = ({
     return true;
   }
 
-  const publicPaths = ['/', '/courses', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/confirm-email'];
+  const publicPaths = ['/', '/courses', '/auth/sign-in', '/auth/sign-up', '/auth/forgot-password', '/auth/reset-password', '/auth/confirm-email', '/auth/callback'];
   const isPublicPath = publicPaths.some(
     (p) => pathname === p || (p !== '/' && pathname.startsWith(p)),
   );

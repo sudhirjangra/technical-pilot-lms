@@ -19,6 +19,16 @@ export default auth(async (req) => {
     if (req.auth && req.auth.user) {
       await validateSessionIfExist();
     }
+
+    // Check if user needs to complete profile
+    if (req.auth && req.auth.user && req.nextUrl.pathname.startsWith('/dashboard')) {
+      const user = req.auth.user;
+      const isProfileComplete = user.full_name && user.date_of_birth && user.phone;
+      if (!isProfileComplete) {
+        const completeProfileUrl = new URL('/auth/complete-profile', req.url);
+        return Response.redirect(completeProfileUrl);
+      }
+    }
   } catch {
     // Allow request to proceed if API is unreachable
   }

@@ -5,12 +5,15 @@ import { safeAction, safeFetch } from '@/lib';
 import { getDeviceInfo } from '@/lib/device';
 import {
   ChangePasswordSchema,
+  CompleteProfileSchema,
   ConfirmEmailSchema,
   DeleteAccountSchema,
   ForgotPasswordSchema,
   GetSession,
   GetSessionSchema,
   GetSessionsSchema,
+  GoogleSignIn,
+  GoogleSignInSchema,
   RefreshToken,
   RefreshTokenSchema,
   ResendOtpSchema,
@@ -63,6 +66,46 @@ export const authorizeSignIn = async (
     date_of_birth: user.date_of_birth,
     phone: user.phone,
     avatar_url: user.avatar_url,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    tokens: tokens,
+  };
+};
+
+/**
+ * Handles Google sign-in by creating or finding user in backend.
+ * Returns user data with tokens for NextAuth session.
+ */
+export const authorizeGoogleSignIn = async (
+  googleUser: GoogleSignIn,
+): Promise<null | User> => {
+  const deviceInfo = await getDeviceInfo();
+  const [error, data] = await safeFetch(SignInDataSchema, '/auth/google-sign-in', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify({
+      ...googleUser,
+      ...deviceInfo,
+    }),
+  });
+
+  if (error) {
+    throw new AuthError(error, { cause: { message: error } });
+  }
+  const { data: user, tokens } = data!;
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    full_name: user.full_name,
+    date_of_birth: user.date_of_birth,
+    phone: user.phone,
+    avatar_url: user.avatar_url ?? googleUser.image,
     is_active: user.is_active,
     created_at: user.created_at,
     updated_at: user.updated_at,
@@ -182,6 +225,43 @@ export const signUpWithCredentials = safeAction
     if (error) throw new Error(error);
 
     redirect(`/auth/confirm-email?email=${encodeURIComponent(parsedInput.email)}`);
+  });
+
+/**
+ * Complete profile action for users who signed in with Google.
+ * @schema CompleteProfileSchema
+ */
+export const completeProfile = safeAction
+  .schema(CompleteProfileSchema)
+  .action(async ({ parsedInput }) => {
+    const session = await auth();
+    if (!session?.user) throw new Error('Not authenticated');
+
+    const [error] = await safeFetch(
+      DefaultReturnSchema,
+      '/auth/complete-profile',
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.user.tokens.access_token}`,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(parsedInput),
+      },
+    );
+
+    if (error) throw new Error(error);
+
+    // Update the session with new profile data
+    await update({
+      user: {
+        ...session.user,
+        full_name: parsedInput.full_name,
+        date_of_birth: parsedInput.date_of_birth,
+        phone: parsedInput.phone,
+      },
+    });
   });
 
 /**

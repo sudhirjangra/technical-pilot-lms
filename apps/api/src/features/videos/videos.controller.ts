@@ -1,9 +1,5 @@
 import { Ip, Roles, User } from '@/common/decorators';
 import {
-  Audit,
-  AuditLogInterceptor,
-} from '@/common/interceptors/audit-log.interceptor';
-import {
   Body,
   Controller,
   Delete,
@@ -13,21 +9,18 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  UseInterceptors,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 import { VideosService } from './videos.service';
 
 @Controller('videos')
-@UseInterceptors(AuditLogInterceptor)
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
   // ── Admin endpoints ──────────────────────────────────────────────────────
 
   @Roles('ADMIN')
-  @Audit('video_lesson.create')
   @Post('lesson')
   async createVideoLesson(@Body() dto: CreateVideoLessonDto) {
     const data = await this.videosService.createVideoLesson(dto);
@@ -49,7 +42,6 @@ export class VideosController {
   }
 
   @Roles('ADMIN')
-  @Audit('video_lesson.update')
   @Patch('lesson/:lessonId')
   async updateVideoLesson(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
@@ -60,7 +52,6 @@ export class VideosController {
   }
 
   @Roles('ADMIN')
-  @Audit('video_lesson.delete')
   @Delete('lesson/:lessonId')
   async deleteVideoLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
     await this.videosService.deleteVideoLesson(lessonId);
@@ -70,7 +61,6 @@ export class VideosController {
   // ── Student endpoint: OTP generation ────────────────────────────────────
 
   @Throttle({ short: { limit: 10, ttl: 60000 } })
-  @Audit('video.otp_requested')
   @Post(':lessonId/otp')
   async generateOtp(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,

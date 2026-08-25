@@ -2,6 +2,7 @@
 
 import LogoIcon from '@/components/logo-icon';
 import { removeSession, signInWithCredentials } from '@/server/auth.server';
+import { createClient } from '@repo/supabase/client';
 import { APP_NAME } from '@repo/constants/app';
 import { uiConfig } from '@repo/config';
 import { Button } from '@repo/shadcn/button';
@@ -26,7 +27,7 @@ import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
 import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
-import { Laptop, Loader2, LogOut, Smartphone } from '@repo/shadcn/lucide';
+import { Laptop, Loader2, LogOut, Smartphone, Chrome } from '@repo/shadcn/lucide';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -202,6 +203,43 @@ const SignInForm = () => {
 
               {/* Submit */}
               <SubmitButton isLoading={isExecuting} name="Sign In" className={`${buttonHeight} text-sm sm:text-base mt-1 sm:mt-2`} />
+
+              {/* Divider */}
+              <div className="relative my-4 sm:my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-card text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+
+              {/* Google Sign In */}
+              <Button
+                type="button"
+                variant="outline"
+                className={`${buttonHeight} text-sm sm:text-base w-full gap-2`}
+                disabled={isExecuting}
+                onClick={async () => {
+                  const supabase = createClient();
+                  const { error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                      redirectTo: `${window.location.origin}/auth/callback`,
+                      queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                      },
+                    },
+                  });
+                  if (error) {
+                    console.error('Google OAuth error:', error);
+                  }
+                }}
+              >
+                <Chrome className="size-4" />
+                <span>Continue with Google</span>
+              </Button>
 
               {/* Sign up link */}
               <p className="text-center text-sm sm:text-base text-muted-foreground mt-4 sm:mt-6">

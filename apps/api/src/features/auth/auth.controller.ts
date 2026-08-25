@@ -9,16 +9,19 @@ import {
 } from '@/common/interfaces';
 import {
   ChangePasswordDto,
+  CompleteProfileDto,
   ConfirmEmailDto,
   CreateUserDto,
   DeleteUserDto,
   ForgotPasswordDto,
+  GoogleSignInDto,
   RefreshTokenDto,
   ResendOtpDto,
   ResetPasswordDto,
   SignInUserDto,
   SignOutAllDeviceUserDto,
   SignOutUserDto,
+  SupabaseSyncDto,
 } from '@/features/auth/dto';
 import {
   Body,
@@ -79,6 +82,54 @@ export class AuthController {
       data: data.data,
       tokens: data.tokens,
     };
+  }
+
+  /**
+   * Signs in a user with Google OAuth.
+   *
+   * @param {GoogleSignInDto} dto - Google user info.
+   * @returns {Promise<SignInResponse>} Sign-in response with tokens and user data.
+   */
+  @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @Post('google-sign-in')
+  async googleSignIn(@Body() dto: GoogleSignInDto): Promise<SignInResponse> {
+    const data = await this.authService.googleSignIn(dto);
+    return {
+      message: 'User signed in successfully',
+      data: data.data,
+      tokens: data.tokens,
+    };
+  }
+
+  /**
+   * Syncs user from Supabase Auth (after OAuth) with our backend.
+   *
+   * @param {SupabaseSyncDto} dto - Supabase user info.
+   * @returns {Promise<SignInResponse>} Sign-in response with tokens and user data.
+   */
+  @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @Post('supabase-sync')
+  async supabaseSync(@Body() dto: SupabaseSyncDto): Promise<SignInResponse> {
+    const data = await this.authService.supabaseSync(dto);
+    return {
+      message: 'User synced successfully',
+      data: data.data,
+      tokens: data.tokens,
+    };
+  }
+
+  /**
+   * Completes the user profile after Google sign-in.
+   *
+   * @param {CompleteProfileDto} dto - Profile completion data.
+   * @returns {Promise<MessageResponse>} Response message.
+   */
+  @Patch('complete-profile')
+  async completeProfile(@Req() req: any, @Body() dto: CompleteProfileDto): Promise<MessageResponse> {
+    await this.authService.completeProfile(req.user.id, dto);
+    return { message: 'Profile completed successfully' };
   }
 
   /**

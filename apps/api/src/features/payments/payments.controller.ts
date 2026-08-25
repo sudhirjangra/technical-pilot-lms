@@ -1,9 +1,5 @@
 import { Public, Roles } from '@/common/decorators';
 import {
-  Audit,
-  AuditLogInterceptor,
-} from '@/common/interceptors/audit-log.interceptor';
-import {
   Body,
   Controller,
   Get,
@@ -13,7 +9,6 @@ import {
   Post,
   Query,
   Req,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateOrderDto, RefundPaymentDto, VerifyPaymentDto } from './dto';
@@ -21,13 +16,11 @@ import { PaymentsService } from './payments.service';
 
 @ApiTags('Payments')
 @Controller('payments')
-@UseInterceptors(AuditLogInterceptor)
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   /** Student: create payment order for a course */
   @Post('order')
-  @Audit('payment.order_created')
   createOrder(
     @Body() dto: CreateOrderDto,
     @Req() req: { user: { id: string } },
@@ -37,7 +30,6 @@ export class PaymentsController {
 
   /** Student: verify payment after Razorpay checkout */
   @Post('verify')
-  @Audit('payment.verified')
   verifyPayment(
     @Body() dto: VerifyPaymentDto,
     @Req() req: { user: { id: string } },
@@ -80,7 +72,6 @@ export class PaymentsController {
   /** Admin: refund a payment */
   @Post(':id/refund')
   @Roles('ADMIN')
-  @Audit('payment.refunded')
   refund(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RefundPaymentDto,

@@ -10,6 +10,8 @@ export const env = createEnv({
     AUTH_SECRET: z.string(),
     NODE_ENV: z.string(),
     AUTH_URL: z.string().url(),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
   },
   client: {},
   runtimeEnv: {
@@ -18,5 +20,7 @@ export const env = createEnv({
     AUTH_SECRET: process.env.AUTH_SECRET,
     NODE_ENV: process.env.NODE_ENV,
     AUTH_URL: process.env.AUTH_URL,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   },
 });

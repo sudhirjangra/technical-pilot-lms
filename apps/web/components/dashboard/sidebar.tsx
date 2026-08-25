@@ -50,7 +50,7 @@ const navGroups = [
     group: 'Learning',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, exact: true },
-      { label: 'My Courses', href: '/dashboard/courses', icon: BookOpen, exact: false },
+      { label: 'My Courses', href: '/cources', icon: BookOpen, exact: false },
       { label: 'Browse Courses', href: '/courses', icon: GraduationCap, exact: false },
     ],
   },

@@ -1,5 +1,4 @@
 import { Public, Roles, User } from '@/common/decorators';
-import { Audit, AuditLogInterceptor } from '@/common/interceptors';
 import {
   Body,
   Controller,
@@ -10,18 +9,15 @@ import {
   Patch,
   Post,
   Query,
-  UseInterceptors,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
 @Controller('courses')
-@UseInterceptors(AuditLogInterceptor)
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Roles('ADMIN')
-  @Audit('course.create')
   @Post()
   async create(@Body() dto: CreateCourseDto, @User() user: { id: string }) {
     const data = await this.coursesService.create(dto, user.id);
@@ -60,7 +56,6 @@ export class CoursesController {
   }
 
   @Roles('ADMIN')
-  @Audit('course.update')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,7 +66,6 @@ export class CoursesController {
   }
 
   @Roles('ADMIN')
-  @Audit('course.delete')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.coursesService.remove(id);

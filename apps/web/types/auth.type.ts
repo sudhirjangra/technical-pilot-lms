@@ -156,3 +156,29 @@ export const DeleteAccountSchema = z.object({
  * Schema for delete account response data.
  */
 export const DeleteAccountData = z.object({});
+
+/**
+ * Schema for Google sign-in user info.
+ */
+export const GoogleSignInSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).nullable().optional(),
+  image: z.string().url().nullable().optional(),
+  sub: z.string().min(1),
+});
+
+export type GoogleSignIn = z.infer<typeof GoogleSignInSchema>;
+
+/**
+ * Schema for completing profile after Google sign-in.
+ */
+export const CompleteProfileSchema = z.object({
+  full_name: z.string().trim().min(2, 'Full name must be at least 2 characters'),
+  date_of_birth: z.string().date('Enter a valid date of birth'),
+  phone: z
+    .string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)'),
+});
+
+export type CompleteProfile = z.infer<typeof CompleteProfileSchema>;

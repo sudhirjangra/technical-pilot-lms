@@ -1,9 +1,5 @@
 import { Roles } from '@/common/decorators';
 import {
-  Audit,
-  AuditLogInterceptor,
-} from '@/common/interceptors/audit-log.interceptor';
-import {
   Body,
   Controller,
   Delete,
@@ -14,7 +10,6 @@ import {
   Post,
   Query,
   Req,
-  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { DoubtSessionsService } from './doubt-sessions.service';
@@ -27,7 +22,6 @@ import {
 
 @ApiTags('Doubt Sessions')
 @Controller('doubt-sessions')
-@UseInterceptors(AuditLogInterceptor)
 export class DoubtSessionsController {
   constructor(private readonly service: DoubtSessionsService) {}
 
@@ -35,7 +29,6 @@ export class DoubtSessionsController {
 
   @Post('slots')
   @Roles('ADMIN')
-  @Audit('doubt_slot.create')
   createSlot(@Body() dto: CreateSlotDto, @Req() req: { user: { id: string } }) {
     return this.service.createSlot(dto, req.user.id);
   }
@@ -48,7 +41,6 @@ export class DoubtSessionsController {
 
   @Patch('slots/:id')
   @Roles('ADMIN')
-  @Audit('doubt_slot.update')
   updateSlot(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSlotDto,
@@ -58,7 +50,6 @@ export class DoubtSessionsController {
 
   @Delete('slots/:id')
   @Roles('ADMIN')
-  @Audit('doubt_slot.delete')
   deleteSlot(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.deleteSlot(id);
   }
@@ -71,7 +62,6 @@ export class DoubtSessionsController {
 
   @Patch('bookings/:id')
   @Roles('ADMIN')
-  @Audit('doubt_booking.update')
   updateBooking(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBookingDto,
@@ -87,7 +77,6 @@ export class DoubtSessionsController {
   }
 
   @Post('book')
-  @Audit('doubt_booking.create')
   bookSlot(@Body() dto: BookSlotDto, @Req() req: { user: { id: string } }) {
     return this.service.bookSlot(dto, req.user.id);
   }

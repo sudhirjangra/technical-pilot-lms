@@ -11,15 +11,18 @@ import {
 import { Env, generateRefreshTime } from '@/common/utils';
 import {
   ChangePasswordDto,
+  CompleteProfileDto,
   ConfirmEmailDto,
   CreateUserDto,
   DeleteUserDto,
   ForgotPasswordDto,
+  GoogleSignInDto,
   RefreshTokenDto,
   ResetPasswordDto,
   SignInUserDto,
   SignOutAllDeviceUserDto,
   SignOutUserDto,
+  SupabaseSyncDto,
 } from '@/features/auth/dto';
 import { MailService } from '@/features/mail/mail.service';
 import {
@@ -297,6 +300,165 @@ export class AuthService {
         session_refresh_time,
       },
     };
+  }
+
+  async googleSignIn(dto: GoogleSignInDto): Promise<LoginUserInterface> {
+    // Check if user exists by email
+    let authUser = await this.getUserByEmail(dto.email);
+
+    if (!authUser) {
+      // Create new user in Supabase Auth
+      const { data: authData, error } = await this.supabase.auth.admin.createUser({
+        email: dto.email,
+        email_confirm: true, // Google emails are pre-verified
+        user_metadata: {
+          full_name: dto.name,
+          avatar_url: dto.image,
+          provider: 'google',
+          provider_id: dto.sub,
+        },
+      });
+
+      if (error) {
+        this.logger.error(
+          { error: error.message, email: dto.email },
+          'Failed to create auth user for Google sign-in',
+        );
+        throw new BadRequestException(error.message);
+      }
+
+      authUser = authData.user;
+
+      // Create profile with Google info
+      const { error: profileError } = await this.supabase.from('profiles').upsert(
+        {
+          id: authUser.id,
+          email: dto.email,
+          role: 'student',
+          full_name: dto.name,
+          avatar_url: dto.image,
+          phone: null,
+          date_of_birth: null,
+        },
+        { onConflict: 'id' },
+      );
+
+      if (profileError) {
+        this.logger.error(
+          { profileError: profileError.message, userId: authUser.id },
+          'Profile upsert failed for Google sign-in, rolling back auth user',
+        );
+        await this.supabase.auth.admin.deleteUser(authUser.id);
+        throw new BadRequestException('Google sign-in failed. Please try again.');
+      }
+    } else {
+      // User exists, update profile with Google info if missing
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile && (!profile.full_name || !profile.avatar_url)) {
+        await this.supabase.from('profiles').update({
+          full_name: profile.full_name ?? dto.name,
+          avatar_url: profile.avatar_url ?? dto.image,
+        }).eq('id', authUser.id);
+      }
+    }
+
+    // Get profile data
+    const { data: profile, error: profileError } = await this.supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    // Check device limit
+    const { data: existingDevices } = await this.supabase
+      .from('devices')
+      .select('id, device_name, platform, last_active_at, created_at')
+      .eq('user_id', authUser.id);
+
+    const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
+    if ((existingDevices?.length ?? 0) >= maxDevices) {
+      throw new BadRequestException({
+        code: 'DEVICE_LIMIT_REACHED',
+        message: `Max device limit reached (${maxDevices}). Remove a session to continue.`,
+        sessions: existingDevices,
+      });
+    }
+
+    const deviceName = dto.device_info?.device_name ?? 'unknown';
+    const tokens = await this.generateTokens(
+      authUser.id,
+      authUser.email!,
+      profile.role ?? 'student',
+    );
+
+    const { data: device } = await this.supabase
+      .from('devices')
+      .insert({
+        user_id: authUser.id,
+        device_fingerprint: tokens.refresh_token,
+        device_name: deviceName,
+        platform: 'web',
+      })
+      .select('id')
+      .single();
+
+    const session_refresh_time = await generateRefreshTime(
+      this.config.get<number>('SESSION_TIMEOUT_DAYS', 3),
+    );
+
+    try {
+      await this.mailService.sendEmail({
+        to: [authUser.email!],
+        subject: 'New sign-in detected',
+        html: SignInSuccessMail({
+          username: profile.full_name ?? profile.email,
+          loginTime: new Date(),
+          ipAddress: dto.device_info?.platform ?? 'unknown',
+          location: 'unknown',
+          device: deviceName,
+        }),
+      });
+    } catch (mailError) {
+      this.logger.warn({ mailError }, 'Mail delivery failed during Google sign-in');
+    }
+
+    return {
+      data: profile,
+      tokens: {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        session_token: device?.id ?? authUser.id,
+        session_refresh_time,
+      },
+    };
+  }
+
+  async completeProfile(userId: string, dto: CompleteProfileDto): Promise<void> {
+    const { error } = await this.supabase
+      .from('profiles')
+      .update({
+        full_name: dto.full_name,
+        date_of_birth: dto.date_of_birth,
+        phone: dto.phone,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      this.logger.error(
+        { error: error.message, userId },
+        'Failed to complete profile',
+      );
+      throw new BadRequestException('Failed to update profile. Please try again.');
+    }
   }
 
   async resendOtp(email: string): Promise<void> {
@@ -654,5 +816,135 @@ export class AuthService {
         `Failed to delete user: ${deleteError.message}`,
       );
     }
+  }
+
+  async supabaseSync(dto: SupabaseSyncDto): Promise<LoginUserInterface> {
+    // Check if user exists by email
+    let authUser = await this.getUserByEmail(dto.email);
+
+    if (!authUser) {
+      // Create new user in Supabase Auth (they already exist in Supabase Auth via OAuth)
+      // We just need to create the profile
+      const { data: supabaseUsers, error: listError } = await this.supabase.auth.admin.listUsers();
+      if (listError) {
+        throw new InternalServerErrorException('Failed to find user in Supabase Auth');
+      }
+      
+      const foundUser = supabaseUsers.users.find(u => u.email === dto.email);
+      
+      if (!foundUser) {
+        throw new NotFoundException('User not found in Supabase Auth');
+      }
+      authUser = foundUser;
+
+      // Create profile with Supabase OAuth info
+      const { error: profileError } = await this.supabase.from('profiles').upsert(
+        {
+          id: authUser.id,
+          email: dto.email,
+          role: 'student',
+          full_name: dto.name,
+          avatar_url: dto.avatar_url,
+          phone: null,
+          date_of_birth: null,
+        },
+        { onConflict: 'id' },
+      );
+
+      if (profileError) {
+        this.logger.error(
+          { profileError: profileError.message, userId: authUser.id },
+          'Profile upsert failed for Supabase sync',
+        );
+        throw new BadRequestException('Failed to create profile. Please try again.');
+      }
+    } else {
+      // User exists, update profile with OAuth info if missing
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile && (!profile.full_name || !profile.avatar_url)) {
+        await this.supabase.from('profiles').update({
+          full_name: profile.full_name ?? dto.name,
+          avatar_url: profile.avatar_url ?? dto.avatar_url,
+        }).eq('id', authUser.id);
+      }
+    }
+
+    // Get profile data
+    const { data: profile, error: profileError } = await this.supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    // Check device limit
+    const { data: existingDevices } = await this.supabase
+      .from('devices')
+      .select('id, device_name, platform, last_active_at, created_at')
+      .eq('user_id', authUser.id);
+
+    const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
+    if ((existingDevices?.length ?? 0) >= maxDevices) {
+      throw new BadRequestException({
+        code: 'DEVICE_LIMIT_REACHED',
+        message: `Max device limit reached (${maxDevices}). Remove a session to continue.`,
+        sessions: existingDevices,
+      });
+    }
+
+    const tokens = await this.generateTokens(
+      authUser.id,
+      authUser.email!,
+      profile.role ?? 'student',
+    );
+
+    const { data: device } = await this.supabase
+      .from('devices')
+      .insert({
+        user_id: authUser.id,
+        device_fingerprint: tokens.refresh_token,
+        device_name: 'web',
+        platform: 'web',
+      })
+      .select('id')
+      .single();
+
+    const session_refresh_time = await generateRefreshTime(
+      this.config.get<number>('SESSION_TIMEOUT_DAYS', 3),
+    );
+
+    try {
+      await this.mailService.sendEmail({
+        to: [authUser.email!],
+        subject: 'New sign-in detected',
+        html: SignInSuccessMail({
+          username: profile.full_name ?? profile.email,
+          loginTime: new Date(),
+          ipAddress: 'unknown',
+          location: 'unknown',
+          device: 'web',
+        }),
+      });
+    } catch (mailError) {
+      this.logger.warn({ mailError }, 'Mail delivery failed during Supabase sync sign-in');
+    }
+
+    return {
+      data: profile,
+      tokens: {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        session_token: device?.id ?? authUser.id,
+        session_refresh_time,
+      },
+    };
   }
 }

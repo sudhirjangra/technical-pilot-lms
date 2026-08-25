@@ -36,12 +36,13 @@ const LessonSchema = z.object({
 
 export type Lesson = z.infer<typeof LessonSchema>;
 
-async function authHeaders() {
+async function authHeaders(includeContentType = true) {
   const session = await auth();
-  return {
-    'Content-Type': 'application/json',
+  const headers: Record<string, string> = {
     Authorization: `Bearer ${session?.user?.tokens.access_token}`,
   };
+  if (includeContentType) headers['Content-Type'] = 'application/json';
+  return headers;
 }
 
 export async function getChapters(courseId: string): Promise<Chapter[]> {
@@ -77,7 +78,7 @@ export async function updateChapter(id: string, payload: { title?: string; descr
 
 export async function deleteChapter(id: string) {
   const [error] = await safeFetch(z.any(), `/chapters/${id}`, {
-    method: 'DELETE', headers: await authHeaders(), cache: 'no-store',
+    method: 'DELETE', headers: await authHeaders(false), cache: 'no-store',
   });
   if (error) return { error };
   return { success: true };
@@ -108,7 +109,7 @@ export async function updateLesson(id: string, payload: { title?: string; descri
 
 export async function deleteLesson(id: string) {
   const [error] = await safeFetch(z.any(), `/lessons/${id}`, {
-    method: 'DELETE', headers: await authHeaders(), cache: 'no-store',
+    method: 'DELETE', headers: await authHeaders(false), cache: 'no-store',
   });
   if (error) return { error };
   return { success: true };

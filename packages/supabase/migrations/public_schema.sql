@@ -701,6 +701,7 @@ COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_mi
 
 COPY public.enrollments (id, student_id, course_id, enrolled_at, status, completed_at, updated_at) FROM stdin;
 af019732-919c-4790-9925-aa297960ee16	c7412dd5-8f70-4716-aa60-ac597baf36d7	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-23 13:07:45.715677+00	active	\N	2026-08-23 13:07:45.715677+00
+b1c2d3e4-5678-90ab-cdef-123456789012	c9ca39a2-7b90-42b6-bec9-4a725913d208	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-23 13:07:45.715677+00	active	\N	2026-08-23 13:07:45.715677+00
 \.
 
 
