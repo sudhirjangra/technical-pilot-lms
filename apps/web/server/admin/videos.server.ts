@@ -14,12 +14,13 @@ const VideoLessonSchema = z.object({
 
 export type VideoLesson = z.infer<typeof VideoLessonSchema>;
 
-async function authHeaders() {
+async function authHeaders(includeContentType = true) {
   const session = await auth();
-  return {
-    'Content-Type': 'application/json',
+  const headers: Record<string, string> = {
     Authorization: `Bearer ${session?.user?.tokens.access_token}`,
   };
+  if (includeContentType) headers['Content-Type'] = 'application/json';
+  return headers;
 }
 
 export async function getVideoLesson(lessonId: string): Promise<VideoLesson | null> {
@@ -41,6 +42,16 @@ export async function createVideoLesson(payload: {
     z.object({ data: VideoLessonSchema }),
     '/videos/lesson',
     { method: 'POST', headers: await authHeaders(), cache: 'no-store', body: JSON.stringify(payload) },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
+export async function uploadVideoLesson(lessonId: string, file: File) {
+  const [error, data] = await safeFetch(
+    z.object({ data: VideoLessonSchema }),
+    `/videos/lesson/${lessonId}/upload`,
+    { method: 'POST', headers: await authHeaders(false), cache: 'no-store', body: (() => { const form = new FormData(); form.append('file', file); return form; })() },
   );
   if (error) return { error };
   return { data: data!.data };

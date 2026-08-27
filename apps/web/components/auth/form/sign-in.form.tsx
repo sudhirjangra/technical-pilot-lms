@@ -28,6 +28,7 @@ import { cn } from '@repo/shadcn/lib/utils';
 import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { Laptop, Loader2, LogOut, Smartphone, Chrome } from '@repo/shadcn/lucide';
+import { Google } from '@repo/shadcn/google';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -237,7 +238,7 @@ const SignInForm = () => {
                   }
                 }}
               >
-                <Chrome className="size-4" />
+                <Google className="size-4" />
                 <span>Continue with Google</span>
               </Button>
 

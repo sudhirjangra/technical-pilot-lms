@@ -72,7 +72,9 @@ export const bootstrap = async (app: NestFastifyApplication): Promise<void> => {
   app.useGlobalInterceptors(new LoggerErrorInterceptor());
 
   // Register Fastify multipart plugin for file uploads
-  await app.register(fastifyMultipart);
+  await app.register(fastifyMultipart, {
+    limits: { fileSize: configService.get<number>('FILE_MAX_SIZE') },
+  });
 
   // Start the application and listen on the configured port and host
   await app.listen(configService.get('PORT')!, '0.0.0.0', () => {

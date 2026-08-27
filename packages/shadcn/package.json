@@ -12,7 +12,8 @@
     "./hooks/x/*": "./src/hooks/*.tsx",
     "./hooks/t/*": "./src/hooks/*.ts",
     "./lucide": "./src/icon/lucide/index.tsx",
-    "./tabler": "./src/icon/tabler/index.tsx"
+    "./tabler": "./src/icon/tabler/index.tsx",
+    "./google": "./src/icon/google.tsx"
   },
   "scripts": {
     "add:ui": "pnpm dlx shadcn@latest add"

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { FastifyRequest } from 'fastify';
 import { CreateLessonDto, UpdateLessonDto } from './dto';
 
 @Injectable()
@@ -13,6 +14,40 @@ export class LessonsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
   ) {}
+
+  async uploadPdf(lessonId: string, request: FastifyRequest) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, title, lesson_type, chapter_id, chapters(title, courses(slug))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'pdf')
+      throw new BadRequestException('Lesson type must be pdf');
+
+    const part = await (request as FastifyRequest & {
+      file: () => Promise<{ mimetype: string; toBuffer: () => Promise<Buffer> } | undefined>;
+    }).file();
+    if (!part || part.mimetype !== 'application/pdf')
+      throw new BadRequestException('A PDF file is required');
+
+    const chapter = lesson.chapters as unknown as { title: string; courses: { slug: string } };
+    const safe = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const filePath = `${safe(chapter.courses.slug)}/${safe(chapter.title)}/${safe(lesson.title)}.pdf`;
+    const buffer = await part.toBuffer();
+    const { error: uploadError } = await this.supabase.storage
+      .from('course-materials')
+      .upload(filePath, buffer, { contentType: 'application/pdf', upsert: true });
+    if (uploadError) throw new BadRequestException(uploadError.message);
+
+    const { data, error } = await this.supabase
+      .from('pdf_notes')
+      .upsert({ lesson_id: lessonId, file_path: filePath, file_size_bytes: buffer.length }, { onConflict: 'lesson_id' })
+      .select()
+      .single();
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
 
   async create(dto: CreateLessonDto) {
     // Verify chapter exists

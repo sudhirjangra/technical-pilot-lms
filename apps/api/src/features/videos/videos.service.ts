@@ -9,10 +9,23 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import axios from 'axios';
+import { FastifyRequest } from 'fastify';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 
 const VDOCIPHER_BASE = 'https://dev.vdocipher.com/api';
 const MAX_CONCURRENT_SESSIONS = 2;
+
+type MultipartRequest = FastifyRequest & {
+  file: () => Promise<{
+    filename: string;
+    mimetype: string;
+    toBuffer: () => Promise<Buffer>;
+  } | undefined>;
+};
+
+function slug(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 @Injectable()
 export class VideosService {
@@ -40,6 +53,69 @@ export class VideosService {
       .single();
     if (error) throw new BadRequestException(error.message);
     return data;
+  }
+
+  async uploadVideo(lessonId: string, request: FastifyRequest) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, title, lesson_type, chapters(title, courses(title, slug))')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'video')
+      throw new BadRequestException('Lesson type must be video');
+
+    const part = await (request as MultipartRequest).file();
+    if (!part || !part.mimetype.startsWith('video/'))
+      throw new BadRequestException('A video file is required');
+
+    const chapter = lesson.chapters as unknown as {
+      title: string;
+      courses: { title: string; slug: string };
+    };
+    const title = `${chapter.courses.title} / ${chapter.title} / ${lesson.title}`;
+    const headers = {
+      Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
+      Accept: 'application/json',
+    };
+    const courseFolder = await axios.post(
+      `${VDOCIPHER_BASE}/videos/folders`,
+      { name: slug(chapter.courses.slug), parent: 'root' },
+      { headers },
+    );
+    const chapterFolder = await axios.post(
+      `${VDOCIPHER_BASE}/videos/folders`,
+      { name: slug(chapter.title), parent: courseFolder.data.id },
+      { headers },
+    );
+    const response = await axios.put(
+      `${VDOCIPHER_BASE}/videos`,
+      undefined,
+      {
+        headers,
+        params: { title, folderId: chapterFolder.data.id },
+      },
+    );
+    const videoId = response.data.videoId as string;
+    const clientPayload = response.data.clientPayload as Record<string, string> | undefined;
+    const uploadLink = clientPayload?.uploadLink;
+    if (!videoId || !uploadLink)
+      throw new BadRequestException('VdoCipher did not return an upload link');
+
+    const form = new FormData();
+    for (const [key, value] of Object.entries(clientPayload)) {
+      if (key !== 'uploadLink') form.append(key, value);
+    }
+    form.append('file', new Blob([new Uint8Array(await part.toBuffer())], { type: part.mimetype }), part.filename);
+    await axios.post(uploadLink, form);
+
+    const { data, error } = await this.supabase
+      .from('video_lessons')
+      .upsert({ lesson_id: lessonId, vdocipher_video_id: videoId }, { onConflict: 'lesson_id' })
+      .select()
+      .single();
+    if (error) throw new BadRequestException(error.message);
+    return { ...data, folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}` };
   }
 
   async updateVideoLesson(lessonId: string, dto: UpdateVideoLessonDto) {

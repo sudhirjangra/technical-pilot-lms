@@ -9,7 +9,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
+import { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 import { VideosService } from './videos.service';
@@ -25,6 +27,16 @@ export class VideosController {
   async createVideoLesson(@Body() dto: CreateVideoLessonDto) {
     const data = await this.videosService.createVideoLesson(dto);
     return { message: 'Video lesson created', data };
+  }
+
+  @Roles('ADMIN')
+  @Post('lesson/:lessonId/upload')
+  async uploadVideo(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const data = await this.videosService.uploadVideo(lessonId, request);
+    return { message: 'Video uploaded', data };
   }
 
   @Roles('ADMIN')

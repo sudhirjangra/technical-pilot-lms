@@ -97,6 +97,16 @@ export async function createLesson(payload: {
   return { data: data!.data };
 }
 
+export async function uploadPdfLesson(lessonId: string, file: File) {
+  const [error, data] = await safeFetch(
+    z.object({ data: LessonSchema }),
+    `/lessons/${lessonId}/pdf`,
+    { method: 'POST', headers: await authHeaders(false), cache: 'no-store', body: (() => { const form = new FormData(); form.append('file', file); return form; })() },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
 export async function updateLesson(id: string, payload: { title?: string; description?: string; is_published?: boolean }) {
   const [error, data] = await safeFetch(
     z.object({ data: LessonSchema }),

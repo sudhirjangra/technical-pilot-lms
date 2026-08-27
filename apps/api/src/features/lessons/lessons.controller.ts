@@ -8,7 +8,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
+import { FastifyRequest } from 'fastify';
 import { CreateLessonDto, ReorderLessonsDto, UpdateLessonDto } from './dto';
 import { LessonsService } from './lessons.service';
 
@@ -21,6 +23,16 @@ export class LessonsController {
   async create(@Body() dto: CreateLessonDto) {
     const data = await this.lessonsService.create(dto);
     return { message: 'Lesson created successfully', data };
+  }
+
+  @Roles('ADMIN')
+  @Post(':id/pdf')
+  async uploadPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const data = await this.lessonsService.uploadPdf(id, request);
+    return { message: 'PDF uploaded', data };
   }
 
   @Get('chapter/:chapterId')

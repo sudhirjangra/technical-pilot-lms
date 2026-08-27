@@ -14,7 +14,9 @@ import {
 const main = async (): Promise<void> => {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({
+      bodyLimit: Number(process.env.FILE_MAX_SIZE ?? 20971520),
+    }),
     {
       bufferLogs: true,
     },

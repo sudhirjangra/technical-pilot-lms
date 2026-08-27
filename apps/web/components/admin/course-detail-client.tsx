@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CourseDetail, updateCourse } from '@/server/admin/course-detail.server';
-import { Chapter, createChapter, deleteChapter, createLesson, deleteLesson } from '@/server/admin/chapters.server';
+import { Chapter, createChapter, deleteChapter, createLesson, deleteLesson, uploadPdfLesson } from '@/server/admin/chapters.server';
 import { Enrollment } from '@/server/admin/enrollments.server';
-import { createVideoLesson, updateVideoLesson, VideoLesson } from '@/server/admin/videos.server';
+import { uploadVideoLesson, VideoLesson } from '@/server/admin/videos.server';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Badge } from '@repo/shadcn/badge';
@@ -29,26 +29,24 @@ export function CourseDetailClient({
   const [showChapterForm, setShowChapterForm] = useState(false);
   const [lessonFormChapterId, setLessonFormChapterId] = useState<string | null>(null);
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
+  const [newLessonType, setNewLessonType] = useState('video');
 
   const videoLessonMap = new Map(videoLessons.map((v) => [v.lesson_id, v]));
 
-  const handleSaveVideoId = async (e: React.FormEvent<HTMLFormElement>, lessonId: string) => {
+  const handleUploadVideo = async (e: React.FormEvent<HTMLFormElement>, lessonId: string) => {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const vdocipherId = (fd.get('vdocipher_video_id') as string).trim();
-    const duration = fd.get('duration_seconds') ? Number(fd.get('duration_seconds')) : undefined;
-
-    const existing = videoLessonMap.get(lessonId);
-    const result = existing
-      ? await updateVideoLesson(lessonId, { vdocipher_video_id: vdocipherId, duration_seconds: duration })
-      : await createVideoLesson({ lesson_id: lessonId, vdocipher_video_id: vdocipherId, duration_seconds: duration });
+    const file = fd.get('video');
+    const result = file instanceof File && file.size > 0
+      ? await uploadVideoLesson(lessonId, file)
+      : { error: 'Please select a video file' };
 
     setLoading(false);
     if (result.error) {
-      toast.error(typeof result.error === 'string' ? result.error : 'Failed to save video ID');
+      toast.error(typeof result.error === 'string' ? result.error : 'Failed to upload video');
     } else {
-      toast.success('Video ID saved');
+      toast.success('Video uploaded');
       setVideoFormLessonId(null);
       router.refresh();
     }
@@ -98,18 +96,28 @@ export function CourseDetailClient({
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
+    const lessonType = fd.get('lesson_type') as string;
     const result = await createLesson({
       chapter_id: lessonFormChapterId!,
       title: fd.get('title') as string,
       description: fd.get('description') as string || undefined,
-      lesson_type: fd.get('lesson_type') as string,
+      lesson_type: lessonType,
       is_published: true,
       duration_seconds: fd.get('duration') ? Number(fd.get('duration')) : undefined,
     });
     setLoading(false);
     if (result.error) toast.error(result.error);
     else {
-      toast.success('Lesson added');
+      const file = fd.get('asset');
+      const uploadResult = file instanceof File && file.size > 0
+        ? lessonType === 'video'
+          ? await uploadVideoLesson(result.data.id, file)
+          : lessonType === 'pdf'
+            ? await uploadPdfLesson(result.data.id, file)
+            : { data: true }
+        : { data: true };
+      if (uploadResult.error) toast.error(uploadResult.error);
+      else toast.success('Lesson added');
       setLessonFormChapterId(null);
       router.refresh();
     }
@@ -229,13 +237,30 @@ export function CourseDetailClient({
                     </div>
                     <div>
                       <label className="text-sm font-medium">Type</label>
-                      <select name="lesson_type" required className="w-full border rounded px-3 py-2 mt-1">
+                      <select
+                        name="lesson_type"
+                        required
+                        value={newLessonType}
+                        onChange={(event) => setNewLessonType(event.target.value)}
+                        className="w-full border rounded px-3 py-2 mt-1"
+                      >
                         <option value="video">Video</option>
                         <option value="pdf">PDF</option>
                         <option value="assignment">Assignment</option>
                         <option value="test">Test</option>
                       </select>
                     </div>
+                    {(newLessonType === 'video' || newLessonType === 'pdf') && (
+                      <div className="w-48">
+                        <label className="text-sm font-medium">Asset</label>
+                        <input
+                          name="asset"
+                          type="file"
+                          accept={newLessonType === 'video' ? 'video/*' : 'application/pdf,.pdf'}
+                          className="w-full text-xs mt-1"
+                        />
+                      </div>
+                    )}
                     <div className="w-24">
                       <label className="text-sm font-medium">Duration (s)</label>
                       <input name="duration" type="number" className="w-full border rounded px-3 py-2 mt-1" />
@@ -280,7 +305,7 @@ export function CourseDetailClient({
                                   videoFormLessonId === lesson.id ? null : lesson.id,
                                 )}
                               >
-                                {vl ? 'Edit Video' : 'Link Video'}
+                                Upload Video
                               </Button>
                             )}
                             <Button size="sm" variant="ghost" onClick={() => handleDeleteLesson(lesson.id)}>
@@ -291,34 +316,22 @@ export function CourseDetailClient({
 
                         {lesson.lesson_type === 'video' && videoFormLessonId === lesson.id && (
                           <form
-                            onSubmit={(e) => handleSaveVideoId(e, lesson.id)}
+                            onSubmit={(e) => handleUploadVideo(e, lesson.id)}
                             className="flex gap-3 items-end px-3 pb-3"
                           >
                             <div className="flex-1">
                               <label className="text-xs font-medium text-muted-foreground">
-                                VdoCipher Video ID
+                                Video file
                               </label>
                               <input
-                                name="vdocipher_video_id"
+                                name="video"
+                                type="file"
                                 required
-                                defaultValue={vl?.vdocipher_video_id ?? ''}
-                                placeholder="e.g. abc123def456"
-                                className="w-full border rounded px-3 py-1.5 mt-1 text-sm font-mono"
+                                accept="video/*"
+                                className="w-full text-xs mt-1"
                               />
                             </div>
-                            <div className="w-28">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Duration (sec)
-                              </label>
-                              <input
-                                name="duration_seconds"
-                                type="number"
-                                defaultValue={vl?.duration_seconds ?? ''}
-                                placeholder="3600"
-                                className="w-full border rounded px-3 py-1.5 mt-1 text-sm"
-                              />
-                            </div>
-                            <Button type="submit" size="sm" disabled={loading}>Save</Button>
+                            <Button type="submit" size="sm" disabled={loading}>Upload</Button>
                           </form>
                         )}
                       </div>

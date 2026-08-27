@@ -24,6 +24,18 @@
 - profiles, devices, audit_logs (as per current_in_database.sql)
 - Blog tables exist but migration 002 drops them
 
+### Phase 3.2: Admin Lesson Asset Uploads (Done)
+- [x] Video lessons can upload directly to VdoCipher with a course/chapter/lesson title hierarchy
+- [x] PDF lessons upload to the private `course-materials` Supabase bucket using course/chapter/lesson folders
+- [x] Video metadata and PDF note paths are persisted against the lesson
+- [x] Assignment and test lessons remain unchanged for later implementation
+- [x] Multipart upload size uses the configured `FILE_MAX_SIZE` limit
+
+### Next Step
+- Apply `009_course_materials_bucket.sql`, configure an upload-sized `FILE_MAX_SIZE`, and test video/PDF uploads with provider credentials.
+- Fixed video upload 413 handling: multipart requests no longer receive a JSON content type, and Fastify body limits now follow `FILE_MAX_SIZE`.
+- Fixed VdoCipher upload credentials: use documented `PUT /api/videos` with course/chapter folder IDs instead of unsupported `POST /api/videos`.
+
 ### Phase 1.5: Frontend Auth Error Handling (Done)
 - [x] Sign-in form handles EMAIL_NOT_CONFIRMED → redirects to /auth/confirm-email?email=...
 - [x] Sign-in form handles DEVICE_LIMIT_REACHED → shows sessions picker UI, user removes one, then auto-retries sign-in
