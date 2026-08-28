@@ -302,25 +302,23 @@ export interface Database {
           lesson_type: LessonType;
           sort_order: number;
           is_published: boolean;
-          duration_seconds: number | null;
+          
         };
         Insert: {
           id?: string;
           chapter_id: string;
           title: string;
           description?: string | null;
-          lesson_type: LessonType;
-          sort_order?: number;
-          is_published?: boolean;
-          duration_seconds?: number | null;
+lesson_type: LessonType;
+           sort_order?: number;
+           is_published?: boolean;
         };
         Update: {
           title?: string;
           description?: string | null;
-          lesson_type?: LessonType;
-          sort_order?: number;
-          is_published?: boolean;
-          duration_seconds?: number | null;
+lesson_type?: LessonType;
+           sort_order?: number;
+           is_published?: boolean;
         };
       };
     };

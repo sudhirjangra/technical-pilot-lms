@@ -40,14 +40,7 @@ export class CreateLessonDto {
   @IsOptional()
   @IsBoolean()
   is_published?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  duration_seconds?: number;
 }
-
 export class UpdateLessonDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -76,14 +69,7 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsBoolean()
   is_published?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  duration_seconds?: number;
 }
-
 export class ReorderLessonsDto {
   @ApiProperty({ type: [Object] })
   lessons: { id: string; sort_order: number }[];

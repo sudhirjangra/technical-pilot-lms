@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { CreateLessonDto, UpdateLessonDto } from './dto';
 
 @Injectable()

@@ -10,7 +10,7 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { CreateLessonDto, ReorderLessonsDto, UpdateLessonDto } from './dto';
 import { LessonsService } from './lessons.service';
 

@@ -54,12 +54,15 @@ export function CourseDetailClient({
 
   const handleStatusChange = async (status: string) => {
     setLoading(true);
-    const result = await updateCourse(course.id, { status });
-    setLoading(false);
-    if (result.error) toast.error(result.error);
-    else {
-      toast.success(`Status changed to ${status}`);
-      router.refresh();
+    try {
+      const result = await updateCourse(course.id, { status });
+      if (result.error) toast.error(result.error);
+      else {
+        toast.success(`Status changed to ${status}`);
+        router.refresh();
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,7 +106,6 @@ export function CourseDetailClient({
       description: fd.get('description') as string || undefined,
       lesson_type: lessonType,
       is_published: true,
-      duration_seconds: fd.get('duration') ? Number(fd.get('duration')) : undefined,
     });
     setLoading(false);
     if (result.error) toast.error(result.error);
@@ -250,21 +252,17 @@ export function CourseDetailClient({
                         <option value="test">Test</option>
                       </select>
                     </div>
-                    {(newLessonType === 'video' || newLessonType === 'pdf') && (
-                      <div className="w-48">
-                        <label className="text-sm font-medium">Asset</label>
-                        <input
-                          name="asset"
-                          type="file"
-                          accept={newLessonType === 'video' ? 'video/*' : 'application/pdf,.pdf'}
-                          className="w-full text-xs mt-1"
-                        />
-                      </div>
-                    )}
-                    <div className="w-24">
-                      <label className="text-sm font-medium">Duration (s)</label>
-                      <input name="duration" type="number" className="w-full border rounded px-3 py-2 mt-1" />
-                    </div>
+{(newLessonType === 'video' || newLessonType === 'pdf') && (
+                       <div className="w-48">
+                         <label className="text-sm font-medium">Asset</label>
+                         <input
+                           name="asset"
+                           type="file"
+                           accept={newLessonType === 'video' ? 'video/*' : 'application/pdf,.pdf'}
+                           className="w-full text-xs mt-1"
+                         />
+                       </div>
+                     )}
                     <Button type="submit" disabled={loading} size="sm">Add</Button>
                   </form>
                 )}

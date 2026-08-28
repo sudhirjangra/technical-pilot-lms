@@ -8,7 +8,6 @@ const VideoLessonSchema = z.object({
   id: z.string(),
   lesson_id: z.string(),
   vdocipher_video_id: z.string(),
-  duration_seconds: z.number().nullable(),
   thumbnail_url: z.string().nullable(),
 });
 
@@ -34,10 +33,9 @@ export async function getVideoLesson(lessonId: string): Promise<VideoLesson | nu
 }
 
 export async function createVideoLesson(payload: {
-  lesson_id: string;
-  vdocipher_video_id: string;
-  duration_seconds?: number;
-}) {
+   lesson_id: string;
+   vdocipher_video_id: string;
+ }) {
   const [error, data] = await safeFetch(
     z.object({ data: VideoLessonSchema }),
     '/videos/lesson',
@@ -58,9 +56,8 @@ export async function uploadVideoLesson(lessonId: string, file: File) {
 }
 
 export async function updateVideoLesson(lessonId: string, payload: {
-  vdocipher_video_id?: string;
-  duration_seconds?: number;
-}) {
+   vdocipher_video_id?: string;
+ }) {
   const [error, data] = await safeFetch(
     z.object({ data: VideoLessonSchema }),
     `/videos/lesson/${lessonId}`,

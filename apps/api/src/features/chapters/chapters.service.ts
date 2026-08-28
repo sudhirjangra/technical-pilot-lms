@@ -41,29 +41,29 @@ export class ChaptersService {
     return data;
   }
 
-  async findByCourse(courseId: string) {
-    const { data, error } = await this.supabase
-      .from('chapters')
-      .select(
-        '*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)',
-      )
-      .eq('course_id', courseId)
-      .order('sort_order', { ascending: true });
-    if (error) throw new BadRequestException(error.message);
-    return data;
-  }
+async findByCourse(courseId: string) {
+     const { data, error } = await this.supabase
+       .from('chapters')
+       .select(
+         '*, lessons(id, title, lesson_type, sort_order, is_published)',
+       )
+       .eq('course_id', courseId)
+       .order('sort_order', { ascending: true });
+     if (error) throw new BadRequestException(error.message);
+     return data;
+   }
 
-  async findOne(id: string) {
-    const { data, error } = await this.supabase
-      .from('chapters')
-      .select(
-        '*, lessons(id, title, lesson_type, sort_order, is_published, duration_seconds)',
-      )
-      .eq('id', id)
-      .single();
-    if (error) throw new NotFoundException('Chapter not found');
-    return data;
-  }
+async findOne(id: string) {
+     const { data, error } = await this.supabase
+       .from('chapters')
+       .select(
+         '*, lessons(id, title, lesson_type, sort_order, is_published)',
+       )
+       .eq('id', id)
+       .single();
+     if (error) throw new NotFoundException('Chapter not found');
+     return data;
+   }
 
   async update(id: string, dto: UpdateChapterDto) {
     const { data, error } = await this.supabase

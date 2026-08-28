@@ -22,28 +22,15 @@ export class CreateVideoLessonDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  duration_seconds?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsString()
   thumbnail_url?: string;
 }
-
 export class UpdateVideoLessonDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @MaxLength(100)
   vdocipher_video_id?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  duration_seconds?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

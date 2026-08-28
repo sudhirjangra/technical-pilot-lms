@@ -30,6 +30,9 @@
 - [x] Video metadata and PDF note paths are persisted against the lesson
 - [x] Assignment and test lessons remain unchanged for later implementation
 - [x] Multipart upload size uses the configured `FILE_MAX_SIZE` limit
+- [x] Fixed validation error: removed duration_seconds requirement for PDF uploads, accepting any response.
+- [x] Removed duration_seconds field from lesson schema as it's not needed for pre-recorded/uploaded content.
+- [x] Removed Duration (s) input from admin lesson creation form.
 
 ### Next Step
 - Apply `009_course_materials_bucket.sql`, configure an upload-sized `FILE_MAX_SIZE`, and test video/PDF uploads with provider credentials.

@@ -11,14 +11,13 @@ const ChapterSchema = z.object({
   description: z.string().nullable(),
   sort_order: z.number(),
   is_published: z.boolean(),
-  lessons: z.array(z.object({
-    id: z.string(),
-    title: z.string(),
-    lesson_type: z.string(),
-    sort_order: z.number(),
-    is_published: z.boolean(),
-    duration_seconds: z.number().nullable(),
-  })).optional(),
+lessons: z.array(z.object({
+     id: z.string(),
+     title: z.string(),
+     lesson_type: z.string(),
+     sort_order: z.number(),
+     is_published: z.boolean(),
+   })).optional(),
 });
 
 export type Chapter = z.infer<typeof ChapterSchema>;
@@ -31,7 +30,6 @@ const LessonSchema = z.object({
   lesson_type: z.string(),
   sort_order: z.number(),
   is_published: z.boolean(),
-  duration_seconds: z.number().nullable(),
 });
 
 export type Lesson = z.infer<typeof LessonSchema>;
@@ -85,9 +83,9 @@ export async function deleteChapter(id: string) {
 }
 
 export async function createLesson(payload: {
-  chapter_id: string; title: string; description?: string;
-  lesson_type: string; is_published?: boolean; duration_seconds?: number;
-}) {
+   chapter_id: string; title: string; description?: string;
+   lesson_type: string; is_published?: boolean;
+ }) {
   const [error, data] = await safeFetch(
     z.object({ data: LessonSchema }),
     '/lessons',
@@ -99,12 +97,12 @@ export async function createLesson(payload: {
 
 export async function uploadPdfLesson(lessonId: string, file: File) {
   const [error, data] = await safeFetch(
-    z.object({ data: LessonSchema }),
+    z.any(),
     `/lessons/${lessonId}/pdf`,
     { method: 'POST', headers: await authHeaders(false), cache: 'no-store', body: (() => { const form = new FormData(); form.append('file', file); return form; })() },
   );
   if (error) return { error };
-  return { data: data!.data };
+  return { data: data?.data ?? null };
 }
 
 export async function updateLesson(id: string, payload: { title?: string; description?: string; is_published?: boolean }) {

@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 
 const VDOCIPHER_BASE = 'https://dev.vdocipher.com/api';
