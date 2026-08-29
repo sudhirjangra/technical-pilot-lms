@@ -4,22 +4,27 @@ import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
 import { z } from 'zod';
 
-const CourseSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  slug: z.string(),
-  description: z.string().nullable(),
-  thumbnail_url: z.string().nullable(),
-  price: z.coerce.number(),
-  discount_price: z.coerce.number().nullable(),
-  status: z.enum(['draft', 'published', 'archived']),
-  category_id: z.string().nullable(),
-  created_by: z.string().nullable(),
-  published_at: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  categories: z.object({ id: z.string(), name: z.string(), slug: z.string() }).nullable(),
-});
+const CourseSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    slug: z.string(),
+    description: z.string().nullable().optional(),
+    thumbnail_url: z.string().nullable().optional(),
+    price: z.coerce.number(),
+    discount_price: z.coerce.number().nullable().optional(),
+    status: z.enum(['draft', 'published', 'archived']),
+    category_id: z.string().nullable().optional(),
+    created_by: z.string().nullable().optional(),
+    published_at: z.string().nullable().optional(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    categories: z
+      .object({ id: z.string(), name: z.string(), slug: z.string() })
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
 
 const CoursesResponseSchema = z.object({
   data: z.array(CourseSchema),

@@ -1,6 +1,10 @@
 packages:
   - apps/*
   - packages/*
+overrides:
+  # Force a single fastify instance; @nestjs/platform-fastify pins 5.11.x which
+  # otherwise conflicts with the direct 5.12.x dependency and breaks plugin types.
+  fastify: ^5.12.1
 allowBuilds:
   '@scarf/scarf': true
   '@swc/core': true

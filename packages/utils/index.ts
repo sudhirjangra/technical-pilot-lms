@@ -4,3 +4,4 @@ export * from './file';
 export * from './formData';
 export * from './group';
 export * from './lib';
+export * from './slug';

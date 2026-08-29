@@ -6,12 +6,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { LessonsService } from '../lessons/lessons.service';
 import { CreateChapterDto, UpdateChapterDto } from './dto';
+
+// Lessons must be returned with every column the admin UI validates against
+// (chapter_id, description, duration_seconds), otherwise the frontend Zod
+// schema rejects the payload and renders an empty chapter list.
+const CHAPTER_WITH_LESSONS_SELECT = '*, lessons(*)';
 
 @Injectable()
 export class ChaptersService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly lessonsService: LessonsService,
   ) {}
 
   async create(dto: CreateChapterDto) {
@@ -41,29 +48,27 @@ export class ChaptersService {
     return data;
   }
 
-async findByCourse(courseId: string) {
-     const { data, error } = await this.supabase
-       .from('chapters')
-       .select(
-         '*, lessons(id, title, lesson_type, sort_order, is_published)',
-       )
-       .eq('course_id', courseId)
-       .order('sort_order', { ascending: true });
-     if (error) throw new BadRequestException(error.message);
-     return data;
-   }
+  async findByCourse(courseId: string) {
+    const { data, error } = await this.supabase
+      .from('chapters')
+      .select(CHAPTER_WITH_LESSONS_SELECT)
+      .eq('course_id', courseId)
+      .order('sort_order', { ascending: true })
+      .order('sort_order', { referencedTable: 'lessons', ascending: true });
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
 
-async findOne(id: string) {
-     const { data, error } = await this.supabase
-       .from('chapters')
-       .select(
-         '*, lessons(id, title, lesson_type, sort_order, is_published)',
-       )
-       .eq('id', id)
-       .single();
-     if (error) throw new NotFoundException('Chapter not found');
-     return data;
-   }
+  async findOne(id: string) {
+    const { data, error } = await this.supabase
+      .from('chapters')
+      .select(CHAPTER_WITH_LESSONS_SELECT)
+      .eq('id', id)
+      .order('sort_order', { referencedTable: 'lessons', ascending: true })
+      .single();
+    if (error) throw new NotFoundException('Chapter not found');
+    return data;
+  }
 
   async update(id: string, dto: UpdateChapterDto) {
     const { data, error } = await this.supabase
@@ -81,13 +86,26 @@ async findOne(id: string) {
   }
 
   async reorder(chapters: { id: string; sort_order: number }[]) {
-    const updates = chapters.map(({ id, sort_order }) =>
-      this.supabase.from('chapters').update({ sort_order }).eq('id', id),
+    const results = await Promise.all(
+      chapters.map(({ id, sort_order }) =>
+        this.supabase.from('chapters').update({ sort_order }).eq('id', id),
+      ),
     );
-    await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+    if (failed?.error) throw new BadRequestException(failed.error.message);
   }
 
   async remove(id: string) {
+    const { data: lessons } = await this.supabase
+      .from('lessons')
+      .select('id')
+      .eq('chapter_id', id);
+    await Promise.all(
+      (lessons ?? []).map((lesson) =>
+        this.lessonsService.cleanupExternalContent(lesson.id as string),
+      ),
+    );
+
     const { error } = await this.supabase
       .from('chapters')
       .delete()

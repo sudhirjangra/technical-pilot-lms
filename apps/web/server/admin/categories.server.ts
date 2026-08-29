@@ -4,15 +4,17 @@ import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
 import { z } from 'zod';
 
-const CategorySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  slug: z.string(),
-  description: z.string().nullable(),
-  thumbnail_url: z.string().nullable(),
-  sort_order: z.number(),
-  is_active: z.boolean(),
-});
+const CategorySchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    description: z.string().nullable().optional(),
+    thumbnail_url: z.string().nullable().optional(),
+    sort_order: z.coerce.number().default(0),
+    is_active: z.boolean().default(true),
+  })
+  .passthrough();
 
 const CategoriesResponseSchema = z.object({
   data: z.array(CategorySchema),
@@ -20,9 +22,22 @@ const CategoriesResponseSchema = z.object({
 
 export type Category = z.infer<typeof CategorySchema>;
 
-export async function getCategories(): Promise<Category[]> {
-  const [error, data] = await safeFetch(CategoriesResponseSchema, '/categories');
-  if (error) return [];
+export async function getCategories(includeInactive = false): Promise<Category[]> {
+  const session = await auth();
+  const [error, data] = await safeFetch(
+    CategoriesResponseSchema,
+    `/categories${includeInactive ? '?includeInactive=true' : ''}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session?.user.tokens.access_token}`,
+      },
+      cache: 'no-store',
+    },
+  );
+  if (error) {
+    console.error('getCategories failed:', error);
+    return [];
+  }
   return data!.data;
 }
 

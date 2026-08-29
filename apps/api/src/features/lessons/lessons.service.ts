@@ -7,12 +7,14 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { FastifyRequest } from 'fastify';
+import { VideosService } from '../videos/videos.service';
 import { CreateLessonDto, UpdateLessonDto } from './dto';
 
 @Injectable()
 export class LessonsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly videosService: VideosService,
   ) {}
 
   async uploadPdf(lessonId: string, request: FastifyRequest) {
@@ -47,6 +49,26 @@ export class LessonsService {
       .single();
     if (error) throw new BadRequestException(error.message);
     return data;
+  }
+
+  async deletePdf(lessonId: string) {
+    const { data: pdfNote, error } = await this.supabase
+      .from('pdf_notes')
+      .select('id, file_path')
+      .eq('lesson_id', lessonId)
+      .single();
+    if (error || !pdfNote) throw new NotFoundException('PDF not found');
+
+    const { error: storageError } = await this.supabase.storage
+      .from('course-materials')
+      .remove([pdfNote.file_path as string]);
+    if (storageError) throw new BadRequestException(storageError.message);
+
+    const { error: deleteError } = await this.supabase
+      .from('pdf_notes')
+      .delete()
+      .eq('id', pdfNote.id as string);
+    if (deleteError) throw new BadRequestException(deleteError.message);
   }
 
   async create(dto: CreateLessonDto) {
@@ -112,14 +134,59 @@ export class LessonsService {
   }
 
   async reorder(lessons: { id: string; sort_order: number }[]) {
-    const updates = lessons.map(({ id, sort_order }) =>
-      this.supabase.from('lessons').update({ sort_order }).eq('id', id),
+    const results = await Promise.all(
+      lessons.map(({ id, sort_order }) =>
+        this.supabase.from('lessons').update({ sort_order }).eq('id', id),
+      ),
     );
-    await Promise.all(updates);
+    const failed = results.find((result) => result.error);
+    if (failed?.error) throw new BadRequestException(failed.error.message);
   }
 
   async remove(id: string) {
+    await this.cleanupExternalContent(id);
     const { error } = await this.supabase.from('lessons').delete().eq('id', id);
     if (error) throw new BadRequestException(error.message);
+  }
+
+  /**
+   * Best-effort removal of externally-hosted assets (VdoCipher videos,
+   * Supabase Storage PDFs) tied to a lesson before its row is deleted.
+   * DB rows (pdf_notes, video_lessons, assignments, tests, questions, etc.)
+   * cascade automatically via ON DELETE CASCADE foreign keys.
+   */
+  async cleanupExternalContent(lessonId: string) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('lesson_type')
+      .eq('id', lessonId)
+      .maybeSingle();
+    if (!lesson) return;
+
+    if (lesson.lesson_type === 'pdf') {
+      const { data: pdfNote } = await this.supabase
+        .from('pdf_notes')
+        .select('file_path')
+        .eq('lesson_id', lessonId)
+        .maybeSingle();
+      if (pdfNote?.file_path) {
+        await this.supabase.storage
+          .from('course-materials')
+          .remove([pdfNote.file_path as string]);
+      }
+    }
+
+    if (lesson.lesson_type === 'video') {
+      const { data: videoLesson } = await this.supabase
+        .from('video_lessons')
+        .select('vdocipher_video_id')
+        .eq('lesson_id', lessonId)
+        .maybeSingle();
+      if (videoLesson?.vdocipher_video_id) {
+        await this.videosService.deleteVdoCipherAsset(
+          videoLesson.vdocipher_video_id as string,
+        );
+      }
+    }
   }
 }

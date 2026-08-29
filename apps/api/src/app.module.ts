@@ -6,6 +6,7 @@ import {
   ThrottleModule,
 } from '@/common/modules';
 import { validateEnv } from '@/common/utils';
+import { AssignmentsModule } from '@/features/assignments/assignments.module';
 import { CategoriesModule } from '@/features/categories/categories.module';
 import { ChaptersModule } from '@/features/chapters/chapters.module';
 import { CoursesModule } from '@/features/courses/courses.module';
@@ -16,6 +17,7 @@ import { LessonsModule } from '@/features/lessons/lessons.module';
 import { PaymentsModule } from '@/features/payments/payments.module';
 import { PermissionsModule } from '@/features/permissions/permissions.module';
 import { ProgressModule } from '@/features/progress/progress.module';
+import { TestsModule } from '@/features/tests/tests.module';
 import { UsersModule } from '@/features/users/users.module';
 import { VideosModule } from '@/features/videos/videos.module';
 import { Module } from '@nestjs/common';
@@ -54,6 +56,7 @@ import { MailModule } from './features/mail/mail.module';
     NodeMailerModule,
     LoggerModule,
     ThrottleModule,
+    AssignmentsModule,
     UsersModule,
     AuthModule,
     MailModule,
@@ -67,6 +70,7 @@ import { MailModule } from './features/mail/mail.module';
     PaymentsModule,
     ProgressModule,
     PermissionsModule,
+    TestsModule,
     DoubtSessionsModule,
     VideosModule,
   ],

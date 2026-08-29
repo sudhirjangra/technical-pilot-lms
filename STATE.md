@@ -64,7 +64,33 @@
 - [x] Sidebar: removed duplicate Account nav group (moved to footer dropdown)
 - [x] Sidebar: added SidebarSeparator between nav groups
 
-## Immediate Next Step
+### Phase 3.4: Admin Course/Chapter/Lesson Bug Fixes (Done)
+- [x] Fixed chapters/lessons invisible in admin UI: `chapters.findByCourse` returned a partial lesson projection (`id, title, lesson_type, sort_order, is_published`) that failed the frontend Zod `LessonSchema` (which required `chapter_id`/`description`) — `getChapters` swallowed the error and returned `[]`. Now selects `*, lessons(*)` with nested sort ordering.
+- [x] Fixed broken chapter/lesson reorder: `ReorderChaptersDto`/`ReorderLessonsDto` had no validation decorators, so the global `ValidationPipe({ whitelist: true })` stripped the array, making `dto.chapters`/`dto.lessons` undefined and throwing on `.map()`. Added nested `@ValidateNested` item DTOs.
+- [x] Reorder services now surface Supabase errors instead of silently discarding them
+- [x] Course status: all draft/published/archived transitions available (was one-way into archived); `published_at` preserved on re-publish and cleared when returning to draft
+- [x] Categories: slug auto-generated/sanitized via new `slugify()` in `@repo/utils` (fixes "Slug must be kebab-case" 400)
+- [x] Admin categories page now sends auth + `includeInactive=true` so inactive categories are visible
+- [x] Frontend schemas (chapter/lesson/course/category/video) made tolerant (`.passthrough()`, optional nullables) so a single field drift no longer blanks the entire admin page
+- [x] Cascade delete: removes VdoCipher video assets and Supabase Storage PDFs for a deleted lesson/chapter/course (DB rows already cascade via FKs)
+- [x] Fixed duplicate `fastify` install (5.11.3 via @nestjs/platform-fastify vs direct 5.12.1) that broke the API type build — added pnpm override; API now compiles with 0 TSC issues and boots successfully
+
+### Phase 3.5: VdoCipher Upload 403 Fix (Done)
+- [x] Root cause: the S3 browser-POST omitted `success_action_status` and `success_action_redirect`. VdoCipher's signed policy declares conditions for both but does not return them in `clientPayload`, and S3 answers 403 when a POST omits a field its policy conditions on.
+- [x] Upload form is now built in explicit policy-field order (`x-amz-credential`, `x-amz-algorithm`, `x-amz-date`, `x-amz-signature`, `key`, `policy`), then the two `success_action_*` fields, with `file` appended last (S3 ignores any field after `file`)
+- [x] No `Authorization` header is sent to the S3 upload link; `validateStatus` widened to accept the 201 S3 returns; `maxBodyLength/maxContentLength` set to Infinity
+- [x] Folder creation (`POST /videos/folders`) is best-effort — any failure (including a plan-gated 403) logs and falls back to the parent/root instead of aborting the upload
+- [x] New `describeAxiosError()` names the failing step and includes VdoCipher's response body, so a future failure is no longer an opaque "Request failed with status code 403"
+
+## Immediate Next Step (In Progress)
+### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering (In Progress)
+- [x] Migration 010_msq_assignments_tests.sql written (questions now belong to test OR assignment, msq question_type, assignment_attempts/answers + option-junction tables, RLS)
+- [x] Sample import templates created: apps/web/public/templates/question-import-template.{csv,json,xlsx}
+- [ ] Apply migration 010_msq_assignments_tests.sql in Supabase
+- [ ] Backend: AssignmentsModule + TestsModule (CRUD, question/option CRUD, CSV/JSON/XLSX bulk import), lessons PDF delete endpoint
+- [x] Frontend: admin course-detail UI — chapter/lesson up/down reorder buttons, publish/draft toggle buttons, video/pdf delete+reupload, assignment/test question builder + import UI
+
+### Previously queued
 - Apply migration 008_profile_details.sql in Supabase
 - Test registration with full name and date of birth, then verify the profile view
 - Test video resume/completion and confirm course progress averages all video lessons

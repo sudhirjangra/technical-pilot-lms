@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict R2CabA1LYdqokVvPftlK4rgrdQkGvdcsDiVQCmfggY8IJBm7K3PhYDH1b31RLWC
+\restrict 75rQZNo4MZ1fmhtM3pedwl9wZ2BmRFvtTVAuICxOW7vQ2c5CY5lQOTMD3VBkgoN
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-1.pgdg24.04+2)
@@ -591,54 +591,6 @@ COPY public.assignments (id, lesson_id, title, instructions, max_score, due_days
 --
 
 COPY public.audit_logs (id, user_id, action, resource_type, resource_id, ip_address, user_agent, metadata, created_at) FROM stdin;
-a9d7199a-f653-4968-8e21-94a9016cac4e	c7412dd5-8f70-4716-aa60-ac597baf36d7	course.create	courses	f3869b09-ae23-4b18-95d6-5d9872eea075	127.0.0.1	node	{"path": "/courses", "method": "POST"}	2026-08-23 13:06:25.028016+00
-4fe79f40-0fa3-4228-b595-47789909a7bd	c7412dd5-8f70-4716-aa60-ac597baf36d7	enrollment.free	enrollments	af019732-919c-4790-9925-aa297960ee16	127.0.0.1	node	{"path": "/enrollments/free/f3869b09-ae23-4b18-95d6-5d9872eea075", "method": "POST"}	2026-08-23 13:07:45.913721+00
-37bac56b-61bc-40da-a3fc-36ea6c6d7bdd	c7412dd5-8f70-4716-aa60-ac597baf36d7	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/218b1a98-3bf7-4812-8d5b-efcc6077209d/otp", "method": "POST"}	2026-08-23 13:15:03.268459+00
-08a86f09-cff6-42df-947d-f203f5421678	c9ca39a2-7b90-42b6-bec9-4a725913d208	enrollment.free	enrollments	c966cdfb-195e-45c3-a92b-86a6dc4da273	127.0.0.1	node	{"path": "/enrollments/free/6c96fbfb-cfc0-4369-b347-5bae621db709", "method": "POST"}	2026-08-23 04:17:09.290402+00
-bad23a98-5393-4597-af0d-03a2c4e09090	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:25:24.400923+00
-faa97368-aa66-4238-9ab0-ca18c6bc1fb1	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:25:54.498278+00
-6fa22453-cf64-49c1-a149-d0f3378c9bf6	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:26:37.379219+00
-d2bad816-8ff1-4165-9897-393a55010011	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:27:05.870029+00
-22a29065-a45c-45ef-ad4f-f59b31380fc4	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:28:11.39039+00
-3a7d8f59-4752-4732-9aaf-b9fa8e3bfc53	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:28:56.666948+00
-406e3694-e2e8-4bf7-afc2-1dd0556f4262	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:29:23.183071+00
-46dd552d-c5dc-45d3-b4cf-027bd6ddc8f7	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:31:51.298313+00
-fbd5f824-dd09-47b4-8f71-9a545b0b291a	\N	course.create	courses	6c96fbfb-cfc0-4369-b347-5bae621db709	127.0.0.1	node	{"path": "/courses", "method": "POST"}	2026-08-23 03:32:05.614637+00
-d463bd1e-f1c6-45a1-82e5-f34b57a191d6	\N	video_lesson.create	videos	c6654397-d0d2-4932-bbf7-e7c3d3d9b373	127.0.0.1	node	{"path": "/videos/lesson", "method": "POST"}	2026-08-23 03:49:46.476399+00
-37b8f8b8-303a-4180-9c98-1337d89db20f	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:35:02.341395+00
-bac69086-7ad9-4a43-a227-c32fef2c75cd	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:35:07.665694+00
-44b42bf1-7605-46c2-b944-2353a3ef4743	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:38:23.258327+00
-ce0cd068-3189-416f-98c9-cc7fa6115959	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:39:15.679363+00
-6d38361b-7cbf-42a3-a070-396f9b20c69e	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 04:52:58.779637+00
-d6a686cd-33ee-4654-9a8a-1880886a504c	c7412dd5-8f70-4716-aa60-ac597baf36d7	video_lesson.create	videos	0e63640c-4d85-4e7c-985d-4482c7da7a95	127.0.0.1	node	{"path": "/videos/lesson", "method": "POST"}	2026-08-23 13:13:59.986173+00
-e6b4a224-92f3-4b12-92a7-f7f058a78a3b	c7412dd5-8f70-4716-aa60-ac597baf36d7	video_lesson.create	videos	ddbf39b3-985a-4604-8d79-22f1d53b4fdf	127.0.0.1	node	{"path": "/videos/lesson", "method": "POST"}	2026-08-23 13:20:36.072761+00
-e27f8e64-62e8-44be-92ac-afa45e7901de	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:04:54.047893+00
-4b8aba46-52d3-4650-8fd0-6a7b7ab0c9fb	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:05:36.854593+00
-e4a8ba8a-d38e-459e-912a-3a553e24cbf9	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:07:09.628508+00
-0e5e2d16-a90f-4a11-9467-845f73f70f21	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:07:45.565157+00
-53789dbd-eb9d-4563-a165-0231434f1fd9	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:08:15.981007+00
-f1400f8d-ee3f-4d73-b59d-7a6b5b11aca2	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:51:04.09218+00
-17dbfd66-e318-4a2f-8d1c-9ab132b4b9fb	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:51:47.095506+00
-025f10ea-a8f7-4caa-8e23-05c1c2f36353	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 06:56:57.867729+00
-090512a2-42a8-42aa-90e5-8f7049a37aee	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 07:07:39.444476+00
-e06726d0-c67c-45b0-ac43-7d7f20eb245d	c9ca39a2-7b90-42b6-bec9-4a725913d208	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 07:42:23.356959+00
-5b794766-e82f-4aab-af8e-3a4e7c1dca7c	\N	enrollment.free	enrollments	756cbf5f-1920-4dc9-b6e1-c8f9a8712449	127.0.0.1	node	{"path": "/enrollments/free/6c96fbfb-cfc0-4369-b347-5bae621db709", "method": "POST"}	2026-08-23 05:03:35.60708+00
-ed5f8d2e-a577-4180-aa77-82f429f7efb3	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 05:03:50.356406+00
-ea7da8df-3b67-49fb-903d-bc6d4fea3092	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 08:59:29.805408+00
-50d18727-6b67-4506-8586-b4f47af74e0d	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:00:01.274216+00
-4518d28e-45a1-4857-98be-a52b2972b80b	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:00:11.244032+00
-8321b9cc-1acb-4de5-8e67-78919d86cecb	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:01:23.585608+00
-3cfc131e-0ebf-434e-bb36-7f260c1db25d	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:01:58.084979+00
-22c1cce2-4f0e-40aa-90bb-df832c9e8667	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:02:04.48273+00
-ce9383dd-2386-4571-a900-16237089f6d6	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 09:58:50.59876+00
-b8c158e9-9235-4858-bf97-4371a29bd5d8	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 10:01:53.175755+00
-25806be4-9c76-4d24-8a14-4a7bc3721150	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 10:22:57.606835+00
-17ab185d-96b5-45e1-ab47-c0678548bf61	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 12:35:09.558525+00
-3c505c37-ea54-49f8-a1cd-7a0f3f46538d	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 12:42:24.155447+00
-90b5633c-9fc0-41cb-9285-b7f5addf1802	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 12:42:56.095567+00
-cee64e9b-9df1-4c2a-a5cf-6ab386799e51	\N	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/13163db6-8242-4b3e-8ff7-68fa89b65e31/otp", "method": "POST"}	2026-08-23 12:58:50.068848+00
-8ad23934-6751-4bf7-b5af-6dda11e76b75	c7412dd5-8f70-4716-aa60-ac597baf36d7	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/218b1a98-3bf7-4812-8d5b-efcc6077209d/otp", "method": "POST"}	2026-08-23 13:14:45.755474+00
-5f5b5729-5b0a-435d-a0fd-b3884eb5a971	c7412dd5-8f70-4716-aa60-ac597baf36d7	video.otp_requested	videos	\N	127.0.0.1	node	{"path": "/videos/1b88108c-bc55-4f3e-b13a-4c2f3c99fea2/otp", "method": "POST"}	2026-08-23 13:20:57.361776+00
 \.
 
 
@@ -657,6 +609,7 @@ COPY public.categories (id, name, slug, description, thumbnail_url, sort_order, 
 
 COPY public.chapters (id, course_id, title, description, sort_order, is_published, created_at, updated_at) FROM stdin;
 1604483d-52ea-4c7c-9437-e1dec3df5632	f3869b09-ae23-4b18-95d6-5d9872eea075	TEst	test	1	t	2026-08-23 13:13:37.278107+00	2026-08-23 13:13:37.278107+00
+046a5ab0-8728-48cd-9b2e-f97472767e4d	7da3947c-9498-4fae-897c-f5ee6b44a9ff	Chapter-1	Upload through UI	1	t	2026-08-26 16:18:06.458827+00	2026-08-26 16:18:06.458827+00
 \.
 
 
@@ -666,6 +619,7 @@ COPY public.chapters (id, course_id, title, description, sort_order, is_publishe
 
 COPY public.courses (id, category_id, title, slug, description, thumbnail_url, price, discount_price, status, created_by, published_at, created_at, updated_at) FROM stdin;
 f3869b09-ae23-4b18-95d6-5d9872eea075	19a3cbdc-4617-4ae5-98cc-d981db020514	Test cource	test-vdocipher	Je;;p	\N	0.00	\N	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	\N	2026-08-23 13:06:24.754891+00	2026-08-23 13:06:24.754891+00
+7da3947c-9498-4fae-897c-f5ee6b44a9ff	19a3cbdc-4617-4ae5-98cc-d981db020514	How to create a course	how-to-create-a-course	Okay I'm testing this course for the first time on preview.	\N	0.00	\N	archived	c7412dd5-8f70-4716-aa60-ac597baf36d7	\N	2026-08-26 14:01:07.092112+00	2026-08-27 13:19:56.645432+00
 \.
 
 
@@ -674,8 +628,11 @@ f3869b09-ae23-4b18-95d6-5d9872eea075	19a3cbdc-4617-4ae5-98cc-d981db020514	Test c
 --
 
 COPY public.devices (id, user_id, device_fingerprint, device_name, platform, last_active_at, created_at) FROM stdin;
-23a5651a-272b-4ad6-b6cd-064ddc1723f1	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzQ5MTQ5MSwiZXhwIjoxNzkwMDgzNDkxfQ.AZN-16KAM5zLpYKau2qhJO8vEtbFOLbt7ZUaq0SMLeU	unknown	web	2026-08-23 13:24:51.975162+00	2026-08-23 13:24:51.975162+00
-bca28397-4d97-46a9-bbea-3040ad06af69	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzQ5MTU4MSwiZXhwIjoxNzkwMDgzNTgxfQ.sD8jKgpyh8TOlZRGZIBlTy5-RHhYvrGNlY2pELhh63o	unknown	web	2026-08-23 13:26:21.589364+00	2026-08-23 13:26:21.589364+00
+c5202758-d59c-4d39-8bf2-dc98e90445ef	c9ca39a2-7b90-42b6-bec9-4a725913d208	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM5Y2EzOWEyLTdiOTAtNDJiNi1iZWM5LTRhNzI1OTEzZDIwOCIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4Nzc1MjU3NCwiZXhwIjoxNzkwMzQ0NTc0fQ.jI1vymq_nVW3r-NlWiZjWOwz-X-NjVW-RapV8XGLexs	K	web	2026-08-26 13:56:14.314072+00	2026-08-26 13:56:14.314072+00
+83e8cdf0-0ae1-4f13-bce6-966c9d96e687	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4Nzc1Mjc0MSwiZXhwIjoxNzkwMzQ0NzQxfQ.UJ3_Jxc14EjQ-En6FY-75quCc1Je74VCJL1bC_0hnh4	unknown	web	2026-08-26 13:59:02.187918+00	2026-08-26 13:59:02.187918+00
+1e7a5fe4-0301-4c8e-b05e-a6344cd86045	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzgzNjU5NSwiZXhwIjoxNzkwNDI4NTk1fQ.bFp50jBrWMwTOH1I_KdgIDHUvSz1SIWhj70rhm8611E	unknown	web	2026-08-27 13:16:35.922953+00	2026-08-27 13:16:35.922953+00
+7ecf96d6-9ff3-41c3-b0f7-c2a641d5ac1e	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzgzNzEzNiwiZXhwIjoxNzkwNDI5MTM2fQ.XaggobJ7RyiNkN9qPWNgLWNP2tpVkSrIEZb-EUYYs3E	unknown	web	2026-08-27 13:25:36.936011+00	2026-08-27 13:25:36.936011+00
+0b38e925-28f1-4604-8ca3-191636dad0c9	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4NzgzNzM2NywiZXhwIjoxNzkwNDI5MzY3fQ.XNlsMsYZf2Yq27lff4uLfeWJiyfA1zMXtmvtFzFzrWQ	unknown	web	2026-08-27 13:29:28.058766+00	2026-08-27 13:29:28.058766+00
 \.
 
 
@@ -701,7 +658,8 @@ COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_mi
 
 COPY public.enrollments (id, student_id, course_id, enrolled_at, status, completed_at, updated_at) FROM stdin;
 af019732-919c-4790-9925-aa297960ee16	c7412dd5-8f70-4716-aa60-ac597baf36d7	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-23 13:07:45.715677+00	active	\N	2026-08-23 13:07:45.715677+00
-b1c2d3e4-5678-90ab-cdef-123456789012	c9ca39a2-7b90-42b6-bec9-4a725913d208	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-23 13:07:45.715677+00	active	\N	2026-08-23 13:07:45.715677+00
+4d5c5688-cc08-441d-aeb5-b3cb9921728e	b67cd6f9-8a60-44a2-950f-dc2265a60f41	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-25 03:33:38.578125+00	active	\N	2026-08-25 03:33:38.578125+00
+65571203-ed88-442c-a1e1-c598c211345d	82d8c298-faab-4d13-a427-8597e6828be6	f3869b09-ae23-4b18-95d6-5d9872eea075	2026-08-26 11:44:57.166039+00	active	\N	2026-08-26 11:44:57.166039+00
 \.
 
 
@@ -710,10 +668,9 @@ b1c2d3e4-5678-90ab-cdef-123456789012	c9ca39a2-7b90-42b6-bec9-4a725913d208	f3869b
 --
 
 COPY public.lessons (id, chapter_id, title, description, lesson_type, sort_order, is_published, duration_seconds, created_at, updated_at) FROM stdin;
-218b1a98-3bf7-4812-8d5b-efcc6077209d	1604483d-52ea-4c7c-9437-e1dec3df5632	Chapter-1	\N	video	1	t	\N	2026-08-23 13:13:51.693034+00	2026-08-23 13:13:51.693034+00
-49c67858-04df-46f9-8e1f-c6fa392e8262	1604483d-52ea-4c7c-9437-e1dec3df5632	Chapter-2	\N	pdf	2	t	\N	2026-08-23 13:14:11.246244+00	2026-08-23 13:14:11.246244+00
-7c34b39b-0dfb-4a97-ab59-75248146db6d	1604483d-52ea-4c7c-9437-e1dec3df5632	Chapter-3	\N	test	3	t	\N	2026-08-23 13:14:23.852125+00	2026-08-23 13:14:23.852125+00
 1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	1604483d-52ea-4c7c-9437-e1dec3df5632	Chapter-2	\N	video	4	t	\N	2026-08-23 13:20:20.509402+00	2026-08-23 13:20:20.509402+00
+a48df103-3c6a-4214-b832-3bf096c4552c	046a5ab0-8728-48cd-9b2e-f97472767e4d	PDF	\N	pdf	1	t	\N	2026-08-27 13:30:21.602072+00	2026-08-27 13:30:21.602072+00
+c5c0b322-d8f9-4c96-91f2-fe7cbc041203	1604483d-52ea-4c7c-9437-e1dec3df5632	Publish PDF	\N	pdf	2	t	\N	2026-08-27 13:38:45.851153+00	2026-08-27 13:38:45.851153+00
 \.
 
 
@@ -730,6 +687,8 @@ COPY public.payments (id, student_id, course_id, amount, discount_amount, razorp
 --
 
 COPY public.pdf_notes (id, lesson_id, file_path, file_size_bytes, page_count, created_at, updated_at) FROM stdin;
+9aeb21cf-fd3d-4d8f-81b3-8a9ace88961c	a48df103-3c6a-4214-b832-3bf096c4552c	how-to-create-a-course/chapter-1/pdf.pdf	238707	\N	2026-08-27 13:30:23.858103+00	2026-08-27 13:30:23.858103+00
+2befc637-ccbf-43ce-b6fc-2ec93bb5307f	c5c0b322-d8f9-4c96-91f2-fe7cbc041203	test-vdocipher/test/publish-pdf.pdf	238707	\N	2026-08-27 13:38:48.193873+00	2026-08-27 13:38:48.193873+00
 \.
 
 
@@ -738,8 +697,10 @@ COPY public.pdf_notes (id, lesson_id, file_path, file_size_bytes, page_count, cr
 --
 
 COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at, date_of_birth) FROM stdin;
-c9ca39a2-7b90-42b6-bec9-4a725913d208	luck28kudida@atomicmail.io	student	luck28kudida	9898878776	\N	t	2026-08-23 03:51:52.979661+00	2026-08-23 03:51:53.277309+00	\N
 c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-08-23 13:13:05.178081+00	2001-01-01
+b67cd6f9-8a60-44a2-950f-dc2265a60f41	officialuse7055@gmail.com	student	Sachin Jangra	9898656565	https://lh3.googleusercontent.com/a/ACg8ocIGqJlhPNJ2d99hv3tYX7yoa6xPYEKxT8MDkmd5HIHbkTEobw=s96-c	t	2026-08-24 14:04:14.342902+00	2026-08-25 03:30:48.286541+00	2003-02-01
+82d8c298-faab-4d13-a427-8597e6828be6	mohan819.tp@gmail.com	student	Mohan	9638574105	https://lh3.googleusercontent.com/a/ACg8ocJbq4bwrWsjaBn_HPrZk1KTYdsZr-LkD2EPcAFL4PO1N_yQLQ=s96-c	t	2026-08-26 11:44:03.492284+00	2026-08-26 11:44:43.525541+00	2003-02-01
+c9ca39a2-7b90-42b6-bec9-4a725913d208	luck28kudida@atomicmail.io	student	luck28kudida	9898878776	\N	t	2026-08-23 03:51:52.979661+00	2026-08-26 13:54:24.804627+00	1995-06-22
 \.
 
 
@@ -748,8 +709,7 @@ c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LM
 --
 
 COPY public.progress (id, student_id, lesson_id, status, progress_percent, last_position_seconds, completed_at, updated_at) FROM stdin;
-360ea21a-f87d-4769-beab-6c98e9a518fd	c7412dd5-8f70-4716-aa60-ac597baf36d7	218b1a98-3bf7-4812-8d5b-efcc6077209d	in_progress	51	51	\N	2026-08-23 13:15:33.991662+00
-51862018-b622-4209-8a62-6c0579d2156f	c7412dd5-8f70-4716-aa60-ac597baf36d7	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	in_progress	21	35	\N	2026-08-23 13:21:35.351706+00
+51862018-b622-4209-8a62-6c0579d2156f	c7412dd5-8f70-4716-aa60-ac597baf36d7	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	completed	100	167	2026-08-25 02:57:58.616+00	2026-08-25 02:57:58.945982+00
 \.
 
 
@@ -806,7 +766,6 @@ COPY public.tests (id, lesson_id, title, time_limit_seconds, passing_score_perce
 --
 
 COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, thumbnail_url, created_at, updated_at) FROM stdin;
-0e63640c-4d85-4e7c-985d-4482c7da7a95	218b1a98-3bf7-4812-8d5b-efcc6077209d	44948cf638d74342a2cb231889d11eb3	\N	\N	2026-08-23 13:13:59.776327+00	2026-08-23 13:13:59.776327+00
 ddbf39b3-985a-4604-8d79-22f1d53b4fdf	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	6aa136af9ffdb92a186953216084757c	\N	\N	2026-08-23 13:20:35.766542+00	2026-08-23 13:20:35.766542+00
 \.
 
@@ -816,9 +775,8 @@ ddbf39b3-985a-4604-8d79-22f1d53b4fdf	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	6aa136
 --
 
 COPY public.video_sessions (id, user_id, lesson_id, ip_address, user_agent, created_at, expires_at) FROM stdin;
-4a4497f5-f816-417b-908c-c9ca67757631	c7412dd5-8f70-4716-aa60-ac597baf36d7	218b1a98-3bf7-4812-8d5b-efcc6077209d	127.0.0.1	node	2026-08-23 13:14:45.039744+00	2026-08-23 14:14:44.936+00
-ca189883-25d2-4a73-a823-4bf369ba4d74	c7412dd5-8f70-4716-aa60-ac597baf36d7	218b1a98-3bf7-4812-8d5b-efcc6077209d	127.0.0.1	node	2026-08-23 13:15:02.758923+00	2026-08-23 14:15:02.652+00
 bed0019b-192d-4037-896b-6375480019d6	c7412dd5-8f70-4716-aa60-ac597baf36d7	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	127.0.0.1	node	2026-08-23 13:20:56.654799+00	2026-08-23 14:20:56.55+00
+7f057fc4-55b8-4174-ae53-a0cfda6c74cd	c7412dd5-8f70-4716-aa60-ac597baf36d7	1b88108c-bc55-4f3e-b13a-4c2f3c99fea2	127.0.0.1	node	2026-08-25 02:57:44.466813+00	2026-08-25 03:57:44.078+00
 \.
 
 
@@ -2428,5 +2386,4 @@ ALTER TABLE public.video_sessions ENABLE ROW LEVEL SECURITY;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict R2CabA1LYdqokVvPftlK4rgrdQkGvdcsDiVQCmfggY8IJBm7K3PhYDH1b31RLWC
-
+\unrestrict 75rQZNo4MZ1fmhtM3pedwl9wZ2BmRFvtTVAuICxOW7vQ2c5CY5lQOTMD3VBkgoN

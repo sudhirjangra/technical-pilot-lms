@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsInt,
   IsOptional,
@@ -7,6 +10,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateChapterDto {
@@ -62,7 +66,22 @@ export class UpdateChapterDto {
   is_published?: boolean;
 }
 
+export class ReorderChapterItemDto {
+  @ApiProperty()
+  @IsUUID()
+  id: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  sort_order: number;
+}
+
 export class ReorderChaptersDto {
-  @ApiProperty({ type: [Object] })
-  chapters: { id: string; sort_order: number }[];
+  @ApiProperty({ type: [ReorderChapterItemDto] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => ReorderChapterItemDto)
+  chapters: ReorderChapterItemDto[];
 }

@@ -35,6 +35,13 @@ export class LessonsController {
     return { message: 'PDF uploaded', data };
   }
 
+  @Roles('ADMIN')
+  @Delete(':id/pdf')
+  async deletePdf(@Param('id', ParseUUIDPipe) id: string) {
+    await this.lessonsService.deletePdf(id);
+    return { message: 'PDF deleted' };
+  }
+
   @Get('chapter/:chapterId')
   async findByChapter(@Param('chapterId', ParseUUIDPipe) chapterId: string) {
     const data = await this.lessonsService.findByChapter(chapterId);

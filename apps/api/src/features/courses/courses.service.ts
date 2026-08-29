@@ -6,12 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { LessonsService } from '../lessons/lessons.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly lessonsService: LessonsService,
   ) {}
 
   async create(dto: CreateCourseDto, createdBy: string) {
@@ -79,9 +81,14 @@ export class CoursesService {
   async update(id: string, dto: UpdateCourseDto) {
     const updatePayload: Record<string, unknown> = { ...dto };
 
-    // Set published_at when publishing
+    // Keep published_at consistent with the status transition.
     if (dto.status === 'published') {
-      updatePayload.published_at = new Date().toISOString();
+      const existing = await this.findOne(id);
+      if (!existing.published_at) {
+        updatePayload.published_at = new Date().toISOString();
+      }
+    } else if (dto.status === 'draft') {
+      updatePayload.published_at = null;
     }
 
     const { data, error } = await this.supabase
@@ -101,6 +108,24 @@ export class CoursesService {
   }
 
   async remove(id: string) {
+    const { data: chapters } = await this.supabase
+      .from('chapters')
+      .select('id')
+      .eq('course_id', id);
+    const chapterIds = (chapters ?? []).map((c) => c.id as string);
+
+    if (chapterIds.length > 0) {
+      const { data: lessons } = await this.supabase
+        .from('lessons')
+        .select('id')
+        .in('chapter_id', chapterIds);
+      await Promise.all(
+        (lessons ?? []).map((lesson) =>
+          this.lessonsService.cleanupExternalContent(lesson.id as string),
+        ),
+      );
+    }
+
     const { error } = await this.supabase.from('courses').delete().eq('id', id);
     if (error) throw new BadRequestException(error.message);
   }

@@ -1,0 +1,38 @@
+[
+  {
+    "question_number": 1,
+    "question_text": "What is the capital of France?",
+    "question_type": "mcq",
+    "option_A": "Delhi",
+    "option_B": "New York",
+    "option_C": "Paris",
+    "option_D": "All of above",
+    "answer": "C",
+    "points": 1,
+    "explanation": "Paris has been the capital since the 12th century."
+  },
+  {
+    "question_number": 2,
+    "question_text": "Which of these are prime numbers?",
+    "question_type": "msq",
+    "option_A": "2",
+    "option_B": "3",
+    "option_C": "5",
+    "option_D": "All of above",
+    "answer": "D",
+    "points": 1,
+    "explanation": "2, 3 and 5 are prime; 4 is not (divisible by 2)."
+  },
+  {
+    "question_number": 3,
+    "question_text": "What is 2+2=?",
+    "question_type": "text",
+    "option_A": "",
+    "option_B": "",
+    "option_C": "",
+    "option_D": "",
+    "answer": "4",
+    "points": 2,
+    "explanation": "2+2 = 4"
+  }
+]

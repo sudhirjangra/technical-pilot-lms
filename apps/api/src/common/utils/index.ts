@@ -26,4 +26,5 @@ export const generateRefreshTime = async (day = 3): Promise<string> => {
 export * from './file';
 export * from './hashString';
 export * from './otp';
+export * from './question-import.util';
 export * from './validateEnv';

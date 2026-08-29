@@ -1,0 +1,4 @@
+question_number,question_text,question_type,option_A,option_B,option_C,option_D,answer,points,explanation
+1,What is the capital of France?,mcq,Delhi,New York,Paris,All of above,C,1,Paris has been the capital since the 12th century.
+2,Which of these are prime numbers?,msq,2,3,5,All of above,D,1,"2, 3 and 5 are prime; 4 is not (divisible by 2)."
+3,What is 2+2=?,text,,,,,4,2,2+2 = 4

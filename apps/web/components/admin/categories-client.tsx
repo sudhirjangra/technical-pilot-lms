@@ -7,11 +7,14 @@ import { Button } from '@repo/shadcn/button';
 import { Card } from '@repo/shadcn/card';
 import { Badge } from '@repo/shadcn/badge';
 import { toast } from '@repo/shadcn/sonner';
+import { slugify } from '@repo/utils';
 
 export function CategoriesClient({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -19,7 +22,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
     const fd = new FormData(e.currentTarget);
     const result = await createCategory({
       name: fd.get('name') as string,
-      slug: fd.get('slug') as string,
+      slug: slugify(fd.get('slug') as string),
       description: fd.get('description') as string || undefined,
       sort_order: Number(fd.get('sort_order')) || 0,
       is_active: true,
@@ -30,6 +33,8 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
     } else {
       toast.success('Category created');
       setShowForm(false);
+      setSlug('');
+      setSlugTouched(false);
       router.refresh();
     }
   };
@@ -56,8 +61,26 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
       {showForm && (
         <Card className="p-6">
           <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            <input name="name" placeholder="Name" required className="border rounded px-3 py-2" />
-            <input name="slug" placeholder="slug-like-this" required className="border rounded px-3 py-2" />
+            <input
+              name="name"
+              placeholder="Name"
+              required
+              className="border rounded px-3 py-2"
+              onChange={(e) => {
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+            />
+            <input
+              name="slug"
+              placeholder="slug-like-this"
+              required
+              value={slug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(slugify(e.target.value));
+              }}
+              className="border rounded px-3 py-2"
+            />
             <input name="sort_order" type="number" placeholder="Sort order" className="border rounded px-3 py-2" />
             <input name="description" placeholder="Description (optional)" className="border rounded px-3 py-2" />
             <Button type="submit" disabled={loading} className="col-span-2">

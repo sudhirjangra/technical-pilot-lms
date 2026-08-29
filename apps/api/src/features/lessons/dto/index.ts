@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -8,6 +11,7 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateLessonDto {
@@ -70,7 +74,22 @@ export class UpdateLessonDto {
   @IsBoolean()
   is_published?: boolean;
 }
+export class ReorderLessonItemDto {
+  @ApiProperty()
+  @IsUUID()
+  id: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  sort_order: number;
+}
+
 export class ReorderLessonsDto {
-  @ApiProperty({ type: [Object] })
-  lessons: { id: string; sort_order: number }[];
+  @ApiProperty({ type: [ReorderLessonItemDto] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => ReorderLessonItemDto)
+  lessons: ReorderLessonItemDto[];
 }

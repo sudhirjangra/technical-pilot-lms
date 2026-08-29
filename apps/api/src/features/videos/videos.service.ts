@@ -27,6 +27,34 @@ function slug(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+/**
+ * Fields VdoCipher returns inside `clientPayload`, in the order AWS S3 expects.
+ * `uploadLink` is the POST target rather than a form field, and `file` must be
+ * appended last — S3 ignores every field that follows the file part.
+ */
+const S3_POLICY_FIELDS = [
+  'x-amz-credential',
+  'x-amz-algorithm',
+  'x-amz-date',
+  'x-amz-signature',
+  'key',
+  'policy',
+] as const;
+
+function describeAxiosError(step: string, err: unknown): string {
+  const axiosErr = err as {
+    response?: { status?: number; data?: unknown };
+    message?: string;
+  };
+  const status = axiosErr.response?.status;
+  const body = axiosErr.response?.data;
+  const rendered =
+    typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined;
+  return `VdoCipher ${step} failed${status ? ` (HTTP ${status})` : ''}: ${
+    rendered ?? axiosErr.message ?? 'unknown error'
+  }`;
+}
+
 @Injectable()
 export class VideosService {
   constructor(
@@ -78,36 +106,65 @@ export class VideosService {
       Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
       Accept: 'application/json',
     };
-    const courseFolder = await axios.post(
-      `${VDOCIPHER_BASE}/videos/folders`,
-      { name: slug(chapter.courses.slug), parent: 'root' },
-      { headers },
+
+    // Folders are a convenience only — never let them block an upload.
+    const courseFolderId = await this.resolveFolder(
+      slug(chapter.courses.slug),
+      'root',
+      headers,
     );
-    const chapterFolder = await axios.post(
-      `${VDOCIPHER_BASE}/videos/folders`,
-      { name: slug(chapter.title), parent: courseFolder.data.id },
-      { headers },
+    const folderId = await this.resolveFolder(
+      slug(chapter.title),
+      courseFolderId,
+      headers,
     );
-    const response = await axios.put(
-      `${VDOCIPHER_BASE}/videos`,
-      undefined,
-      {
+
+    let response;
+    try {
+      response = await axios.put(`${VDOCIPHER_BASE}/videos`, undefined, {
         headers,
-        params: { title, folderId: chapterFolder.data.id },
-      },
-    );
+        params: { title, folderId },
+      });
+    } catch (err) {
+      throw new BadRequestException(
+        describeAxiosError('upload credentials request', err),
+      );
+    }
+
     const videoId = response.data.videoId as string;
-    const clientPayload = response.data.clientPayload as Record<string, string> | undefined;
+    const clientPayload = response.data.clientPayload as
+      | Record<string, string>
+      | undefined;
     const uploadLink = clientPayload?.uploadLink;
-    if (!videoId || !uploadLink)
+    if (!videoId || !clientPayload || !uploadLink)
       throw new BadRequestException('VdoCipher did not return an upload link');
 
+    // Field order matters: every policy field first, then `file` last. S3 also
+    // rejects the POST (HTTP 403) unless success_action_* are present, because
+    // VdoCipher's signed policy declares conditions for them.
     const form = new FormData();
-    for (const [key, value] of Object.entries(clientPayload)) {
-      if (key !== 'uploadLink') form.append(key, value);
+    for (const field of S3_POLICY_FIELDS) {
+      const value = clientPayload[field];
+      if (value !== undefined) form.append(field, value);
     }
-    form.append('file', new Blob([new Uint8Array(await part.toBuffer())], { type: part.mimetype }), part.filename);
-    await axios.post(uploadLink, form);
+    form.append('success_action_status', '201');
+    form.append('success_action_redirect', '');
+    form.append(
+      'file',
+      new Blob([new Uint8Array(await part.toBuffer())], { type: part.mimetype }),
+      part.filename,
+    );
+
+    try {
+      // No Authorization header here: this posts to AWS S3, not VdoCipher.
+      await axios.post(uploadLink, form, {
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        validateStatus: (status) => status >= 200 && status < 400,
+      });
+    } catch (err) {
+      throw new BadRequestException(describeAxiosError('file upload', err));
+    }
 
     const { data, error } = await this.supabase
       .from('video_lessons')
@@ -116,6 +173,31 @@ export class VideosService {
       .single();
     if (error) throw new BadRequestException(error.message);
     return { ...data, folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}` };
+  }
+
+  /**
+   * Returns the id of the named child folder, creating it when needed.
+   * Folder organisation is cosmetic, so any VdoCipher failure here (including
+   * plan-gated folder APIs returning 403) falls back to the parent folder
+   * rather than aborting the upload.
+   */
+  private async resolveFolder(
+    name: string,
+    parent: string,
+    headers: Record<string, string>,
+  ): Promise<string> {
+    if (!name) return parent;
+    try {
+      const { data } = await axios.post(
+        `${VDOCIPHER_BASE}/videos/folders`,
+        { name, parent },
+        { headers },
+      );
+      return (data?.id ?? data?.folderId ?? parent) as string;
+    } catch (err) {
+      console.warn(describeAxiosError(`folder "${name}" creation`, err));
+      return parent;
+    }
   }
 
   async updateVideoLesson(lessonId: string, dto: UpdateVideoLessonDto) {
@@ -131,11 +213,44 @@ export class VideosService {
   }
 
   async deleteVideoLesson(lessonId: string) {
+    // Best-effort cleanup of the hosted VdoCipher asset before dropping the row.
+    const { data: videoLesson } = await this.supabase
+      .from('video_lessons')
+      .select('vdocipher_video_id')
+      .eq('lesson_id', lessonId)
+      .maybeSingle();
+    if (videoLesson?.vdocipher_video_id) {
+      await this.deleteVdoCipherAsset(videoLesson.vdocipher_video_id as string);
+    }
+
     const { error } = await this.supabase
       .from('video_lessons')
       .delete()
       .eq('lesson_id', lessonId);
     if (error) throw new BadRequestException(error.message);
+  }
+
+  /**
+   * Deletes a video asset from VdoCipher. Best-effort: logs and swallows
+   * errors so a provider outage never blocks lesson/chapter/course deletion.
+   */
+  async deleteVdoCipherAsset(videoId: string) {
+    try {
+      await axios.delete(`${VDOCIPHER_BASE}/videos`, {
+        headers: {
+          Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
+          Accept: 'application/json',
+        },
+        params: { videos: videoId },
+      });
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: unknown; status?: number } };
+      console.error(
+        'VdoCipher delete error:',
+        axiosErr.response?.status,
+        JSON.stringify(axiosErr.response?.data),
+      );
+    }
   }
 
   // ── Student: generate OTP for secure playback ────────────────────────────

@@ -9,11 +9,14 @@ import { Button } from '@repo/shadcn/button';
 import { Card } from '@repo/shadcn/card';
 import { Badge } from '@repo/shadcn/badge';
 import { toast } from '@repo/shadcn/sonner';
+import { slugify } from '@repo/utils';
 
 export function CoursesClient({ courses, categories }: { courses: Course[]; categories: Category[] }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [slug, setSlug] = useState('');
+  const [slugTouched, setSlugTouched] = useState(false);
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -21,7 +24,7 @@ export function CoursesClient({ courses, categories }: { courses: Course[]; cate
     const fd = new FormData(e.currentTarget);
     const result = await createCourse({
       title: fd.get('title') as string,
-      slug: fd.get('slug') as string,
+      slug: slugify(fd.get('slug') as string),
       description: fd.get('description') as string,
       category_id: fd.get('category_id') as string || undefined,
       price: Number(fd.get('price')),
@@ -34,6 +37,8 @@ export function CoursesClient({ courses, categories }: { courses: Course[]; cate
     } else {
       toast.success('Course created');
       setShowForm(false);
+      setSlug('');
+      setSlugTouched(false);
       router.refresh();
     }
   };
@@ -60,8 +65,26 @@ export function CoursesClient({ courses, categories }: { courses: Course[]; cate
       {showForm && (
         <Card className="p-6">
           <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
-            <input name="title" placeholder="Title" required className="border rounded px-3 py-2 col-span-2" />
-            <input name="slug" placeholder="slug-like-this" required className="border rounded px-3 py-2" />
+            <input
+              name="title"
+              placeholder="Title"
+              required
+              className="border rounded px-3 py-2 col-span-2"
+              onChange={(e) => {
+                if (!slugTouched) setSlug(slugify(e.target.value));
+              }}
+            />
+            <input
+              name="slug"
+              placeholder="slug-like-this"
+              required
+              value={slug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(slugify(e.target.value));
+              }}
+              className="border rounded px-3 py-2"
+            />
             <select name="category_id" className="border rounded px-3 py-2">
               <option value="">No category</option>
               {categories.map((c) => (
