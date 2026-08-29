@@ -7,10 +7,15 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateEnrollmentDto, UpdateEnrollmentDto } from './dto';
+import {
+  CreateEnrollmentDto,
+  ListEnrollmentsQueryDto,
+  UpdateEnrollmentDto,
+} from './dto';
 import { EnrollmentsService } from './enrollments.service';
 
 @ApiTags('Enrollments')
@@ -23,6 +28,13 @@ export class EnrollmentsController {
   @Roles('ADMIN')
   create(@Body() dto: CreateEnrollmentDto) {
     return this.enrollmentsService.create(dto);
+  }
+
+  /** Admin: browse all enrollments with filters + pagination */
+  @Get()
+  @Roles('ADMIN')
+  findAll(@Query() query: ListEnrollmentsQueryDto) {
+    return this.enrollmentsService.findAll(query);
   }
 
   /** Student: get their own enrollments */

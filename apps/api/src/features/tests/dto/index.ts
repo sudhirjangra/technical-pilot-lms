@@ -110,6 +110,20 @@ export class CreateTestQuestionDto {
   @Min(0)
   sort_order?: number;
 
+  @ApiPropertyOptional({ description: 'Question number shown to the student' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  question_number?: number;
+
+  @ApiPropertyOptional({
+    description: 'Expected answer for question_type = text',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  correct_text_answer?: string;
+
   @ApiPropertyOptional({ type: [TestQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -147,6 +161,20 @@ export class UpdateTestQuestionDto {
   @IsInt()
   @Min(0)
   sort_order?: number;
+
+  @ApiPropertyOptional({ description: 'Question number shown to the student' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  question_number?: number;
+
+  @ApiPropertyOptional({
+    description: 'Expected answer for question_type = text',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  correct_text_answer?: string;
 
   @ApiPropertyOptional({ type: [TestQuestionOptionDto] })
   @IsOptional()

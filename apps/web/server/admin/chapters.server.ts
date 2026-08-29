@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const LessonSchema = z
@@ -13,6 +14,7 @@ const LessonSchema = z
     lesson_type: z.string(),
     sort_order: z.coerce.number().default(0),
     is_published: z.boolean().default(false),
+    is_preview: z.boolean().nullable().optional(),
     duration_seconds: z.coerce.number().nullable().optional(),
   })
   .passthrough();
@@ -34,9 +36,15 @@ const ReorderPayloadSchema = z.object({
   sort_order: z.number(),
 });
 
-const MessageResponseSchema = z.object({
-  message: z.string().optional(),
-});
+const MessageResponseSchema = z
+  .object({
+    message: z.string().optional(),
+  })
+  .passthrough();
+
+const revalidateCourseAdmin = () => {
+  revalidatePath('/admin/courses', 'layout');
+};
 
 export type Chapter = z.infer<typeof ChapterSchema>;
 export type Lesson = z.infer<typeof LessonSchema>;
@@ -53,7 +61,7 @@ async function authHeaders(includeContentType = true) {
 export async function getChapters(courseId: string): Promise<Chapter[]> {
   const session = await auth();
   const [error, data] = await safeFetch(
-    z.object({ data: z.array(ChapterSchema) }),
+    z.object({ data: z.array(ChapterSchema) }).passthrough(),
     `/chapters/course/${courseId}`,
     {
       headers: {
@@ -83,7 +91,7 @@ export async function createChapter(payload: {
   is_published?: boolean;
 }) {
   const [error, data] = await safeFetch(
-    z.object({ data: ChapterSchema }),
+    z.object({ data: ChapterSchema }).passthrough(),
     '/chapters',
     {
       method: 'POST',
@@ -92,21 +100,24 @@ export async function createChapter(payload: {
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { data: data!.data };
 }
 
-export async function updateChapter(
-  id: string,
-  payload: {
-    title?: string;
-    description?: string;
-    sort_order?: number;
-    is_published?: boolean;
-  },
-) {
+export type ChapterUpdatePayload = {
+  title?: string;
+  description?: string | null;
+  sort_order?: number;
+  is_published?: boolean;
+};
+
+export async function updateChapter(id: string, payload: ChapterUpdatePayload) {
   const [error, data] = await safeFetch(
-    z.object({ data: ChapterSchema }),
+    z.object({ data: ChapterSchema }).passthrough(),
     `/chapters/${id}`,
     {
       method: 'PATCH',
@@ -115,7 +126,11 @@ export async function updateChapter(
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { data: data!.data };
 }
 
@@ -132,7 +147,11 @@ export async function reorderChapters(chapters: { id: string; sort_order: number
       }),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { success: true };
 }
 
@@ -142,7 +161,11 @@ export async function deleteChapter(id: string) {
     headers: await authHeaders(false),
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { success: true };
 }
 
@@ -154,7 +177,7 @@ export async function createLesson(payload: {
   is_published?: boolean;
 }) {
   const [error, data] = await safeFetch(
-    z.object({ data: LessonSchema }),
+    z.object({ data: LessonSchema }).passthrough(),
     '/lessons',
     {
       method: 'POST',
@@ -163,7 +186,11 @@ export async function createLesson(payload: {
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { data: data!.data };
 }
 
@@ -177,7 +204,11 @@ export async function uploadPdfLesson(lessonId: string, file: File) {
     cache: 'no-store',
     body: formData,
   });
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { data: data?.data ?? null };
 }
 
@@ -187,22 +218,26 @@ export async function deletePdfLesson(lessonId: string) {
     headers: await authHeaders(false),
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { success: true };
 }
 
-export async function updateLesson(
-  id: string,
-  payload: {
-    title?: string;
-    description?: string;
-    lesson_type?: string;
-    sort_order?: number;
-    is_published?: boolean;
-  },
-) {
+export type LessonUpdatePayload = {
+  title?: string;
+  description?: string | null;
+  lesson_type?: string;
+  sort_order?: number;
+  is_published?: boolean;
+  is_preview?: boolean;
+};
+
+export async function updateLesson(id: string, payload: LessonUpdatePayload) {
   const [error, data] = await safeFetch(
-    z.object({ data: LessonSchema }),
+    z.object({ data: LessonSchema }).passthrough(),
     `/lessons/${id}`,
     {
       method: 'PATCH',
@@ -211,7 +246,11 @@ export async function updateLesson(
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { data: data!.data };
 }
 
@@ -228,7 +267,11 @@ export async function reorderLessons(lessons: { id: string; sort_order: number }
       }),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { success: true };
 }
 
@@ -238,6 +281,10 @@ export async function deleteLesson(id: string) {
     headers: await authHeaders(false),
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('chapters.server request failed:', error);
+    return { error };
+  }
+  revalidateCourseAdmin();
   return { success: true };
 }

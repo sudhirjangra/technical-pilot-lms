@@ -127,6 +127,11 @@ export class TestsService {
       points: dto.points ?? 1,
       explanation: dto.explanation?.trim() || null,
       sort_order: sortOrder,
+      question_number: dto.question_number ?? sortOrder,
+      correct_text_answer:
+        dto.question_type === 'text'
+          ? dto.correct_text_answer?.trim() || null
+          : null,
     };
 
     const { data: question, error } = await this.supabase
@@ -170,6 +175,13 @@ export class TestsService {
         explanation:
           dto.explanation === undefined ? undefined : dto.explanation.trim() || null,
         sort_order: dto.sort_order,
+        question_number: dto.question_number,
+        correct_text_answer:
+          nextQuestionType === 'text'
+            ? dto.correct_text_answer === undefined
+              ? undefined
+              : dto.correct_text_answer.trim() || null
+            : null,
       })
       .eq('id', questionId);
 
@@ -384,6 +396,8 @@ export class TestsService {
           points: question.points,
           explanation: question.explanation ?? null,
           sort_order: question.sort_order,
+          question_number: question.question_number,
+          correct_text_answer: question.correct_text_answer,
         })
         .select()
         .single();

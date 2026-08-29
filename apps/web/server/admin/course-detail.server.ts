@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const CourseDetailSchema = z
@@ -31,18 +32,32 @@ export type CourseDetail = z.infer<typeof CourseDetailSchema>;
 export async function getCourseById(id: string): Promise<CourseDetail | null> {
   const session = await auth();
   const [error, data] = await safeFetch(
-    z.object({ data: CourseDetailSchema }),
+    z.object({ data: CourseDetailSchema }).passthrough(),
     `/courses/${id}`,
     { headers: { Authorization: `Bearer ${session?.user?.tokens.access_token}` }, cache: 'no-store' },
   );
-  if (error) return null;
+  if (error) {
+    console.error('getCourseById failed:', error);
+    return null;
+  }
   return data!.data;
 }
 
-export async function updateCourse(id: string, payload: Record<string, unknown>) {
+export type CourseDetailUpdatePayload = {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  thumbnail_url?: string | null;
+  category_id?: string | null;
+  price?: number;
+  discount_price?: number | null;
+  status?: string;
+};
+
+export async function updateCourse(id: string, payload: CourseDetailUpdatePayload) {
   const session = await auth();
   const [error, data] = await safeFetch(
-    z.object({ data: CourseDetailSchema }),
+    z.object({ data: CourseDetailSchema }).passthrough(),
     `/courses/${id}`,
     {
       method: 'PATCH',
@@ -51,6 +66,11 @@ export async function updateCourse(id: string, payload: Record<string, unknown>)
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('updateCourse failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/courses');
+  revalidatePath(`/admin/courses/${id}`);
   return { data: data!.data };
 }

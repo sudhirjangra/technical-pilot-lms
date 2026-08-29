@@ -105,18 +105,47 @@ export class ProgressService {
     const { data: chapters } = await this.supabase
       .from('chapters')
       .select(
-        'id, title, sort_order, lessons(id, title, sort_order, lesson_type)',
+        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, due_days_after_start))',
       )
       .eq('course_id', courseId)
-      .order('sort_order');
+      .eq('is_published', true)
+      .eq('lessons.is_published', true)
+      .order('sort_order', { ascending: true })
+      .order('sort_order', { referencedTable: 'lessons', ascending: true });
 
     if (!chapters) return { chapters: [], overall_percent: 0 };
+
+    // chapter_starts anchors every assignment due date inside the chapter.
+    const { data: chapterStarts } = await this.supabase
+      .from('chapter_starts')
+      .select('chapter_id, started_at')
+      .eq('student_id', studentId)
+      .in(
+        'chapter_id',
+        chapters.map((ch: { id: string }) => ch.id),
+      );
+
+    const startedAtMap = new Map<string, string>(
+      (chapterStarts ?? []).map(
+        (row: { chapter_id: string; started_at: string }) => [
+          row.chapter_id,
+          row.started_at,
+        ],
+      ),
+    );
 
     const lessonIds = chapters.flatMap((ch: { lessons: { id: string }[] }) =>
       ch.lessons.map((l) => l.id),
     );
 
-    if (lessonIds.length === 0) return { chapters, overall_percent: 0 };
+    if (lessonIds.length === 0)
+      return {
+        chapters: chapters.map((ch: { id: string }) => ({
+          ...ch,
+          started_at: startedAtMap.get(ch.id) ?? null,
+        })),
+        overall_percent: 0,
+      };
 
     const { data: progressRecords } = await this.supabase
       .from('progress')
@@ -157,13 +186,25 @@ export class ProgressService {
           : 'not_started';
 
     const enrichedChapters = chapters.map(
-      (ch: { lessons: { id: string }[] }) => ({
-        ...ch,
-        lessons: ch.lessons.map((l) => ({
-          ...l,
-          progress: progressMap.get(l.id) ?? null,
-        })),
-      }),
+      (ch: {
+        id: string;
+        lessons: {
+          id: string;
+          lesson_type?: string;
+          assignments?: unknown;
+        }[];
+      }) => {
+        const startedAt = startedAtMap.get(ch.id) ?? null;
+        return {
+          ...ch,
+          started_at: startedAt,
+          lessons: ch.lessons.map((l) => ({
+            ...l,
+            progress: progressMap.get(l.id) ?? null,
+            due_at: this.computeDueAt(startedAt, l.assignments),
+          })),
+        };
+      },
     );
 
     return {
@@ -171,6 +212,28 @@ export class ProgressService {
       overall_percent: overallPercent,
       overall_status: overallStatus,
     };
+  }
+
+  /**
+   * Assignment due date = chapter start + due_days_after_start days.
+   * Null when the chapter was never started or the assignment has no due window.
+   */
+  private computeDueAt(
+    startedAt: string | null,
+    assignments: unknown,
+  ): string | null {
+    if (!startedAt) return null;
+
+    const assignment = Array.isArray(assignments)
+      ? (assignments[0] as { due_days_after_start?: number | null } | undefined)
+      : (assignments as { due_days_after_start?: number | null } | null);
+
+    const dueDays = assignment?.due_days_after_start;
+    if (dueDays === null || dueDays === undefined) return null;
+
+    const due = new Date(startedAt);
+    due.setUTCDate(due.getUTCDate() + dueDays);
+    return due.toISOString();
   }
 
   /** Admin: get progress summary for a student */

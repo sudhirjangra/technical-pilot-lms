@@ -47,11 +47,13 @@ export class CreateAssignmentDto {
   @Min(1)
   max_score?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Days allowed after the student starts the parent chapter',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
-  due_days_after_enrollment?: number;
+  due_days_after_start?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -92,11 +94,13 @@ export class UpdateAssignmentDto {
   @Min(1)
   max_score?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Days allowed after the student starts the parent chapter',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
-  due_days_after_enrollment?: number;
+  due_days_after_start?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -146,6 +150,20 @@ export class CreateAssignmentQuestionDto {
   @Min(0)
   sort_order?: number;
 
+  @ApiPropertyOptional({ description: 'Question number shown to the student' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  question_number?: number;
+
+  @ApiPropertyOptional({
+    description: 'Expected answer for question_type = text',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  correct_text_answer?: string;
+
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -183,6 +201,20 @@ export class UpdateAssignmentQuestionDto {
   @IsInt()
   @Min(0)
   sort_order?: number;
+
+  @ApiPropertyOptional({ description: 'Question number shown to the student' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  question_number?: number;
+
+  @ApiPropertyOptional({
+    description: 'Expected answer for question_type = text',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  correct_text_answer?: string;
 
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()

@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { CreateEnrollmentDto, UpdateEnrollmentDto } from './dto';
+import { CreateEnrollmentDto, ListEnrollmentsQueryDto, UpdateEnrollmentDto } from './dto';
 
 @Injectable()
 export class EnrollmentsService {
@@ -54,11 +54,55 @@ export class EnrollmentsService {
   async findByCourse(courseId: string) {
     const { data, error } = await this.supabase
       .from('enrollments')
-      .select('*, profiles(id, full_name, email, avatar_url)')
+      .select(
+        '*, profiles(id, full_name, email, avatar_url), courses(id, title, slug, thumbnail_url, status)',
+      )
       .eq('course_id', courseId)
       .order('enrolled_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
     return data;
+  }
+
+  /** Admin: paginated listing of every enrollment, with optional filters */
+  async findAll(query: ListEnrollmentsQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let studentIds: string[] | null = null;
+    const search = query.search?.trim();
+    if (search) {
+      // Resolve matching students first — filtering an embedded relation does
+      // not restrict the parent rows reliably.
+      const { data: profiles, error: profilesError } = await this.supabase
+        .from('profiles')
+        .select('id')
+        .or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+      if (profilesError) throw new BadRequestException(profilesError.message);
+      studentIds = (profiles ?? []).map((p: { id: string }) => p.id);
+      if (studentIds.length === 0) {
+        return { data: [], meta: { total: 0, page, limit } };
+      }
+    }
+
+    let request = this.supabase
+      .from('enrollments')
+      .select(
+        '*, profiles(id, full_name, email, avatar_url), courses(id, title, slug, thumbnail_url, status)',
+        { count: 'exact' },
+      );
+
+    if (query.courseId) request = request.eq('course_id', query.courseId);
+    if (query.status) request = request.eq('status', query.status);
+    if (studentIds) request = request.in('student_id', studentIds);
+
+    const { data, error, count } = await request
+      .order('enrolled_at', { ascending: false })
+      .range(from, to);
+
+    if (error) throw new BadRequestException(error.message);
+    return { data: data ?? [], meta: { total: count ?? 0, page, limit } };
   }
 
   async findOne(id: string) {

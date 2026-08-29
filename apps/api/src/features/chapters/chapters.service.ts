@@ -1,6 +1,7 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -93,6 +94,59 @@ export class ChaptersService {
     );
     const failed = results.find((result) => result.error);
     if (failed?.error) throw new BadRequestException(failed.error.message);
+  }
+
+  /**
+   * Student pressed "Start now" on a chapter. Insert-if-absent so re-pressing
+   * never moves the assignment deadlines anchored to `started_at`.
+   */
+  async startChapter(chapterId: string, studentId: string) {
+    const courseId = await this.getCourseIdForChapter(chapterId);
+    await this.ensureActiveEnrollment(studentId, courseId);
+
+    const { error } = await this.supabase.from('chapter_starts').upsert(
+      { student_id: studentId, chapter_id: chapterId },
+      { onConflict: 'student_id,chapter_id', ignoreDuplicates: true },
+    );
+    if (error) throw new BadRequestException(error.message);
+
+    return this.getChapterStart(chapterId, studentId);
+  }
+
+  /** Current student's chapter_start row, or null when not started yet. */
+  async getChapterStart(chapterId: string, studentId: string) {
+    const { data, error } = await this.supabase
+      .from('chapter_starts')
+      .select('*')
+      .eq('chapter_id', chapterId)
+      .eq('student_id', studentId)
+      .maybeSingle();
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  private async getCourseIdForChapter(chapterId: string): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('chapters')
+      .select('course_id')
+      .eq('id', chapterId)
+      .single();
+    if (error || !data) throw new NotFoundException('Chapter not found');
+    return data.course_id as string;
+  }
+
+  private async ensureActiveEnrollment(studentId: string, courseId: string) {
+    const { data } = await this.supabase
+      .from('enrollments')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('course_id', courseId)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (!data)
+      throw new ForbiddenException(
+        'Active enrollment required to access this content',
+      );
   }
 
   async remove(id: string) {

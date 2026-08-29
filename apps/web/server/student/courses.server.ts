@@ -73,11 +73,74 @@ export async function checkEnrollment(courseId: string): Promise<boolean> {
   return data!.enrolled;
 }
 
-const ProgressSchema = z.object({
-  chapters: z.array(z.any()),
-  overall_percent: z.number(),
-  overall_status: z.enum(['not_started', 'in_progress', 'completed']),
-});
+const LessonProgressRecordSchema = z
+  .object({
+    status: z.string().nullable().optional(),
+    progress_percent: z.coerce.number().nullable().optional(),
+    last_position_seconds: z.coerce.number().nullable().optional(),
+  })
+  .passthrough();
+
+const ProgressLessonSchema = z
+  .object({
+    id: z.string(),
+    title: z.string().nullable().optional(),
+    sort_order: z.coerce.number().nullable().optional(),
+    lesson_type: z.string().nullable().optional(),
+    due_at: z.string().nullable().optional(),
+    progress: LessonProgressRecordSchema.nullable().optional(),
+  })
+  .passthrough();
+
+const ProgressChapterSchema = z
+  .object({
+    id: z.string(),
+    title: z.string().nullable().optional(),
+    sort_order: z.coerce.number().nullable().optional(),
+    started_at: z.string().nullable().optional(),
+    lessons: z.array(ProgressLessonSchema).nullable().optional(),
+  })
+  .passthrough();
+
+const ProgressSchema = z
+  .object({
+    chapters: z.array(ProgressChapterSchema).nullable().optional(),
+    overall_percent: z.coerce.number().nullable().optional(),
+    overall_status: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export type StudentLessonProgress = {
+  id: string;
+  title: string;
+  sort_order: number;
+  lesson_type: string;
+  due_at: string | null;
+  progress: {
+    status: string;
+    progress_percent: number;
+    last_position_seconds: number;
+  } | null;
+};
+
+export type StudentChapterProgress = {
+  id: string;
+  title: string;
+  sort_order: number;
+  started_at: string | null;
+  lessons: StudentLessonProgress[];
+};
+
+export type StudentCourseProgress = {
+  chapters: StudentChapterProgress[];
+  overall_percent: number;
+  overall_status: 'not_started' | 'in_progress' | 'completed';
+};
+
+const toOverallStatus = (
+  value: string | null | undefined,
+): StudentCourseProgress['overall_status'] =>
+  value === 'completed' || value === 'in_progress' ? value : 'not_started';
 
 export async function enrollFreeCourse(courseId: string): Promise<{ error?: string }> {
   const session = await auth();
@@ -95,7 +158,9 @@ export async function enrollFreeCourse(courseId: string): Promise<{ error?: stri
   return {};
 }
 
-export async function getCourseProgress(courseId: string) {
+export async function getCourseProgress(
+  courseId: string,
+): Promise<StudentCourseProgress | null> {
   const session = await auth();
   if (!session?.user) return null;
   const [error, data] = await safeFetch(
@@ -103,6 +168,40 @@ export async function getCourseProgress(courseId: string) {
     `/progress/course/${courseId}`,
     { headers: { Authorization: `Bearer ${session.user.tokens.access_token}` }, cache: 'no-store' },
   );
-  if (error) return null;
-  return data;
+  if (error) {
+    console.error('getCourseProgress failed:', error);
+    return null;
+  }
+
+  // Defensive client-side ordering: student order must never diverge from admin order.
+  const chapters: StudentChapterProgress[] = (data!.chapters ?? [])
+    .map((chapter) => ({
+      id: chapter.id,
+      title: chapter.title ?? 'Untitled chapter',
+      sort_order: chapter.sort_order ?? 0,
+      started_at: chapter.started_at ?? null,
+      lessons: (chapter.lessons ?? [])
+        .map((lesson) => ({
+          id: lesson.id,
+          title: lesson.title ?? 'Untitled lesson',
+          sort_order: lesson.sort_order ?? 0,
+          lesson_type: lesson.lesson_type ?? 'video',
+          due_at: lesson.due_at ?? null,
+          progress: lesson.progress
+            ? {
+                status: lesson.progress.status ?? 'not_started',
+                progress_percent: lesson.progress.progress_percent ?? 0,
+                last_position_seconds: lesson.progress.last_position_seconds ?? 0,
+              }
+            : null,
+        }))
+        .sort((left, right) => left.sort_order - right.sort_order),
+    }))
+    .sort((left, right) => left.sort_order - right.sort_order);
+
+  return {
+    chapters,
+    overall_percent: data!.overall_percent ?? 0,
+    overall_status: toOverallStatus(data!.overall_status),
+  };
 }

@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const CourseSchema = z
@@ -26,9 +27,17 @@ const CourseSchema = z
   })
   .passthrough();
 
-const CoursesResponseSchema = z.object({
-  data: z.array(CourseSchema),
-});
+const CoursesResponseSchema = z
+  .object({
+    data: z.array(CourseSchema),
+  })
+  .passthrough();
+
+const CourseResponseSchema = z
+  .object({
+    data: CourseSchema,
+  })
+  .passthrough();
 
 export type Course = z.infer<typeof CourseSchema>;
 
@@ -40,7 +49,10 @@ export async function getAdminCourses(): Promise<Course[]> {
     },
     cache: 'no-store',
   });
-  if (error) return [];
+  if (error) {
+    console.error('getAdminCourses failed:', error);
+    return [];
+  }
   return data!.data;
 }
 
@@ -54,7 +66,7 @@ export async function createCourse(formData: {
   status: string;
 }) {
   const session = await auth();
-  const [error, data] = await safeFetch(z.object({ data: CourseSchema }), '/courses', {
+  const [error, data] = await safeFetch(CourseResponseSchema, '/courses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -63,7 +75,42 @@ export async function createCourse(formData: {
     cache: 'no-store',
     body: JSON.stringify(formData),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('createCourse failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/courses');
+  return { data: data!.data };
+}
+
+export type CourseUpdatePayload = {
+  title?: string;
+  slug?: string;
+  description?: string | null;
+  thumbnail_url?: string | null;
+  category_id?: string | null;
+  price?: number;
+  discount_price?: number | null;
+  status?: 'draft' | 'published' | 'archived';
+};
+
+export async function updateAdminCourse(id: string, payload: CourseUpdatePayload) {
+  const session = await auth();
+  const [error, data] = await safeFetch(CourseResponseSchema, `/courses/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+    },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  if (error) {
+    console.error('updateAdminCourse failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/courses');
+  revalidatePath(`/admin/courses/${id}`);
   return { data: data!.data };
 }
 
@@ -76,6 +123,10 @@ export async function deleteCourse(id: string) {
     },
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('deleteCourse failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/courses');
   return { success: true };
 }

@@ -57,6 +57,9 @@ function describeAxiosError(step: string, err: unknown): string {
 
 @Injectable()
 export class VideosService {
+  /** Caches resolved `parent/name` → folderId so repeat uploads skip the lookup. */
+  private readonly folderCache = new Map<string, string>();
+
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly config: ConfigService,
@@ -176,7 +179,9 @@ export class VideosService {
   }
 
   /**
-   * Returns the id of the named child folder, creating it when needed.
+   * Returns the id of the named child folder, reusing an existing one when
+   * present so repeat uploads do not pile up duplicate subfolders.
+   *
    * Folder organisation is cosmetic, so any VdoCipher failure here (including
    * plan-gated folder APIs returning 403) falls back to the parent folder
    * rather than aborting the upload.
@@ -187,16 +192,62 @@ export class VideosService {
     headers: Record<string, string>,
   ): Promise<string> {
     if (!name) return parent;
+
+    const cacheKey = `${parent}/${name}`;
+    const cached = this.folderCache.get(cacheKey);
+    if (cached) return cached;
+
+    const existing = await this.findChildFolder(name, parent, headers);
+    if (existing) {
+      this.folderCache.set(cacheKey, existing);
+      return existing;
+    }
+
     try {
       const { data } = await axios.post(
         `${VDOCIPHER_BASE}/videos/folders`,
         { name, parent },
         { headers },
       );
-      return (data?.id ?? data?.folderId ?? parent) as string;
+      const created = (data?.id ?? data?.folderId) as string | undefined;
+      if (!created) return parent;
+      this.folderCache.set(cacheKey, created);
+      return created;
     } catch (err) {
+      // A concurrent upload may have created it between our lookup and this
+      // POST, so re-check before giving up and falling back to the parent.
+      const raced = await this.findChildFolder(name, parent, headers);
+      if (raced) {
+        this.folderCache.set(cacheKey, raced);
+        return raced;
+      }
       console.warn(describeAxiosError(`folder "${name}" creation`, err));
       return parent;
+    }
+  }
+
+  /** Looks for an existing direct child folder by name. Returns undefined on any failure. */
+  private async findChildFolder(
+    name: string,
+    parent: string,
+    headers: Record<string, string>,
+  ): Promise<string | undefined> {
+    try {
+      const { data } = await axios.get(`${VDOCIPHER_BASE}/videos/folders/${parent}`, {
+        headers,
+      });
+      const children: Array<Record<string, unknown>> =
+        data?.folderList ?? data?.folders ?? data?.children ?? [];
+      const match = children.find(
+        (folder) =>
+          typeof folder?.name === 'string' &&
+          folder.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (!match) return undefined;
+      return (match.id ?? match.folderId) as string | undefined;
+    } catch (err) {
+      console.warn(describeAxiosError(`folder listing for "${parent}"`, err));
+      return undefined;
     }
   }
 

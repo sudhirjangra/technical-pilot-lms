@@ -2,6 +2,7 @@
 
 import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 const CategorySchema = z
@@ -16,9 +17,26 @@ const CategorySchema = z
   })
   .passthrough();
 
-const CategoriesResponseSchema = z.object({
-  data: z.array(CategorySchema),
-});
+const CategoriesResponseSchema = z
+  .object({
+    data: z.array(CategorySchema),
+  })
+  .passthrough();
+
+const CategoryResponseSchema = z
+  .object({
+    data: CategorySchema,
+  })
+  .passthrough();
+
+export type CategoryUpdatePayload = {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  thumbnail_url?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+};
 
 export type Category = z.infer<typeof CategorySchema>;
 
@@ -49,7 +67,7 @@ export async function createCategory(formData: {
   is_active?: boolean;
 }) {
   const session = await auth();
-  const [error, data] = await safeFetch(z.object({ data: CategorySchema }), '/categories', {
+  const [error, data] = await safeFetch(CategoryResponseSchema, '/categories', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -58,7 +76,30 @@ export async function createCategory(formData: {
     cache: 'no-store',
     body: JSON.stringify(formData),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('createCategory failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/categories');
+  return { data: data!.data };
+}
+
+export async function updateCategory(id: string, payload: CategoryUpdatePayload) {
+  const session = await auth();
+  const [error, data] = await safeFetch(CategoryResponseSchema, `/categories/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+    },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  if (error) {
+    console.error('updateCategory failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/categories');
   return { data: data!.data };
 }
 
@@ -71,6 +112,10 @@ export async function deleteCategory(id: string) {
     },
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('deleteCategory failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/categories');
   return { success: true };
 }

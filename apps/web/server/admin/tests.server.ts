@@ -4,68 +4,95 @@ import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
 import { z } from 'zod';
 
-const QuestionOptionSchema = z.object({
-  id: z.string(),
-  question_id: z.string(),
-  option_text: z.string(),
-  is_correct: z.boolean(),
-  sort_order: z.number(),
-}).passthrough();
+const QuestionOptionSchema = z
+  .object({
+    id: z.string(),
+    question_id: z.string().nullable().optional(),
+    option_text: z.string(),
+    is_correct: z.boolean().default(false),
+    sort_order: z.coerce.number().default(0),
+  })
+  .passthrough();
 
-const QuestionSchema = z.object({
-  id: z.string(),
-  test_id: z.string().nullable(),
-  assignment_id: z.string().nullable(),
-  question_text: z.string(),
-  question_type: z.enum(['mcq', 'msq', 'text']),
-  points: z.number(),
-  explanation: z.string().nullable(),
-  sort_order: z.number(),
-}).passthrough();
+const QuestionSchema = z
+  .object({
+    id: z.string(),
+    test_id: z.string().nullable().optional(),
+    assignment_id: z.string().nullable().optional(),
+    question_text: z.string(),
+    question_type: z.enum(['mcq', 'msq', 'text']).catch('mcq'),
+    question_number: z.coerce.number().nullable().optional(),
+    correct_text_answer: z.string().nullable().optional(),
+    points: z.coerce.number().default(1),
+    explanation: z.string().nullable().optional(),
+    sort_order: z.coerce.number().default(0),
+  })
+  .passthrough();
 
 const QuestionWithOptionsSchema = QuestionSchema.extend({
-  question_options: z.array(QuestionOptionSchema),
+  question_options: z
+    .array(QuestionOptionSchema)
+    .nullish()
+    .transform((options) => options ?? []),
 }).passthrough();
 
 const TestSchema = z.object({
   id: z.string(),
-  lesson_id: z.string(),
+  lesson_id: z.string().nullable().optional(),
   title: z.string(),
-  time_limit_seconds: z.number().nullable().optional(),
-  passing_score_percent: z.number().nullable().optional(),
-  max_attempts: z.number().nullable().optional(),
+  time_limit_seconds: z.coerce.number().nullable().optional(),
+  passing_score_percent: z.coerce.number().nullable().optional(),
+  max_attempts: z.coerce.number().nullable().optional(),
 }).passthrough();
 
 const TestDetailSchema = TestSchema.extend({
-  questions: z.array(QuestionWithOptionsSchema),
+  questions: z
+    .array(QuestionWithOptionsSchema)
+    .nullish()
+    .transform((questions) => questions ?? []),
 }).passthrough();
 
-const MessageSchema = z.object({
-  message: z.string().optional(),
-});
+const MessageSchema = z
+  .object({
+    message: z.string().optional(),
+  })
+  .passthrough();
 
-const TestResponseSchema = z.object({
-  message: z.string().optional(),
-  data: TestSchema,
-});
+const TestResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    data: TestSchema,
+  })
+  .passthrough();
 
-const TestDetailResponseSchema = z.object({
-  message: z.string().optional(),
-  data: TestDetailSchema,
-});
+const TestDetailResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    data: TestDetailSchema,
+  })
+  .passthrough();
 
-const QuestionResponseSchema = z.object({
-  message: z.string().optional(),
-  data: QuestionWithOptionsSchema,
-});
+const QuestionResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    data: QuestionWithOptionsSchema,
+  })
+  .passthrough();
 
-const QuestionImportResponseSchema = z.object({
-  message: z.string().optional(),
-  data: z.object({
-    count: z.number(),
-    questions: z.array(QuestionWithOptionsSchema),
-  }),
-});
+const QuestionImportResponseSchema = z
+  .object({
+    message: z.string().optional(),
+    data: z
+      .object({
+        count: z.coerce.number().default(0),
+        questions: z
+          .array(QuestionWithOptionsSchema)
+          .nullish()
+          .transform((questions) => questions ?? []),
+      })
+      .passthrough(),
+  })
+  .passthrough();
 
 export type Test = z.infer<typeof TestSchema>;
 export type TestDetail = z.infer<typeof TestDetailSchema>;
@@ -95,7 +122,10 @@ export async function getTestForLesson(lessonId: string): Promise<TestDetail | n
     `/tests/lesson/${lessonId}`,
     { headers: await authHeaders(), cache: 'no-store' },
   );
-  if (error) return null;
+  if (error) {
+    console.error('tests.server fetch failed:', error);
+    return null;
+  }
   return data!.data;
 }
 
@@ -112,7 +142,10 @@ export async function createTest(payload: {
     cache: 'no-store',
     body: JSON.stringify(payload),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { data: data!.data };
 }
 
@@ -131,7 +164,10 @@ export async function updateTest(
     cache: 'no-store',
     body: JSON.stringify(payload),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { data: data!.data };
 }
 
@@ -141,7 +177,10 @@ export async function deleteTest(id: string) {
     headers: await authHeaders(false),
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { success: true };
 }
 
@@ -150,6 +189,8 @@ export async function createTestQuestion(
   payload: {
     question_text: string;
     question_type: TestQuestionType;
+    question_number?: number;
+    correct_text_answer?: string | null;
     points?: number;
     explanation?: string;
     sort_order?: number;
@@ -162,7 +203,10 @@ export async function createTestQuestion(
     cache: 'no-store',
     body: JSON.stringify(payload),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { data: data!.data };
 }
 
@@ -171,6 +215,8 @@ export async function updateTestQuestion(
   payload: {
     question_text?: string;
     question_type?: TestQuestionType;
+    question_number?: number;
+    correct_text_answer?: string | null;
     points?: number;
     explanation?: string;
     sort_order?: number;
@@ -187,7 +233,10 @@ export async function updateTestQuestion(
       body: JSON.stringify(payload),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { data: data!.data };
 }
 
@@ -197,7 +246,10 @@ export async function deleteTestQuestion(questionId: string) {
     headers: await authHeaders(false),
     cache: 'no-store',
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { success: true };
 }
 
@@ -211,7 +263,10 @@ export async function reorderTestQuestions(
     cache: 'no-store',
     body: JSON.stringify({ questions }),
   });
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { success: true };
 }
 
@@ -226,6 +281,9 @@ export async function importTestQuestions(id: string, file: File) {
       body: buildFileUploadForm(file),
     },
   );
-  if (error) return { error };
+  if (error) {
+    console.error('tests.server request failed:', error);
+    return { error };
+  }
   return { data: data!.data };
 }

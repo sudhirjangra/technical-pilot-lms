@@ -72,7 +72,7 @@ type QuestionType = 'mcq' | 'msq' | 'text';
 
 type BuilderQuestionOption = {
   id: string;
-  question_id: string;
+  question_id?: string | null;
   option_text: string;
   is_correct: boolean;
   sort_order: number;
@@ -83,7 +83,7 @@ type BuilderQuestion = {
   question_text: string;
   question_type: QuestionType;
   points: number;
-  explanation: string | null;
+  explanation: string | null | undefined;
   sort_order: number;
   question_options: BuilderQuestionOption[];
 };
@@ -94,7 +94,7 @@ type BuilderMetaDraft = {
   passingScorePercent: string;
   maxAttempts: string;
   instructions: string;
-  dueDaysAfterEnrollment: string;
+  dueDaysAfterStart: string;
   maxScore: string;
 };
 
@@ -123,7 +123,7 @@ const defaultBuilderMeta = (lessonTitle = ''): BuilderMetaDraft => ({
   passingScorePercent: '',
   maxAttempts: '',
   instructions: '',
-  dueDaysAfterEnrollment: '',
+  dueDaysAfterStart: '',
   maxScore: '100',
 });
 
@@ -188,7 +188,7 @@ const getMetaFromEntity = (
       passing_score_percent?: number | null;
       max_attempts?: number | null;
       instructions?: string | null;
-      due_days_after_enrollment?: number | null;
+      due_days_after_start?: number | null;
       max_score?: number | null;
     }
     | null,
@@ -198,9 +198,9 @@ const getMetaFromEntity = (
   passingScorePercent: entity?.passing_score_percent != null ? String(entity.passing_score_percent) : '',
   maxAttempts: entity?.max_attempts != null ? String(entity.max_attempts) : '',
   instructions: kind === 'assignment' ? entity?.instructions ?? '' : '',
-  dueDaysAfterEnrollment:
-    kind === 'assignment' && entity?.due_days_after_enrollment != null
-      ? String(entity.due_days_after_enrollment)
+  dueDaysAfterStart:
+    kind === 'assignment' && entity?.due_days_after_start != null
+      ? String(entity.due_days_after_start)
       : '',
   maxScore:
     kind === 'assignment' && entity?.max_score != null
@@ -557,14 +557,14 @@ export function CourseDetailClient({
         ? await updateAssignment(builderRecordId, {
           ...commonPayload,
           instructions: builderMeta.instructions.trim() || undefined,
-          due_days_after_enrollment: parseOptionalNumber(builderMeta.dueDaysAfterEnrollment),
+          due_days_after_start: parseOptionalNumber(builderMeta.dueDaysAfterStart),
           max_score: parseOptionalNumber(builderMeta.maxScore),
         })
         : await createAssignment({
           lesson_id: activeBuilderLesson.id,
           ...commonPayload,
           instructions: builderMeta.instructions.trim() || undefined,
-          due_days_after_enrollment: parseOptionalNumber(builderMeta.dueDaysAfterEnrollment),
+          due_days_after_start: parseOptionalNumber(builderMeta.dueDaysAfterStart),
           max_score: parseOptionalNumber(builderMeta.maxScore),
         });
 
@@ -884,11 +884,11 @@ export function CourseDetailClient({
                     {activeBuilderLesson.lesson_type === 'assignment' && (
                       <>
                         <div>
-                          <label className="text-sm font-medium">Due days after enrollment</label>
+                          <label className="text-sm font-medium">Due days after start</label>
                           <Input
                             inputMode="numeric"
-                            value={builderMeta.dueDaysAfterEnrollment}
-                            onChange={(event) => handleBuilderMetaChange('dueDaysAfterEnrollment', event.target.value)}
+                            value={builderMeta.dueDaysAfterStart}
+                            onChange={(event) => handleBuilderMetaChange('dueDaysAfterStart', event.target.value)}
                           />
                         </div>
                         <div>

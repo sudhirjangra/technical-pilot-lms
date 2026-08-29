@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ChaptersService } from './chapters.service';
 import { CreateChapterDto, ReorderChaptersDto, UpdateChapterDto } from './dto';
@@ -33,6 +34,27 @@ export class ChaptersController {
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.chaptersService.findOne(id);
     return { message: 'Chapter fetched successfully', data };
+  }
+
+  /** Student: mark a chapter as started (anchors assignment due dates) */
+  @Post(':id/start')
+  async startChapter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() _body: Record<string, never> = {},
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.chaptersService.startChapter(id, req.user.id);
+    return { message: 'Chapter started', data };
+  }
+
+  /** Student: get their chapter start record (null when not started) */
+  @Get(':id/start')
+  async getChapterStart(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.chaptersService.getChapterStart(id, req.user.id);
+    return { message: 'Chapter start fetched successfully', data };
   }
 
   @Roles('ADMIN')

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./*": "./src/ui/*.tsx",
+    "./ui/*": "./src/ui/*.tsx",
     "./shadcn.css": "./src/shadcn.css",
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
