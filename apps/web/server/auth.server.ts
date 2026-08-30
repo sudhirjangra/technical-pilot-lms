@@ -311,32 +311,6 @@ export const signOutOtherDevice = safeAction
   });
 
 /**
- * Sign out from all devices.
- */
-export const signOutAllDevice = safeAction.action(async () => {
-  const session = await auth();
-
-  const [error] = await safeFetch(
-    DefaultReturnSchema,
-    '/auth/sign-out-allDevices',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.user?.tokens.access_token}`,
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ userId: session?.user.id }),
-    },
-  );
-
-  if (!error) {
-    revalidateTag('nest-auth-sessions');
-    await signOut({ redirect: true, redirectTo: '/' });
-  }
-});
-
-/**
  * Change password for the current user.
  * @schema ChangePasswordSchema
  */

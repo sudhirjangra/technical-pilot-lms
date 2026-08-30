@@ -15,6 +15,9 @@ const SlotSchema = z.object({
   status: z.string(),
   created_by: z.string(),
   created_at: z.string(),
+  topic: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  meeting_link: z.string().nullable().optional(),
 });
 
 const BookingSchema = z.object({
@@ -28,6 +31,8 @@ const BookingSchema = z.object({
   doubt_slots: z.object({
     id: z.string(), date: z.string(), start_time: z.string(),
     end_time: z.string(), duration_minutes: z.number(), status: z.string(),
+    topic: z.string().nullable().optional(),
+    meeting_link: z.string().nullable().optional(),
   }).nullable(),
 });
 
@@ -55,10 +60,26 @@ export async function getAdminSlots(date?: string): Promise<Slot[]> {
 export async function createSlot(payload: {
   date: string; start_time: string; end_time: string;
   duration_minutes: number; max_bookings?: number;
+  topic?: string; description?: string; meeting_link?: string;
 }) {
   const h = await headers();
   const [error, data] = await safeFetch(SlotSchema, '/doubt-sessions/slots', {
     method: 'POST', headers: h, cache: 'no-store', body: JSON.stringify(payload),
+  });
+  if (error) return { error };
+  return { data: data! };
+}
+
+export async function updateSlot(id: string, payload: {
+  status?: string;
+  meeting_link?: string;
+  topic?: string;
+  description?: string;
+}) {
+  const h = await headers();
+  const [error, data] = await safeFetch(SlotSchema, `/doubt-sessions/slots/${id}`, {
+    method: 'PATCH', headers: h, cache: 'no-store',
+    body: JSON.stringify(payload),
   });
   if (error) return { error };
   return { data: data! };

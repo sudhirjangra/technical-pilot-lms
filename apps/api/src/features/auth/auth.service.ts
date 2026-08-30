@@ -20,7 +20,6 @@ import {
   RefreshTokenDto,
   ResetPasswordDto,
   SignInUserDto,
-  SignOutAllDeviceUserDto,
   SignOutUserDto,
   SupabaseSyncDto,
 } from '@/features/auth/dto';
@@ -609,6 +608,7 @@ export class AuthService {
   }
 
   async changePassword(dto: ChangePasswordDto): Promise<void> {
+    if (!dto.identifier) throw new BadRequestException('Identifier is required');
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
@@ -671,11 +671,6 @@ export class AuthService {
       .delete()
       .eq('id', dto.session_token);
     if (error) throw new NotFoundException('Session not found');
-  }
-
-  async signOutAllDevices(dto: SignOutAllDeviceUserDto): Promise<void> {
-    await this.supabase.from('devices').delete().eq('user_id', dto.userId);
-    await this.supabase.auth.admin.signOut(dto.userId);
   }
 
   async refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenInterface> {

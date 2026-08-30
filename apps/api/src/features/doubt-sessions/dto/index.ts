@@ -6,6 +6,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -29,6 +30,21 @@ export class CreateSlotDto {
   @Min(1)
   @Max(50)
   max_bookings?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  meeting_link?: string;
 }
 
 export class UpdateSlotDto {
@@ -39,6 +55,16 @@ export class UpdateSlotDto {
   @IsOptional()
   @IsString()
   meeting_link?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
 }
 
 export class BookSlotDto {

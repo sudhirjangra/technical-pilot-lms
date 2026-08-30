@@ -25,6 +25,7 @@ import {
   ClipboardList,
   FileText,
   ListTree,
+  Lock,
   PlayCircle,
   PlayCircle as PlayIcon,
   Timer,
@@ -84,6 +85,25 @@ function dueState(dueAt: string) {
     overdue: false,
     label: diffDays === 0 ? 'Due today' : `${diffDays}d left`,
   };
+}
+
+/**
+ * Check if a chapter is unlocked. Unlocked if it's the first chapter or
+ * if all lessons in the previous chapter are completed.
+ */
+function isChapterUnlocked(
+  chapters: StudentChapterProgress[],
+  currentChapterIndex: number,
+): boolean {
+  if (currentChapterIndex === 0) return true;
+
+  const previousChapter = chapters[currentChapterIndex - 1];
+  if (!previousChapter?.lessons) return true;
+
+  // All lessons in previous chapter must be completed
+  return previousChapter.lessons.every(
+    (lesson) => lesson.progress?.status === 'completed',
+  );
 }
 
 function LessonStatusIcon({ status }: { status: string }) {
@@ -182,22 +202,39 @@ function TocBody({
             const done = chapter.lessons.filter(
               (lesson) => lessonStatus(lesson) === 'completed',
             ).length;
+            const chapterUnlocked = isChapterUnlocked(chapters, chapterIndex);
+            const isFirstLockedChapter = !chapterUnlocked && (chapterIndex === 0 || isChapterUnlocked(chapters, chapterIndex - 1));
 
             return (
               <AccordionItem key={chapter.id} value={chapter.id} className="border-b-0">
-                <AccordionTrigger className="min-h-11 gap-2 rounded-md px-2 py-2 text-left hover:bg-muted/60 hover:no-underline">
+                <AccordionTrigger className={cn(
+                  'min-h-11 gap-2 rounded-md px-2 py-2 text-left hover:no-underline',
+                  chapterUnlocked ? 'hover:bg-muted/60' : 'opacity-60 cursor-not-allowed',
+                )}>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {chapterIndex + 1}. {chapter.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium">
+                        {chapterIndex + 1}. {chapter.title}
+                      </p>
+                      {!chapterUnlocked && (
+                        <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+                      )}
+                    </div>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {done}/{total} lessons
+                      {!chapterUnlocked && ' • Locked'}
                     </p>
                   </div>
                 </AccordionTrigger>
 
                 <AccordionContent className="pb-2">
-                  <ChapterStartControls chapter={chapter} courseId={courseId} />
+                  {!chapterUnlocked && isFirstLockedChapter && (
+                    <p className="mb-3 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                      Complete the previous chapter to unlock this content.
+                    </p>
+                  )}
+                  
+                  {chapterUnlocked && <ChapterStartControls chapter={chapter} courseId={courseId} />}
 
                   <ul className="space-y-0.5">
                     {chapter.lessons.map((lesson, lessonIndex) => {
@@ -211,54 +248,79 @@ function TocBody({
 
                       return (
                         <li key={lesson.id}>
-                          <Link
-                            href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
-                            onClick={onNavigate}
-                            aria-current={isActive ? 'page' : undefined}
-                            className={cn(
-                              'flex min-h-11 items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors',
-                              isActive
-                                ? 'bg-primary/10 font-medium text-primary'
-                                : 'text-foreground/80 hover:bg-muted/60',
-                            )}
-                          >
-                            <LessonStatusIcon status={status} />
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-center gap-1.5">
-                                <Icon
-                                  className={cn(
-                                    'size-3.5 shrink-0',
-                                    isActive ? 'text-primary' : 'text-muted-foreground',
+                          {chapterUnlocked ? (
+                            <Link
+                              href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
+                              onClick={onNavigate}
+                              aria-current={isActive ? 'page' : undefined}
+                              className={cn(
+                                'flex min-h-11 items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors',
+                                isActive
+                                  ? 'bg-primary/10 font-medium text-primary'
+                                  : 'text-foreground/80 hover:bg-muted/60',
+                              )}
+                            >
+                              <LessonStatusIcon status={status} />
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-1.5">
+                                  <Icon
+                                    className={cn(
+                                      'size-3.5 shrink-0',
+                                      isActive ? 'text-primary' : 'text-muted-foreground',
+                                    )}
+                                  />
+                                  <span className="truncate">
+                                    {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
+                                  </span>
+                                </span>
+                                <span className="mt-1 flex flex-wrap items-center gap-1">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {LESSON_TYPE_LABELS[lesson.lesson_type] ??
+                                      lesson.lesson_type}
+                                  </Badge>
+                                  {status === 'in_progress' && (
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      {lesson.progress?.progress_percent ?? 0}%
+                                    </Badge>
                                   )}
-                                />
-                                <span className="truncate">
-                                  {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
+                                  {due && lesson.due_at && (
+                                    <Badge
+                                      variant={due.overdue ? 'destructive' : 'secondary'}
+                                      className="gap-1 text-[10px]"
+                                    >
+                                      {due.overdue && (
+                                        <AlertTriangle className="size-3" />
+                                      )}
+                                      Due {formatDate(lesson.due_at)} · {due.label}
+                                    </Badge>
+                                  )}
                                 </span>
                               </span>
-                              <span className="mt-1 flex flex-wrap items-center gap-1">
-                                <Badge variant="outline" className="text-[10px]">
-                                  {LESSON_TYPE_LABELS[lesson.lesson_type] ??
-                                    lesson.lesson_type}
-                                </Badge>
-                                {status === 'in_progress' && (
-                                  <Badge variant="secondary" className="text-[10px]">
-                                    {lesson.progress?.progress_percent ?? 0}%
+                            </Link>
+                          ) : (
+                            <div className={cn(
+                              'flex min-h-11 items-start gap-2 rounded-md px-2 py-2 text-sm',
+                              'text-muted-foreground/60 opacity-60 cursor-not-allowed'
+                            )}>
+                              <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-1.5">
+                                  <Icon
+                                    className="size-3.5 shrink-0 text-muted-foreground/50"
+                                  />
+                                  <span className="truncate">
+                                    {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
+                                  </span>
+                                </span>
+                                <span className="mt-1 flex flex-wrap items-center gap-1">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {LESSON_TYPE_LABELS[lesson.lesson_type] ??
+                                      lesson.lesson_type}
                                   </Badge>
-                                )}
-                                {due && lesson.due_at && (
-                                  <Badge
-                                    variant={due.overdue ? 'destructive' : 'secondary'}
-                                    className="gap-1 text-[10px]"
-                                  >
-                                    {due.overdue && (
-                                      <AlertTriangle className="size-3" />
-                                    )}
-                                    Due {formatDate(lesson.due_at)} · {due.label}
-                                  </Badge>
-                                )}
+                                </span>
                               </span>
-                            </span>
-                          </Link>
+                            </div>
+                          )}
                         </li>
                       );
                     })}

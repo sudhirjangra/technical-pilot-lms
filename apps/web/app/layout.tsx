@@ -1,3 +1,4 @@
+import { GlobalRouteLoader } from '@/components/global-route-loader';
 import Providers from '@/components/providers';
 import { APP_NAME, APP_URL } from '@repo/constants/app';
 import { cn } from '@repo/shadcn/lib/utils';
@@ -121,7 +122,10 @@ const RootLayout = async ({
         }}
         suppressHydrationWarning
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <GlobalRouteLoader />
+          {children}
+        </Providers>
         <Toaster />
       </body>
     </html>

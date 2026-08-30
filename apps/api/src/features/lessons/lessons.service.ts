@@ -71,6 +71,50 @@ export class LessonsService {
     if (deleteError) throw new BadRequestException(deleteError.message);
   }
 
+  async getPdfUrl(lessonId: string, req: FastifyRequest) {
+    // Verify lesson exists and is a PDF
+    const { data: lesson, error: lessonError } = await this.supabase
+      .from('lessons')
+      .select('id, lesson_type, chapter_id, chapters(course_id)')
+      .eq('id', lessonId)
+      .single();
+    if (lessonError || !lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'pdf') throw new BadRequestException('This lesson does not have a PDF');
+
+    // Get user from request
+    const user = (req as any).user;
+    if (!user?.id) throw new NotFoundException('User not authenticated');
+
+    // Verify enrollment
+    const chapter = lesson.chapters as unknown as { course_id: string };
+    const { data: enrollment, error: enrollmentError } = await this.supabase
+      .from('enrollments')
+      .select('id')
+      .eq('course_id', chapter.course_id)
+      .eq('student_id', user.id)
+      .single();
+    if (enrollmentError || !enrollment) 
+      throw new BadRequestException('Not enrolled in this course');
+
+    // Get PDF file path
+    const { data: pdfNote, error: pdfError } = await this.supabase
+      .from('pdf_notes')
+      .select('file_path')
+      .eq('lesson_id', lessonId)
+      .maybeSingle();
+    if (pdfError || !pdfNote?.file_path) 
+      throw new NotFoundException('PDF not available for this lesson');
+
+    // Generate signed URL (1 hour expiry)
+    const { data: signedUrlData, error: urlError } = await this.supabase.storage
+      .from('course-materials')
+      .createSignedUrl(pdfNote.file_path as string, 3600);
+    if (urlError || !signedUrlData?.signedUrl) 
+      throw new BadRequestException('Failed to generate PDF URL');
+
+    return signedUrlData.signedUrl;
+  }
+
   async create(dto: CreateLessonDto) {
     // Verify chapter exists
     const { error: chErr } = await this.supabase

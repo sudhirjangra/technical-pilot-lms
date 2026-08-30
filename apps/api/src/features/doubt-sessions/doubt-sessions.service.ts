@@ -70,6 +70,13 @@ export class DoubtSessionsService {
   }
 
   async deleteSlot(id: string) {
+    // Cancel all active bookings before deleting the slot
+    await this.supabase
+      .from('doubt_bookings')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+      .eq('slot_id', id)
+      .in('status', ['confirmed', 'pending']);
+
     const { error } = await this.supabase
       .from('doubt_slots')
       .delete()
@@ -147,9 +154,10 @@ export class DoubtSessionsService {
     const { data, error } = await this.supabase
       .from('doubt_bookings')
       .select(
-        '*, doubt_slots(id, date, start_time, end_time, duration_minutes, status)',
+        '*, doubt_slots(id, date, start_time, end_time, duration_minutes, status, topic, meeting_link)',
       )
       .eq('student_id', studentId)
+      .neq('status', 'cancelled')
       .order('booked_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
     return data;

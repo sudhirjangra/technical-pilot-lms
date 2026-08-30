@@ -80,6 +80,25 @@ export class ProgressService {
 
   /** Upsert progress — creates record on first save, updates on subsequent saves */
   async update(lessonId: string, studentId: string, dto: UpdateProgressDto) {
+    // If incoming is not a completion, check if already completed — if so, only update last watched position
+    if (dto.status !== 'completed') {
+      const existing = await this.getByLesson(lessonId, studentId);
+      if (existing?.status === 'completed') {
+        if (dto.last_position_seconds !== undefined) {
+          const { data, error } = await this.supabase
+            .from('progress')
+            .update({ last_position_seconds: dto.last_position_seconds })
+            .eq('student_id', studentId)
+            .eq('lesson_id', lessonId)
+            .select('*')
+            .single();
+          if (error) throw new BadRequestException(error.message);
+          return data;
+        }
+        return existing;
+      }
+    }
+
     const payload: Record<string, unknown> = {
       student_id: studentId,
       lesson_id: lessonId,
@@ -113,7 +132,12 @@ export class ProgressService {
       .order('sort_order', { ascending: true })
       .order('sort_order', { referencedTable: 'lessons', ascending: true });
 
-    if (!chapters) return { chapters: [], overall_percent: 0 };
+    // Filter out unpublished chapters in JS (belt-and-suspenders; PostgREST nested filter quirk)
+    const visibleChapters = (chapters ?? []).filter(
+      (ch: { is_published?: boolean }) => ch.is_published !== false,
+    );
+
+    if (!visibleChapters.length) return { chapters: [], overall_percent: 0 };
 
     // chapter_starts anchors every assignment due date inside the chapter.
     const { data: chapterStarts } = await this.supabase
@@ -122,7 +146,7 @@ export class ProgressService {
       .eq('student_id', studentId)
       .in(
         'chapter_id',
-        chapters.map((ch: { id: string }) => ch.id),
+        visibleChapters.map((ch: { id: string }) => ch.id),
       );
 
     const startedAtMap = new Map<string, string>(
@@ -134,13 +158,16 @@ export class ProgressService {
       ),
     );
 
-    const lessonIds = chapters.flatMap((ch: { lessons: { id: string }[] }) =>
-      ch.lessons.map((l) => l.id),
+    const lessonIds = visibleChapters.flatMap(
+      (ch: { lessons: { id: string; is_published?: boolean }[] }) =>
+        ch.lessons
+          .filter((l) => l.is_published !== false)
+          .map((l) => l.id),
     );
 
     if (lessonIds.length === 0)
       return {
-        chapters: chapters.map((ch: { id: string }) => ({
+        chapters: visibleChapters.map((ch: { id: string }) => ({
           ...ch,
           started_at: startedAtMap.get(ch.id) ?? null,
         })),
@@ -160,23 +187,31 @@ export class ProgressService {
       ]),
     );
 
-    const videoLessons = chapters.flatMap(
-      (ch: { lessons: { id: string; lesson_type: string }[] }) =>
-        ch.lessons.filter((lesson) => lesson.lesson_type === 'video'),
-    );
-    const videoProgress = videoLessons.map((lesson) => {
-      const progress = progressMap.get(lesson.id) as
-        | { progress_percent?: number; status?: string }
-        | undefined;
-      return progress?.status === 'completed'
-        ? 100
-        : Math.min(100, Math.max(0, progress?.progress_percent ?? 0));
+    // Calculate chapter-level completion, then overall course completion
+    const chapterProgress = visibleChapters.map((ch: { lessons: { id: string; lesson_type: string; is_published?: boolean }[] }) => {
+      const publishedLessons = (ch.lessons ?? []).filter((l) => l.is_published !== false);
+      if (publishedLessons.length === 0) return 0;
+
+      const lessonProgresses = publishedLessons.map((lesson) => {
+        const progress = progressMap.get(lesson.id) as
+          | { progress_percent?: number; status?: string }
+          | undefined;
+        if (lesson.lesson_type === 'assignment' || lesson.lesson_type === 'test') {
+          return progress?.status === 'completed' ? 100 : 0;
+        }
+        return progress?.status === 'completed'
+          ? 100
+          : Math.min(100, Math.max(0, progress?.progress_percent ?? 0));
+      });
+
+      return lessonProgresses.length
+        ? Math.round(lessonProgresses.reduce((sum, val) => sum + val, 0) / lessonProgresses.length)
+        : 0;
     });
-    const overallPercent = videoProgress.length
-      ? Math.round(
-          videoProgress.reduce((sum, value) => sum + value, 0) /
-            videoProgress.length,
-        )
+
+    // Overall course percent is the average of all chapter percents
+    const overallPercent = chapterProgress.length
+      ? Math.round(chapterProgress.reduce((sum, val) => sum + val, 0) / chapterProgress.length)
       : 0;
     const overallStatus =
       overallPercent === 100
@@ -185,24 +220,27 @@ export class ProgressService {
           ? 'in_progress'
           : 'not_started';
 
-    const enrichedChapters = chapters.map(
+    const enrichedChapters = visibleChapters.map(
       (ch: {
         id: string;
         lessons: {
           id: string;
           lesson_type?: string;
           assignments?: unknown;
+          is_published?: boolean;
         }[];
       }) => {
         const startedAt = startedAtMap.get(ch.id) ?? null;
         return {
           ...ch,
           started_at: startedAt,
-          lessons: ch.lessons.map((l) => ({
-            ...l,
-            progress: progressMap.get(l.id) ?? null,
-            due_at: this.computeDueAt(startedAt, l.assignments),
-          })),
+          lessons: ch.lessons
+            .filter((l) => l.is_published !== false)
+            .map((l) => ({
+              ...l,
+              progress: progressMap.get(l.id) ?? null,
+              due_at: this.computeDueAt(startedAt, l.assignments),
+            })),
         };
       },
     );

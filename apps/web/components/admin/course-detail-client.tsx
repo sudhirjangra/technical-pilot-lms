@@ -55,6 +55,7 @@ import {
   DialogTitle,
 } from '@repo/shadcn/dialog';
 import { Input } from '@repo/shadcn/input';
+import { OrbitalSpinner } from '@repo/shadcn/orbital-spinner';
 import {
   Select,
   SelectContent,
@@ -80,10 +81,13 @@ type BuilderQuestionOption = {
 
 type BuilderQuestion = {
   id: string;
+  question_number: number | null;
   question_text: string;
   question_type: QuestionType;
   points: number;
   explanation: string | null | undefined;
+  topic: string | null | undefined;
+  correct_text_answer: string | null | undefined;
   sort_order: number;
   question_options: BuilderQuestionOption[];
 };
@@ -104,10 +108,13 @@ type QuestionOptionDraft = {
 };
 
 type QuestionDraft = {
+  question_number: string;
   question_text: string;
   question_type: QuestionType;
   points: string;
   explanation: string;
+  topic: string;
+  correct_text_answer: string;
   options: QuestionOptionDraft[];
 };
 
@@ -133,10 +140,13 @@ const createOptionDraft = (isCorrect = false): QuestionOptionDraft => ({
 });
 
 const createQuestionDraft = (questionType: QuestionType = 'mcq'): QuestionDraft => ({
+  question_number: '',
   question_text: '',
   question_type: questionType,
   points: '1',
   explanation: '',
+  topic: '',
+  correct_text_answer: '',
   options: questionType === 'text'
     ? []
     : [createOptionDraft(true), createOptionDraft(false)],
@@ -237,6 +247,7 @@ export function CourseDetailClient({
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
 
   const videoLessonMap = new Map(
     videoLessons.map((videoLesson) => [videoLesson.lesson_id, videoLesson]),
@@ -253,6 +264,7 @@ export function CourseDetailClient({
     lessonId: string,
   ) => {
     event.preventDefault();
+    setUploadingLessonId(lessonId);
     setLoading(true);
     const formData = new FormData(event.currentTarget);
     const file = formData.get('video');
@@ -261,6 +273,7 @@ export function CourseDetailClient({
       : { error: 'Please select a video file' };
 
     setLoading(false);
+    setUploadingLessonId(null);
     if (result.error) {
       toast.error(typeof result.error === 'string' ? result.error : 'Failed to upload video');
       return;
@@ -276,6 +289,7 @@ export function CourseDetailClient({
     lessonId: string,
   ) => {
     event.preventDefault();
+    setUploadingLessonId(lessonId);
     setLoading(true);
     const formData = new FormData(event.currentTarget);
     const file = formData.get('pdf');
@@ -284,6 +298,7 @@ export function CourseDetailClient({
       : { error: 'Please select a PDF file' };
 
     setLoading(false);
+    setUploadingLessonId(null);
     if (result.error) {
       toast.error(result.error);
       return;
@@ -506,10 +521,13 @@ export function CourseDetailClient({
     setBuilderMeta(getMetaFromEntity(lesson.title, lesson.lesson_type, entity));
     setBuilderQuestions(sortQuestions(entity.questions.map((question) => ({
       id: question.id,
+      question_number: question.question_number ?? null,
       question_text: question.question_text,
       question_type: question.question_type,
       points: question.points,
       explanation: question.explanation,
+      topic: (question as { topic?: string | null }).topic ?? null,
+      correct_text_answer: (question as { correct_text_answer?: string | null }).correct_text_answer ?? null,
       sort_order: question.sort_order,
       question_options: [...question.question_options].sort(
         (left, right) => left.sort_order - right.sort_order,
@@ -590,10 +608,13 @@ export function CourseDetailClient({
     }
 
     setQuestionDraft({
+      question_number: question.question_number != null ? String(question.question_number) : '',
       question_text: question.question_text,
       question_type: question.question_type,
       points: String(question.points),
       explanation: question.explanation ?? '',
+      topic: question.topic ?? '',
+      correct_text_answer: question.correct_text_answer ?? '',
       options: question.question_type === 'text'
         ? []
         : question.question_options.map((option) => ({
@@ -679,6 +700,12 @@ export function CourseDetailClient({
       return;
     }
 
+    const questionNumber = parseOptionalNumber(questionDraft.question_number);
+    if (questionDraft.question_number.trim() && questionNumber == null) {
+      toast.error('Question number must be a valid positive integer');
+      return;
+    }
+
     const isTextQuestion = questionDraft.question_type === 'text';
     const preparedOptions = isTextQuestion
       ? undefined
@@ -709,10 +736,15 @@ export function CourseDetailClient({
 
     setBuilderSaving(true);
     const payload = {
+      question_number: questionNumber,
       question_text: questionText,
       question_type: questionDraft.question_type,
       points,
       explanation: questionDraft.explanation.trim() || undefined,
+      topic: questionDraft.topic.trim() || undefined,
+      correct_text_answer: questionDraft.question_type === 'text'
+        ? questionDraft.correct_text_answer.trim() || undefined
+        : undefined,
       options: preparedOptions,
     };
 
@@ -735,10 +767,13 @@ export function CourseDetailClient({
       ...current.filter((question) => question.id !== savedQuestion.id),
       {
         id: savedQuestion.id,
+        question_number: savedQuestion.question_number ?? null,
         question_text: savedQuestion.question_text,
         question_type: savedQuestion.question_type,
         points: savedQuestion.points,
         explanation: savedQuestion.explanation,
+        topic: savedQuestion.topic ?? null,
+        correct_text_answer: (savedQuestion as { correct_text_answer?: string | null }).correct_text_answer ?? null,
         sort_order: savedQuestion.sort_order,
         question_options: [...savedQuestion.question_options].sort(
           (left, right) => left.sort_order - right.sort_order,
@@ -766,29 +801,6 @@ export function CourseDetailClient({
     toast.success('Question deleted');
   };
 
-  const handleQuestionReorder = async (questionIndex: number, direction: -1 | 1) => {
-    if (!activeBuilderLesson || !builderRecordId) return;
-    const reordered = moveItem(builderQuestions, questionIndex, direction);
-    if (!reordered) return;
-    const payload = buildReorderPayload(reordered);
-
-    setBuilderSaving(true);
-    const result = activeBuilderLesson.lesson_type === 'test'
-      ? await reorderTestQuestions(builderRecordId, payload)
-      : await reorderAssignmentQuestions(builderRecordId, payload);
-    setBuilderSaving(false);
-    if (result.error) {
-      toast.error(result.error);
-      return;
-    }
-
-    setBuilderQuestions(reordered.map((question, index) => ({
-      ...question,
-      sort_order: index + 1,
-    })));
-    toast.success('Question order updated');
-  };
-
   const handleImportQuestions = async () => {
     if (!activeBuilderLesson || !builderRecordId) {
       toast.error('Save the assignment/test details first');
@@ -798,7 +810,7 @@ export function CourseDetailClient({
       toast.error('Select a file to import');
       return;
     }
-    if (!confirm('Importing replaces all existing questions. Continue?')) return;
+    if (!confirm('Importing will append these questions below the existing ones. Continue?')) return;
 
     setBuilderSaving(true);
     const result = activeBuilderLesson.lesson_type === 'test'
@@ -812,25 +824,41 @@ export function CourseDetailClient({
     const importedQuestions = result.data.questions;
     const importedCount = result.data.count;
 
-    setBuilderQuestions(sortQuestions(importedQuestions.map((question) => ({
-      id: question.id,
-      question_text: question.question_text,
-      question_type: question.question_type,
-      points: question.points,
-      explanation: question.explanation,
-      sort_order: question.sort_order,
-      question_options: [...question.question_options].sort(
-        (left, right) => left.sort_order - right.sort_order,
-      ),
-    }))));
+    setBuilderQuestions((current) => sortQuestions([
+      ...current,
+      ...importedQuestions.map((question) => ({
+        id: question.id,
+        question_number: question.question_number ?? null,
+        question_text: question.question_text,
+        question_type: question.question_type,
+        points: question.points,
+        explanation: question.explanation,
+        topic: (question as { topic?: string | null }).topic ?? null,
+        correct_text_answer: (question as { correct_text_answer?: string | null }).correct_text_answer ?? null,
+        sort_order: question.sort_order,
+        question_options: [...question.question_options].sort(
+          (left, right) => left.sort_order - right.sort_order,
+        ),
+      })),
+    ]));
     toast.success(`Imported ${importedCount} question${importedCount === 1 ? '' : 's'}`);
     setImportFile(null);
   };
 
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-[2px]">
+          <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card/95 px-6 py-5 shadow-lg">
+            <OrbitalSpinner className="size-12" />
+            <p className="text-sm font-medium text-foreground">Please wait...</p>
+            <p className="text-xs text-muted-foreground">Your request is being processed.</p>
+          </div>
+        </div>
+      )}
+
       <Dialog open={builderOpen} onOpenChange={closeQuestionManager}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="max-h-[92vh] w-[min(96vw,1600px)] max-w-[96vw] overflow-y-auto p-4 sm:p-6 md:max-w-[90vw] lg:max-w-[1200px] xl:max-w-[1400px] 2xl:max-w-[1600px]">
           <DialogHeader>
             <DialogTitle>
               {activeBuilderLesson?.lesson_type === 'test' ? 'Manage Test' : 'Manage Assignment'} Questions
@@ -841,7 +869,10 @@ export function CourseDetailClient({
           </DialogHeader>
 
           {builderLoading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <OrbitalSpinner className="size-10" />
+              <p className="text-sm text-muted-foreground">Loading builder...</p>
+            </div>
           ) : activeBuilderLesson ? (
             <div className="space-y-4">
               <Card>
@@ -911,7 +942,14 @@ export function CourseDetailClient({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={handleSaveBuilderMeta} disabled={builderSaving}>
-                      Save Details
+                      {builderSaving ? (
+                        <>
+                          <OrbitalSpinner className="mr-2 size-3" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Details'
+                      )}
                     </Button>
                     {!builderRecordId && (
                       <p className="text-xs text-muted-foreground">
@@ -939,7 +977,7 @@ export function CourseDetailClient({
                     </a>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Importing replaces all existing questions for this {activeBuilderLesson.lesson_type}.
+                    Imported questions are appended after the current list for this {activeBuilderLesson.lesson_type}.
                   </p>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1">
@@ -951,7 +989,14 @@ export function CourseDetailClient({
                       />
                     </div>
                     <Button size="sm" onClick={handleImportQuestions} disabled={builderSaving || !importFile}>
-                      Import
+                      {builderSaving ? (
+                        <>
+                          <OrbitalSpinner className="mr-2 size-3" />
+                          Importing...
+                        </>
+                      ) : (
+                        'Import'
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -970,11 +1015,13 @@ export function CourseDetailClient({
                   {showQuestionForm && (
                     <div className="rounded-lg border p-3 sm:p-4">
                       <div className="grid gap-4 md:grid-cols-2">
-                        <div className="md:col-span-2">
-                          <label className="text-sm font-medium">Question text</label>
-                          <Textarea
-                            value={questionDraft.question_text}
-                            onChange={(event) => handleQuestionDraftChange('question_text', event.target.value)}
+                        <div>
+                          <label className="text-sm font-medium">Question number</label>
+                          <Input
+                            inputMode="numeric"
+                            value={questionDraft.question_number}
+                            onChange={(event) => handleQuestionDraftChange('question_number', event.target.value)}
+                            placeholder="Optional"
                           />
                         </div>
                         <div>
@@ -993,6 +1040,13 @@ export function CourseDetailClient({
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium">Question text</label>
+                          <Textarea
+                            value={questionDraft.question_text}
+                            onChange={(event) => handleQuestionDraftChange('question_text', event.target.value)}
+                          />
+                        </div>
                         <div>
                           <label className="text-sm font-medium">Points</label>
                           <Input
@@ -1008,6 +1062,27 @@ export function CourseDetailClient({
                             onChange={(event) => handleQuestionDraftChange('explanation', event.target.value)}
                           />
                         </div>
+                        <div>
+                          <label className="text-sm font-medium">Topic / Subject <span className="text-muted-foreground font-normal">(optional)</span></label>
+                          <Input
+                            value={questionDraft.topic}
+                            onChange={(event) => handleQuestionDraftChange('topic', event.target.value)}
+                            placeholder="e.g. Algebra, Chemistry, History"
+                          />
+                        </div>
+                        {questionDraft.question_type === 'text' && (
+                          <div className="md:col-span-2">
+                            <label className="text-sm font-medium">
+                              Expected answer{' '}
+                              <span className="text-muted-foreground font-normal">(case-insensitive match — leave blank for manual grading)</span>
+                            </label>
+                            <Input
+                              value={questionDraft.correct_text_answer}
+                              onChange={(event) => handleQuestionDraftChange('correct_text_answer', event.target.value)}
+                              placeholder="e.g. photosynthesis"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {questionDraft.question_type !== 'text' && (
@@ -1050,7 +1125,16 @@ export function CourseDetailClient({
 
                       <div className="mt-4 flex flex-wrap gap-2">
                         <Button size="sm" onClick={handleSaveQuestion} disabled={builderSaving}>
-                          {editingQuestionId ? 'Save Question' : 'Add Question'}
+                          {builderSaving ? (
+                            <>
+                              <OrbitalSpinner className="mr-2 size-3" />
+                              Saving...
+                            </>
+                          ) : editingQuestionId ? (
+                            'Save Question'
+                          ) : (
+                            'Add Question'
+                          )}
                         </Button>
                         <Button size="sm" variant="outline" onClick={resetQuestionEditor}>
                           Cancel
@@ -1068,9 +1152,14 @@ export function CourseDetailClient({
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{questionIndex + 1}. {question.question_text}</span>
+                                <span className="font-medium">
+                                  {question.question_number ?? questionIndex + 1}. {question.question_text}
+                                </span>
                                 <Badge variant="outline">{question.question_type.toUpperCase()}</Badge>
                                 <Badge variant="secondary">{question.points} pt{question.points === 1 ? '' : 's'}</Badge>
+                                {question.topic && (
+                                  <Badge variant="outline" className="text-[10px]">{question.topic}</Badge>
+                                )}
                               </div>
                               {question.question_options.length > 0 && (
                                 <div className="space-y-1">
@@ -1094,24 +1183,6 @@ export function CourseDetailClient({
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                disabled={questionIndex === 0 || builderSaving}
-                                onClick={() => handleQuestionReorder(questionIndex, -1)}
-                              >
-                                ▲
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                disabled={questionIndex === builderQuestions.length - 1 || builderSaving}
-                                onClick={() => handleQuestionReorder(questionIndex, 1)}
-                              >
-                                ▼
-                              </Button>
                               <Button size="sm" variant="outline" onClick={() => startEditingQuestion(question)}>
                                 Edit
                               </Button>
@@ -1147,9 +1218,17 @@ export function CourseDetailClient({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
-            {course.status}
-          </Badge>
+          <span
+            className={`inline-block size-2.5 rounded-full ${
+              course.status === 'published'
+                ? 'bg-emerald-500'
+                : course.status === 'archived'
+                  ? 'bg-slate-500'
+                  : 'bg-amber-500'
+            }`}
+            title={course.status}
+            aria-label={course.status}
+          />
           {course.status !== 'published' && (
             <Button size="sm" onClick={() => handleStatusChange('published')} disabled={loading}>
               Publish
@@ -1221,9 +1300,13 @@ export function CourseDetailClient({
                     <CardTitle className="text-base">
                       {chapterIndex + 1}. {chapter.title}
                     </CardTitle>
-                    <Badge variant={chapter.is_published ? 'default' : 'outline'}>
-                      {chapter.is_published ? 'Published' : 'Draft'}
-                    </Badge>
+                    <span
+                      className={`inline-block size-2.5 rounded-full ${
+                        chapter.is_published ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                      title={chapter.is_published ? 'Published' : 'Draft'}
+                      aria-label={chapter.is_published ? 'Published' : 'Draft'}
+                    />
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -1318,9 +1401,13 @@ export function CourseDetailClient({
                             <span className="text-xs text-muted-foreground">{lessonIndex + 1}.</span>
                             <span>{lesson.title}</span>
                             <Badge variant="outline" className="text-xs">{lesson.lesson_type}</Badge>
-                            <Badge variant={lesson.is_published ? 'default' : 'outline'} className="text-xs">
-                              {lesson.is_published ? 'Published' : 'Draft'}
-                            </Badge>
+                            <span
+                              className={`inline-block size-2.5 rounded-full ${
+                                lesson.is_published ? 'bg-emerald-500' : 'bg-amber-500'
+                              }`}
+                              title={lesson.is_published ? 'Published' : 'Draft'}
+                              aria-label={lesson.is_published ? 'Published' : 'Draft'}
+                            />
                             {lesson.duration_seconds ? (
                               <span className="text-xs text-muted-foreground">
                                 {Math.floor(lesson.duration_seconds / 60)}m
@@ -1394,7 +1481,7 @@ export function CourseDetailClient({
                                     pdfFormLessonId === lesson.id ? null : lesson.id,
                                   )}
                                 >
-                                  Upload/Replace PDF
+                                  Replace PDF
                                 </Button>
                                 <Button
                                   size="sm"
@@ -1462,7 +1549,16 @@ export function CourseDetailClient({
                                 className="mt-1 text-xs"
                               />
                             </div>
-                            <Button type="submit" size="sm" disabled={loading}>Upload</Button>
+                            <Button type="submit" size="sm" disabled={loading || uploadingLessonId === lesson.id}>
+                              {uploadingLessonId === lesson.id ? (
+                                <>
+                                  <OrbitalSpinner className="mr-2 size-3" />
+                                  Uploading...
+                                </>
+                              ) : (
+                                'Upload'
+                              )}
+                            </Button>
                           </form>
                         )}
                       </div>

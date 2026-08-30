@@ -9,6 +9,7 @@ import {
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -18,6 +19,8 @@ import type { FastifyRequest } from 'fastify';
 import {
   CreateTestDto,
   CreateTestQuestionDto,
+  SaveAnswerDto,
+  SubmitTestAttemptDto,
   UpdateTestDto,
   UpdateTestQuestionDto,
 } from './dto';
@@ -126,6 +129,7 @@ export class TestsService {
       question_type: dto.question_type,
       points: dto.points ?? 1,
       explanation: dto.explanation?.trim() || null,
+      topic: dto.topic?.trim() || null,
       sort_order: sortOrder,
       question_number: dto.question_number ?? sortOrder,
       correct_text_answer:
@@ -174,6 +178,7 @@ export class TestsService {
         points: dto.points,
         explanation:
           dto.explanation === undefined ? undefined : dto.explanation.trim() || null,
+        topic: dto.topic === undefined ? undefined : dto.topic.trim() || null,
         sort_order: dto.sort_order,
         question_number: dto.question_number,
         correct_text_answer:
@@ -239,23 +244,649 @@ export class TestsService {
       mimetype: part.mimetype,
     });
 
-    // Import replaces the entire question bank for this test.
-    const { error: deleteError } = await this.supabase
+    const { data: lastQuestion, error: lastQuestionError } = await this.supabase
       .from('questions')
-      .delete()
-      .eq('test_id', testId);
+      .select('question_number, sort_order')
+      .eq('test_id', testId)
+      .order('question_number', { ascending: false })
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (deleteError) throw new BadRequestException(deleteError.message);
+    if (lastQuestionError) throw new BadRequestException(lastQuestionError.message);
+
+    const questionNumberOffset = lastQuestion?.question_number ?? 0;
+    const sortOrderOffset = lastQuestion?.sort_order ?? 0;
 
     const insertedQuestions = await this.insertImportedQuestions(
       questions,
       testId,
+      {
+        questionNumberOffset,
+        sortOrderOffset,
+      },
     );
 
     return {
       count: insertedQuestions.length,
       questions: insertedQuestions,
     };
+  }
+
+  // ── Student endpoints ─────────────────────────────────────────────────────
+
+  async getTestForStudentLesson(lessonId: string, studentId: string) {
+    // Verify enrollment
+    await this.checkEnrollmentForLesson(lessonId, studentId);
+
+    const { data: test, error } = await this.supabase
+      .from('tests')
+      .select('*')
+      .eq('lesson_id', lessonId)
+      .single();
+
+    if (error || !test) throw new NotFoundException('Test not found');
+
+    // Fetch questions without correct answers
+    const questions = await this.getStudentQuestionsWithOptions(test.id);
+
+    // Fetch attempt count + latest attempt for this student
+    const { data: rawAttempts } = await this.supabase
+      .from('test_attempts')
+      .select('id, started_at, completed_at, score, max_score, time_spent_seconds')
+      .eq('test_id', test.id)
+      .eq('student_id', studentId)
+      .order('started_at', { ascending: false });
+
+    const passingPct = test.passing_score_percent ?? 60;
+    const attempts = (rawAttempts ?? []).map((a) => {
+      const percentage =
+        a.max_score && a.max_score > 0
+          ? Math.round(((a.score ?? 0) / a.max_score) * 100)
+          : null;
+      return {
+        ...a,
+        percentage,
+        passed: percentage !== null ? percentage >= passingPct : null,
+      };
+    });
+
+    const attemptCount = attempts.length;
+    const latestAttempt = attempts[0] ?? null;
+
+    return {
+      test: { ...test, questions },
+      attempt: latestAttempt,
+      attempts_used: attemptCount,
+      attempts,
+    };
+  }
+
+  async startAttempt(testId: string, studentId: string) {
+    // Fetch test details in one query
+    const { data: testRow, error: testErr } = await this.supabase
+      .from('tests')
+      .select('id, lesson_id, max_attempts')
+      .eq('id', testId)
+      .single();
+
+    if (testErr || !testRow) throw new NotFoundException('Test not found');
+
+    // Check enrollment via lesson
+    if (testRow.lesson_id) {
+      await this.checkEnrollmentForLesson(testRow.lesson_id, studentId);
+    }
+
+    // Check max_attempts
+    const testDetails = testRow;
+
+    if (testDetails?.max_attempts) {
+      const { count } = await this.supabase
+        .from('test_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('test_id', testId)
+        .eq('student_id', studentId);
+
+      if ((count ?? 0) >= testDetails.max_attempts) {
+        throw new ForbiddenException('Maximum attempts reached for this test');
+      }
+    }
+
+    const { data: attempt, error } = await this.supabase
+      .from('test_attempts')
+      .insert({
+        test_id: testId,
+        student_id: studentId,
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return attempt;
+  }
+
+  async submitAttempt(
+    attemptId: string,
+    studentId: string,
+    dto: SubmitTestAttemptDto,
+  ) {
+    // Verify attempt belongs to student and is not completed
+    const { data: attempt, error: attemptError } = await this.supabase
+      .from('test_attempts')
+      .select('*, tests(passing_score_percent)')
+      .eq('id', attemptId)
+      .eq('student_id', studentId)
+      .single();
+
+    if (attemptError || !attempt) throw new NotFoundException('Attempt not found');
+    if (attempt.completed_at) {
+      throw new BadRequestException('Attempt already submitted');
+    }
+
+    // Fetch questions with correct answers for grading
+    const { data: questions, error: questionsError } = await this.supabase
+      .from('questions')
+      .select('id, question_type, points, explanation, correct_text_answer, topic, question_text')
+      .eq('test_id', attempt.test_id);
+
+    if (questionsError) throw new BadRequestException(questionsError.message);
+
+    const questionIds = (questions ?? []).map((q) => q.id);
+    const { data: allOptions } = await this.supabase
+      .from('question_options')
+      .select('id, question_id, is_correct')
+      .in('question_id', questionIds);
+
+    const correctOptionsMap = new Map<string, Set<string>>();
+    for (const opt of allOptions ?? []) {
+      const set = correctOptionsMap.get(opt.question_id) ?? new Set<string>();
+      if (opt.is_correct) set.add(opt.id);
+      correctOptionsMap.set(opt.question_id, set);
+    }
+
+    let totalScore = 0;
+    let maxScore = 0;
+    let correctCount = 0;
+
+    const answerResults: Array<{
+      questionId: string;
+      isCorrect: boolean | null;
+      points: number;
+      pointsEarned: number;
+      explanation: string | null;
+      correctOptionIds: string[];
+    }> = [];
+
+    for (const q of questions ?? []) {
+      const points = q.points ?? 1;
+      maxScore += points;
+
+      const answer = dto.answers.find((a) => a.questionId === q.id);
+      const correctIds = correctOptionsMap.get(q.id) ?? new Set<string>();
+
+      let isCorrect: boolean | null = null;
+      let pointsEarned = 0;
+
+      if (q.question_type === 'text') {
+        const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+        const expected = q.correct_text_answer ? normalize(q.correct_text_answer as string) : null;
+        const given = answer?.textAnswer ? normalize(answer.textAnswer) : null;
+        if (!expected) {
+          isCorrect = null; // no expected answer set → manually graded
+        } else if (given) {
+          isCorrect = given === expected;
+          if (isCorrect) { pointsEarned = points; correctCount++; }
+        } else {
+          isCorrect = false;
+        }
+      } else if (answer?.selectedOptionIds?.length) {
+        const selectedSet = new Set(answer.selectedOptionIds);
+        const setsMatch =
+          selectedSet.size === correctIds.size &&
+          [...selectedSet].every((id) => correctIds.has(id));
+        isCorrect = setsMatch;
+        if (isCorrect) {
+          pointsEarned = points;
+          correctCount++;
+        }
+      } else {
+        isCorrect = false;
+      }
+
+      if (isCorrect) totalScore += pointsEarned;
+
+      answerResults.push({
+        questionId: q.id,
+        isCorrect,
+        points,
+        pointsEarned,
+        explanation: q.explanation ?? null,
+        correctOptionIds: [...correctIds],
+      });
+    }
+
+    const passingPercent = attempt.tests?.passing_score_percent ?? 60;
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const passed = percentage >= passingPercent;
+
+    // Calculate total time spent
+    const startedAt = new Date(attempt.started_at).getTime();
+    const totalTimeSeconds = Math.round((Date.now() - startedAt) / 1000);
+
+    // Update attempt
+    const { error: updateError } = await this.supabase
+      .from('test_attempts')
+      .update({
+        completed_at: new Date().toISOString(),
+        score: totalScore,
+        max_score: maxScore,
+        time_spent_seconds: totalTimeSeconds,
+      })
+      .eq('id', attemptId);
+
+    if (updateError) throw new BadRequestException(updateError.message);
+
+    // Upsert test_answers
+    for (const answer of dto.answers) {
+      const result = answerResults.find((r) => r.questionId === answer.questionId);
+      const q = (questions ?? []).find((qq) => qq.id === answer.questionId);
+
+      const { data: upsertedAnswer, error: answerError } = await this.supabase
+        .from('test_answers')
+        .upsert(
+          {
+            attempt_id: attemptId,
+            question_id: answer.questionId,
+            text_answer: answer.textAnswer ?? null,
+            is_correct: result?.isCorrect ?? null,
+            time_spent_seconds: answer.timeSpentSeconds,
+          },
+          { onConflict: 'attempt_id,question_id' },
+        )
+        .select('id')
+        .single();
+
+      if (answerError) continue;
+
+      // For MCQ/MSQ, upsert junction table
+      if (q?.question_type !== 'text' && answer.selectedOptionIds?.length) {
+        await this.supabase
+          .from('test_answer_options')
+          .delete()
+          .eq('test_answer_id', upsertedAnswer.id);
+
+        await this.supabase.from('test_answer_options').insert(
+          answer.selectedOptionIds.map((optId) => ({
+            test_answer_id: upsertedAnswer.id,
+            option_id: optId,
+          })),
+        );
+      }
+    }
+
+    // Build per-question review (include correct answers and explanation now)
+    const questionReview = (questions ?? []).map((q) => {
+      const result = answerResults.find((r) => r.questionId === q.id)!;
+      const answer = dto.answers.find((a) => a.questionId === q.id);
+      return {
+        questionId: q.id,
+        isCorrect: result.isCorrect,
+        pointsEarned: result.pointsEarned,
+        points: result.points,
+        explanation: result.explanation,
+        correctOptionIds: result.correctOptionIds,
+        selectedOptionIds: answer?.selectedOptionIds ?? [],
+        textAnswer: answer?.textAnswer ?? null,
+        topic: (q as { topic?: string | null }).topic ?? null,
+        timeSpentSeconds: answer?.timeSpentSeconds ?? 0,
+        questionType: q.question_type,
+        questionText: (q as { question_text?: string }).question_text ?? '',
+      };
+    });
+
+    // Build topic breakdown
+    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    for (const q of questions ?? []) {
+      const topic = (q as { topic?: string | null }).topic ?? 'General';
+      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const result = answerResults.find((r) => r.questionId === q.id)!;
+      const answer = dto.answers.find((a) => a.questionId === q.id);
+      current.total += 1;
+      if (result.isCorrect === true) current.correct += 1;
+      current.totalTime += answer?.timeSpentSeconds ?? 0;
+      current.points += result.points;
+      current.earnedPoints += result.pointsEarned;
+      topicMap.set(topic, current);
+    }
+    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({
+      topic,
+      ...stats,
+    }));
+
+    const totalQCount = (questions ?? []).length;
+    const avgTimePerQuestion = totalQCount > 0 ? Math.round(totalTimeSeconds / totalQCount) : 0;
+
+    return {
+      score: totalScore,
+      maxScore,
+      passed,
+      percentage,
+      correctCount,
+      totalCount: totalQCount,
+      questionReview,
+      totalTimeSeconds,
+      topicBreakdown,
+      avgTimePerQuestion,
+    };
+  }
+
+  async saveAnswer(
+    attemptId: string,
+    questionId: string,
+    studentId: string,
+    dto: SaveAnswerDto,
+  ) {
+    // Verify attempt belongs to student
+    const { data: attempt } = await this.supabase
+      .from('test_attempts')
+      .select('id')
+      .eq('id', attemptId)
+      .eq('student_id', studentId)
+      .single();
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    const { data: upsertedAnswer, error } = await this.supabase
+      .from('test_answers')
+      .upsert(
+        {
+          attempt_id: attemptId,
+          question_id: questionId,
+          text_answer: dto.textAnswer ?? null,
+          time_spent_seconds: dto.timeSpentSeconds,
+        },
+        { onConflict: 'attempt_id,question_id' },
+      )
+      .select('id')
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+
+    if (dto.selectedOptionIds?.length !== undefined) {
+      await this.supabase
+        .from('test_answer_options')
+        .delete()
+        .eq('test_answer_id', upsertedAnswer.id);
+
+      if (dto.selectedOptionIds.length > 0) {
+        await this.supabase.from('test_answer_options').insert(
+          dto.selectedOptionIds.map((optId) => ({
+            test_answer_id: upsertedAnswer.id,
+            option_id: optId,
+          })),
+        );
+      }
+    }
+  }
+
+  // ── End student endpoints ──────────────────────────────────────────────────
+
+  // ── Admin analytics endpoints ──────────────────────────────────────────────
+
+  async getTestAttempts(testId: string) {
+    await this.ensureTestExists(testId);
+
+    const { data: test } = await this.supabase
+      .from('tests')
+      .select('passing_score_percent')
+      .eq('id', testId)
+      .single();
+
+    const passingPct = test?.passing_score_percent ?? 60;
+
+    const { data: attempts, error } = await this.supabase
+      .from('test_attempts')
+      .select('id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, profiles(full_name, email)')
+      .eq('test_id', testId)
+      .order('started_at', { ascending: false });
+
+    if (error) throw new BadRequestException(error.message);
+
+    return (attempts ?? []).map((a) => {
+      const percentage =
+        a.max_score && a.max_score > 0
+          ? Math.round(((a.score ?? 0) / a.max_score) * 100)
+          : null;
+      const profile = a.profiles as { full_name?: string; email?: string } | null;
+      return {
+        id: a.id,
+        student_id: a.student_id,
+        student_name: profile?.full_name ?? null,
+        student_email: profile?.email ?? null,
+        started_at: a.started_at,
+        completed_at: a.completed_at,
+        score: a.score,
+        max_score: a.max_score,
+        time_spent_seconds: a.time_spent_seconds,
+        percentage,
+        passed: percentage !== null ? percentage >= passingPct : null,
+      };
+    });
+  }
+
+  async getAttemptDetail(attemptId: string, studentId?: string) {
+    const query = this.supabase
+      .from('test_attempts')
+      .select('*, tests(passing_score_percent), profiles(full_name, email)')
+      .eq('id', attemptId);
+
+    if (studentId) {
+      query.eq('student_id', studentId);
+    }
+
+    const { data: attempt, error: attemptErr } = await query.single();
+
+    if (attemptErr || !attempt) {
+      if (studentId) {
+        throw new ForbiddenException('Access denied');
+      }
+      throw new NotFoundException('Attempt not found');
+    }
+
+    const passingPct = (attempt.tests as { passing_score_percent?: number } | null)?.passing_score_percent ?? 60;
+    const percentage =
+      attempt.max_score && attempt.max_score > 0
+        ? Math.round(((attempt.score ?? 0) / attempt.max_score) * 100)
+        : null;
+
+    const { data: answers, error: answersErr } = await this.supabase
+      .from('test_answers')
+      .select('id, question_id, text_answer, is_correct, time_spent_seconds')
+      .eq('attempt_id', attemptId);
+
+    if (answersErr) throw new BadRequestException(answersErr.message);
+
+    const answerIds = (answers ?? []).map((a) => a.id);
+    const { data: answerOptions } = await this.supabase
+      .from('test_answer_options')
+      .select('test_answer_id, option_id')
+      .in('test_answer_id', answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000']);
+
+    const selectedOptionsMap = new Map<string, string[]>();
+    for (const ao of answerOptions ?? []) {
+      const current = selectedOptionsMap.get(ao.test_answer_id) ?? [];
+      current.push(ao.option_id);
+      selectedOptionsMap.set(ao.test_answer_id, current);
+    }
+
+    const { data: questions } = await this.supabase
+      .from('questions')
+      .select('id, question_type, points, explanation, topic, question_text')
+      .eq('test_id', attempt.test_id);
+
+    const questionIds = (questions ?? []).map((q) => q.id);
+    const { data: allOptions } = await this.supabase
+      .from('question_options')
+      .select('id, question_id, is_correct')
+      .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
+
+    const correctOptionsMap = new Map<string, string[]>();
+    for (const opt of allOptions ?? []) {
+      if (opt.is_correct) {
+        const current = correctOptionsMap.get(opt.question_id) ?? [];
+        current.push(opt.id);
+        correctOptionsMap.set(opt.question_id, current);
+      }
+    }
+
+    const profile = attempt.profiles as { full_name?: string; email?: string } | null;
+
+    const questionReview = (questions ?? []).map((q) => {
+      const answer = (answers ?? []).find((a) => a.question_id === q.id);
+      const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
+      const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
+      return {
+        questionId: q.id,
+        questionText: (q as { question_text?: string }).question_text ?? '',
+        questionType: q.question_type,
+        topic: (q as { topic?: string | null }).topic ?? null,
+        isCorrect: answer?.is_correct ?? null,
+        timeSpentSeconds: answer?.time_spent_seconds ?? 0,
+        points: q.points ?? 1,
+        explanation: (q as { explanation?: string | null }).explanation ?? null,
+        correctOptionIds,
+        selectedOptionIds,
+        textAnswer: answer?.text_answer ?? null,
+      };
+    });
+
+    return {
+      id: attempt.id,
+      test_id: attempt.test_id,
+      student_id: attempt.student_id,
+      student_name: profile?.full_name ?? null,
+      student_email: profile?.email ?? null,
+      started_at: attempt.started_at,
+      completed_at: attempt.completed_at,
+      score: attempt.score,
+      max_score: attempt.max_score,
+      time_spent_seconds: attempt.time_spent_seconds,
+      percentage,
+      passed: percentage !== null ? percentage >= passingPct : null,
+      questionReview,
+    };
+  }
+
+  async gradeAttemptAnswers(attemptId: string, grades: { questionId: string; isCorrect: boolean }[]) {
+    for (const grade of grades) {
+      await this.supabase
+        .from('test_answers')
+        .update({ is_correct: grade.isCorrect })
+        .eq('attempt_id', attemptId)
+        .eq('question_id', grade.questionId);
+    }
+
+    const { data: attempt } = await this.supabase
+      .from('test_attempts')
+      .select('test_id')
+      .eq('id', attemptId)
+      .single();
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    const { data: questions } = await this.supabase
+      .from('questions')
+      .select('id, points')
+      .eq('test_id', attempt.test_id);
+
+    const { data: answers } = await this.supabase
+      .from('test_answers')
+      .select('question_id, is_correct')
+      .eq('attempt_id', attemptId);
+
+    const pointsMap = new Map((questions ?? []).map((q) => [q.id, q.points ?? 1]));
+    const maxScore = (questions ?? []).reduce((sum, q) => sum + (q.points ?? 1), 0);
+    const totalScore = (answers ?? [])
+      .filter((a) => a.is_correct === true)
+      .reduce((sum, a) => sum + (pointsMap.get(a.question_id) ?? 1), 0);
+
+    const { data: updatedAttempt } = await this.supabase
+      .from('test_attempts')
+      .update({ score: totalScore, max_score: maxScore })
+      .eq('id', attemptId)
+      .select()
+      .single();
+
+    return updatedAttempt;
+  }
+
+  async findAttemptForStudent(attemptId: string, studentId: string, role?: string) {
+    const isAdmin = (role ?? '').toUpperCase() === 'ADMIN';
+    if (isAdmin) {
+      return this.getAttemptDetail(attemptId);
+    }
+    return this.getAttemptDetail(attemptId, studentId);
+  }
+
+  // ── End admin analytics endpoints ──────────────────────────────────────────
+
+  private async checkEnrollmentForLesson(lessonId: string, studentId: string) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('chapters(course_id)')
+      .eq('id', lessonId)
+      .single();
+
+    const courseId = (lesson?.chapters as unknown as { course_id: string })
+      ?.course_id;
+    if (!courseId) throw new NotFoundException('Lesson not found');
+
+    const { data: enrollment } = await this.supabase
+      .from('enrollments')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('course_id', courseId)
+      .eq('status', 'active')
+      .single();
+
+    if (!enrollment) {
+      throw new ForbiddenException(
+        'Active enrollment required to access this test',
+      );
+    }
+  }
+
+  private async getStudentQuestionsWithOptions(testId: string) {
+    const { data: questions, error } = await this.supabase
+      .from('questions')
+      .select('id, test_id, question_text, question_type, points, explanation, sort_order, question_number, topic')
+      .eq('test_id', testId)
+      .order('sort_order', { ascending: true });
+
+    if (error) throw new BadRequestException(error.message);
+    if (!questions || questions.length === 0) return [];
+
+    const questionIds = questions.map((q) => q.id);
+    const { data: options, error: optionsError } = await this.supabase
+      .from('question_options')
+      .select('id, question_id, option_text, sort_order')
+      .in('question_id', questionIds)
+      .order('sort_order', { ascending: true });
+
+    if (optionsError) throw new BadRequestException(optionsError.message);
+
+    const optionMap = new Map<string, { id: string; question_id: string; option_text: string; sort_order: number }[]>();
+    for (const opt of options ?? []) {
+      const current = optionMap.get(opt.question_id) ?? [];
+      current.push(opt);
+      optionMap.set(opt.question_id, current);
+    }
+
+    return questions.map((q) => ({
+      ...q,
+      question_options: optionMap.get(q.id) ?? [],
+    }));
   }
 
   private async getLesson(lessonId: string) {
@@ -381,11 +1012,12 @@ export class TestsService {
   private async insertImportedQuestions(
     questions: ImportedQuizQuestion[],
     testId: string,
+    offsets: { questionNumberOffset: number; sortOrderOffset: number },
   ) {
     const insertedQuestions: Array<QuestionRow & { question_options: unknown[] }> =
       [];
 
-    for (const question of questions) {
+    for (const [index, question] of questions.entries()) {
       const { data: insertedQuestion, error } = await this.supabase
         .from('questions')
         .insert({
@@ -395,8 +1027,9 @@ export class TestsService {
           question_type: question.question_type,
           points: question.points,
           explanation: question.explanation ?? null,
-          sort_order: question.sort_order,
-          question_number: question.question_number,
+          topic: (question as { topic?: string | null }).topic ?? null,
+          sort_order: offsets.sortOrderOffset + index + 1,
+          question_number: offsets.questionNumberOffset + question.question_number,
           correct_text_answer: question.correct_text_answer,
         })
         .select()

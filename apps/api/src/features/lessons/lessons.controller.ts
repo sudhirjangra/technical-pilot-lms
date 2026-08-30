@@ -42,6 +42,13 @@ export class LessonsController {
     return { message: 'PDF deleted' };
   }
 
+  /** Student: get signed URL for PDF access */
+  @Get(':id/pdf-url')
+  async getPdfUrl(@Param('id', ParseUUIDPipe) id: string, @Req() req: FastifyRequest) {
+    const pdfUrl = await this.lessonsService.getPdfUrl(id, req);
+    return { pdfUrl };
+  }
+
   @Get('chapter/:chapterId')
   async findByChapter(@Param('chapterId', ParseUUIDPipe) chapterId: string) {
     const data = await this.lessonsService.findByChapter(chapterId);

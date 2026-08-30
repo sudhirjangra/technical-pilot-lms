@@ -124,6 +124,12 @@ export class CreateTestQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
+  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
   @ApiPropertyOptional({ type: [TestQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -176,6 +182,12 @@ export class UpdateTestQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
+  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
   @ApiPropertyOptional({ type: [TestQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -184,7 +196,91 @@ export class UpdateTestQuestionDto {
   options?: TestQuestionOptionDto[];
 }
 
+export class ReorderTestQuestionItemDto {
+  @ApiProperty()
+  @IsUUID()
+  id: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  sort_order: number;
+}
+
 export class ReorderTestQuestionsDto {
-  @ApiProperty({ type: [Object] })
-  questions: { id: string; sort_order: number }[];
+  @ApiProperty({ type: [ReorderTestQuestionItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReorderTestQuestionItemDto)
+  questions: ReorderTestQuestionItemDto[];
+}
+
+// --- Student DTOs ---
+
+export class SubmitAnswerDto {
+  @ApiProperty()
+  @IsUUID()
+  questionId: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  selectedOptionIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  textAnswer?: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  timeSpentSeconds: number;
+}
+
+export class SubmitTestAttemptDto {
+  @ApiProperty({ type: [SubmitAnswerDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubmitAnswerDto)
+  answers: SubmitAnswerDto[];
+}
+
+export class SaveAnswerDto {
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  selectedOptionIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  textAnswer?: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  timeSpentSeconds: number;
+}
+
+export class GradeItemDto {
+  @ApiProperty()
+  @IsUUID()
+  questionId: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  isCorrect: boolean;
+}
+
+export class GradeAttemptDto {
+  @ApiProperty({ type: [GradeItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GradeItemDto)
+  grades: GradeItemDto[];
 }

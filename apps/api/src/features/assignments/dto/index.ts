@@ -164,6 +164,12 @@ export class CreateAssignmentQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
+  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -216,6 +222,12 @@ export class UpdateAssignmentQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
+  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  topic?: string;
+
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -224,7 +236,91 @@ export class UpdateAssignmentQuestionDto {
   options?: AssignmentQuestionOptionDto[];
 }
 
+// ── Student DTOs ──────────────────────────────────────────────────────────────
+
+export class SubmitAssignmentAnswerDto {
+  @ApiProperty()
+  @IsUUID()
+  questionId: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  selectedOptionIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  textAnswer?: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  timeSpentSeconds: number;
+}
+
+export class SubmitAssignmentAttemptDto {
+  @ApiProperty({ type: [SubmitAssignmentAnswerDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubmitAssignmentAnswerDto)
+  answers: SubmitAssignmentAnswerDto[];
+}
+
+export class SaveAssignmentAnswerDto {
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  selectedOptionIds?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  textAnswer?: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  timeSpentSeconds: number;
+}
+
+export class ReorderAssignmentQuestionItemDto {
+  @ApiProperty()
+  @IsUUID()
+  id: string;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  sort_order: number;
+}
+
 export class ReorderAssignmentQuestionsDto {
-  @ApiProperty({ type: [Object] })
-  questions: { id: string; sort_order: number }[];
+  @ApiProperty({ type: [ReorderAssignmentQuestionItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReorderAssignmentQuestionItemDto)
+  questions: ReorderAssignmentQuestionItemDto[];
+}
+
+export class GradeItemDto {
+  @ApiProperty()
+  @IsUUID()
+  questionId: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  isCorrect: boolean;
+}
+
+export class GradeAttemptDto {
+  @ApiProperty({ type: [GradeItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GradeItemDto)
+  grades: GradeItemDto[];
 }

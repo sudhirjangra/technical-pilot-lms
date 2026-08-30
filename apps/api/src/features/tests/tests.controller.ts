@@ -15,7 +15,10 @@ import type { FastifyRequest } from 'fastify';
 import {
   CreateTestDto,
   CreateTestQuestionDto,
+  GradeAttemptDto,
   ReorderTestQuestionsDto,
+  SaveAnswerDto,
+  SubmitTestAttemptDto,
   UpdateTestDto,
   UpdateTestQuestionDto,
 } from './dto';
@@ -93,6 +96,98 @@ export class TestsController {
   ) {
     await this.testsService.reorderQuestions(id, dto.questions);
     return { message: 'Questions reordered' };
+  }
+
+  // ── Student routes ───────────────────────────────────────────────────────
+
+  @Get('student/lesson/:lessonId')
+  async getTestForStudentLesson(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.testsService.getTestForStudentLesson(
+      lessonId,
+      req.user.id,
+    );
+    return { message: 'Test fetched', data };
+  }
+
+  @Post('student/:testId/attempts')
+  async startAttempt(
+    @Param('testId', ParseUUIDPipe) testId: string,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.testsService.startAttempt(testId, req.user.id);
+    return { message: 'Attempt started', data };
+  }
+
+  @Post('student/attempts/:attemptId/submit')
+  async submitAttempt(
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Body() dto: SubmitTestAttemptDto,
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.testsService.submitAttempt(
+      attemptId,
+      req.user.id,
+      dto,
+    );
+    return { message: 'Attempt submitted', data };
+  }
+
+  @Patch('student/attempts/:attemptId/answers/:questionId')
+  async saveAnswer(
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Param('questionId', ParseUUIDPipe) questionId: string,
+    @Body() dto: SaveAnswerDto,
+    @Req() req: { user: { id: string } },
+  ) {
+    await this.testsService.saveAnswer(
+      attemptId,
+      questionId,
+      req.user.id,
+      dto,
+    );
+    return { message: 'Answer saved' };
+  }
+
+  // ── End student routes ────────────────────────────────────────────────────
+
+  // ── Admin analytics routes ────────────────────────────────────────────────
+
+  @Roles('ADMIN')
+  @Get(':id/attempts')
+  async getTestAttempts(@Param('id', ParseUUIDPipe) id: string) {
+    const data = await this.testsService.getTestAttempts(id);
+    return { message: 'Attempts fetched', data };
+  }
+
+  @Roles('ADMIN')
+  @Get('attempts/:attemptId')
+  async getAttemptDetail(@Param('attemptId', ParseUUIDPipe) attemptId: string) {
+    const data = await this.testsService.getAttemptDetail(attemptId);
+    return { message: 'Attempt detail fetched', data };
+  }
+
+  @Roles('ADMIN')
+  @Patch('attempts/:attemptId/grade')
+  async gradeAttempt(
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Body() dto: GradeAttemptDto,
+  ) {
+    const data = await this.testsService.gradeAttemptAnswers(attemptId, dto.grades);
+    return { message: 'Grades applied', data };
+  }
+
+  // ── End admin analytics routes ────────────────────────────────────────────
+
+  @Get('student/attempts/:attemptId')
+  async getStudentAttemptDetail(
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+    @Req() req: { user: { id: string; role?: string } },
+  ) {
+    const data = await this.testsService.findAttemptForStudent(attemptId, req.user.id, req.user.role);
+    return { message: 'Attempt detail fetched', data };
   }
 
   @Roles('ADMIN')

@@ -25,6 +25,7 @@ const QuestionSchema = z
     correct_text_answer: z.string().nullable().optional(),
     points: z.coerce.number().default(1),
     explanation: z.string().nullable().optional(),
+    topic: z.string().nullable().optional(),
     sort_order: z.coerce.number().default(0),
   })
   .passthrough();
@@ -204,6 +205,7 @@ export async function createAssignmentQuestion(
     correct_text_answer?: string | null;
     points?: number;
     explanation?: string;
+    topic?: string;
     sort_order?: number;
     options?: { option_text: string; is_correct: boolean }[];
   },
@@ -234,6 +236,7 @@ export async function updateAssignmentQuestion(
     correct_text_answer?: string | null;
     points?: number;
     explanation?: string;
+    topic?: string;
     sort_order?: number;
     options?: { option_text: string; is_correct: boolean }[];
   },
@@ -305,4 +308,64 @@ export async function importAssignmentQuestions(id: string, file: File) {
     return { error };
   }
   return { data: data!.data };
+}
+
+export async function gradeAssignmentAttempt(
+  attemptId: string,
+  grades: { questionId: string; isCorrect: boolean }[],
+) {
+  const [error, data] = await safeFetch(
+    z.object({ message: z.string().optional(), data: z.any() }),
+    `/assignments/attempts/${attemptId}/grade`,
+    {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      cache: 'no-store',
+      body: JSON.stringify({ grades }),
+    },
+  );
+  if (error) return { error };
+  return { data };
+}
+
+const AttemptDetailSchema = z.object({
+  message: z.string().optional(),
+  data: z.object({
+    id: z.string(),
+    assignment_id: z.string(),
+    student_id: z.string(),
+    student_name: z.string().nullable().optional(),
+    student_email: z.string().nullable().optional(),
+    started_at: z.string(),
+    completed_at: z.string().nullable().optional(),
+    score: z.coerce.number().nullable().optional(),
+    max_score: z.coerce.number().nullable().optional(),
+    time_spent_seconds: z.coerce.number().nullable().optional(),
+    percentage: z.coerce.number().nullable().optional(),
+    passed: z.boolean().nullable().optional(),
+    questionReview: z.array(z.object({
+      questionId: z.string(),
+      questionText: z.string().default(''),
+      questionType: z.enum(['mcq', 'msq', 'text']).catch('mcq'),
+      topic: z.string().nullable().optional(),
+      isCorrect: z.boolean().nullable(),
+      timeSpentSeconds: z.coerce.number().default(0),
+      points: z.coerce.number().default(1),
+      explanation: z.string().nullable().optional(),
+      correctOptionIds: z.array(z.string()).default([]),
+      selectedOptionIds: z.array(z.string()).default([]),
+      textAnswer: z.string().nullable().optional(),
+    })).default([]),
+  }),
+}).passthrough();
+
+export type AdminAssignmentAttemptDetail = z.infer<typeof AttemptDetailSchema>['data'];
+
+export async function getAdminAssignmentAttemptDetail(attemptId: string): Promise<AdminAssignmentAttemptDetail | null> {
+  const [error, data] = await safeFetch(AttemptDetailSchema, `/assignments/attempts/${attemptId}`, {
+    headers: await authHeaders(false),
+    cache: 'no-store',
+  });
+  if (error) return null;
+  return data!.data;
 }

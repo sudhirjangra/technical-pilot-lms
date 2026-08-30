@@ -1,4 +1,5 @@
 import { Public } from '@/common/decorators';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { JwtRefreshGuard } from '@/common/guards/jwt-refresh.guard';
 import {
   MessageResponse,
@@ -19,7 +20,6 @@ import {
   ResendOtpDto,
   ResetPasswordDto,
   SignInUserDto,
-  SignOutAllDeviceUserDto,
   SignOutUserDto,
   SupabaseSyncDto,
 } from '@/features/auth/dto';
@@ -30,6 +30,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -148,20 +149,6 @@ export class AuthController {
   }
 
   /**
-   * Signs out the user from all devices.
-   *
-   * @param {SignOutAllDeviceUserDto} dto - Data for signing out from all devices.
-   * @returns {Promise<MessageResponse>} Response message.
-   */
-  @Post('sign-out-allDevices')
-  async signOutAllDevices(
-    @Body() dto: SignOutAllDeviceUserDto,
-  ): Promise<MessageResponse> {
-    await this.authService.signOutAllDevices(dto);
-    return { message: 'User signed out from all devices successfully' };
-  }
-
-  /**
    * Retrieves all sessions for a user.
    *
    * @param {string} userId - ID of the user.
@@ -169,7 +156,7 @@ export class AuthController {
    */
   @Get('sessions/:userId')
   async sessions(
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Req() req: any,
   ): Promise<SessionsResponse> {
     if (
@@ -189,8 +176,17 @@ export class AuthController {
    * @returns {Promise<SessionResponse>} Session details.
    */
   @Get('session/:id')
-  async session(@Param('id') id: string): Promise<SessionResponse> {
+  async session(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+  ): Promise<SessionResponse> {
     const data = await this.authService.getSession(id);
+    if (
+      data.user_id !== req.user.id &&
+      (req.user.role ?? '').toUpperCase() !== 'ADMIN'
+    ) {
+      throw new ForbiddenException('Cannot access this session');
+    }
     return { data };
   }
 
@@ -253,9 +249,10 @@ export class AuthController {
    */
   @Patch('change-password')
   async changePassword(
+    @Req() req: any,
     @Body() dto: ChangePasswordDto,
   ): Promise<MessageResponse> {
-    await this.authService.changePassword(dto);
+    await this.authService.changePassword({ ...dto, identifier: req.user.email });
     return { message: 'Password changed successfully' };
   }
 

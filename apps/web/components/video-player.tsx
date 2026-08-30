@@ -22,6 +22,8 @@ interface WatermarkPos {
 const SAVE_INTERVAL_MS = 8000;
 // Mark lesson completed when this fraction of video watched
 const COMPLETION_THRESHOLD = 0.9;
+// Minimum progress % required before manually marking as completed
+const MANUAL_COMPLETE_MIN_PROGRESS = 80;
 
 declare global {
   interface Window {
@@ -148,25 +150,26 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
   }, [lessonId]);
 
   // ── Save progress helper ─────────────────────────────────────────────────
-  const saveProgress = useCallback((posSeconds: number, completed: boolean) => {
-    const pos = Math.floor(posSeconds);
-    if (!completed && Math.abs(pos - lastSavedRef.current) < 4) return;
+  const saveProgress = useCallback((posSeconds: number, completed: boolean, force = false) => {
+    const pos = Math.max(0, Math.floor(posSeconds));
+    if (!force && !completed && Math.abs(pos - lastSavedRef.current) < 4) return;
     lastSavedRef.current = pos;
 
     const player = playerRef.current;
     const duration = player?.video?.duration ?? 0;
+    const percent = duration > 0 ? Math.min(100, Math.round((pos / duration) * 100)) : 0;
+    const finalCompleted = completed || (duration > 0 && pos >= duration * COMPLETION_THRESHOLD);
     const dto: Record<string, unknown> = {
       last_position_seconds: pos,
-      status: completed ? 'completed' : 'in_progress',
+      status: finalCompleted ? 'completed' : 'in_progress',
+      progress_percent: finalCompleted ? 100 : percent,
     };
-    if (duration > 0) {
-      dto.progress_percent = Math.min(100, Math.round((pos / duration) * 100));
-    }
 
     fetch(`/api/progress/${lessonId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
+      keepalive: true,
     }).catch(() => null);
   }, [lessonId]);
 
@@ -191,14 +194,14 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
       const pos = player.video.currentTime;
       const dur = player.video.duration;
       if (dur > 0 && pos / dur >= COMPLETION_THRESHOLD) {
-        saveProgress(pos, true);
+        saveProgress(pos, true, true);
       }
     };
     player.video.addEventListener('timeupdate', onTimeUpdate);
 
     // Save on natural end
     const onEnded = () => {
-      saveProgress(player.video.currentTime, true);
+      saveProgress(player.video.currentTime, true, true);
     };
     player.video.addEventListener('ended', onEnded);
 
@@ -244,7 +247,9 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
       if (player) {
         if (isHidden) {
           player.video.pause();
-          saveProgress(player.video.currentTime, false);
+          const duration = player.video.duration || 0;
+          const shouldComplete = duration > 0 && player.video.currentTime >= duration * COMPLETION_THRESHOLD;
+          saveProgress(player.video.currentTime, shouldComplete, true);
         }
         // Don't auto-play on return — user should resume manually
       }
@@ -281,11 +286,38 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
 
   // ── Save on unmount ───────────────────────────────────────────────────────
   useEffect(() => {
-    return () => {
+    const handleBeforeUnload = () => {
       const player = playerRef.current;
       if (player) {
+        const duration = player.video.duration || 0;
         const pos = player.video.currentTime;
-        if (pos > 0) saveProgress(pos, false);
+        const shouldComplete = duration > 0 && pos >= duration * COMPLETION_THRESHOLD;
+        saveProgress(pos, shouldComplete, true);
+      }
+    };
+
+    const handlePageHide = () => {
+      const player = playerRef.current;
+      if (player) {
+        const duration = player.video.duration || 0;
+        const pos = player.video.currentTime;
+        const shouldComplete = duration > 0 && pos >= duration * COMPLETION_THRESHOLD;
+        saveProgress(pos, shouldComplete, true);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      const player = playerRef.current;
+      if (player) {
+        const duration = player.video.duration || 0;
+        const pos = player.video.currentTime;
+        const shouldComplete = duration > 0 && pos >= duration * COMPLETION_THRESHOLD;
+        saveProgress(pos, shouldComplete, true);
       }
     };
   }, [saveProgress]);

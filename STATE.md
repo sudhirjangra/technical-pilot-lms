@@ -38,6 +38,7 @@
 - Apply `009_course_materials_bucket.sql`, configure an upload-sized `FILE_MAX_SIZE`, and test video/PDF uploads with provider credentials.
 - Fixed video upload 413 handling: multipart requests no longer receive a JSON content type, and Fastify body limits now follow `FILE_MAX_SIZE`.
 - Fixed VdoCipher upload credentials: use documented `PUT /api/videos` with course/chapter folder IDs instead of unsupported `POST /api/videos`.
+- Fixed admin upload UX: file uploads now show a centered blocking loading overlay instead of inline button spinners, and the non-functional PDF watermark overlay was removed.
 
 ### Phase 1.5: Frontend Auth Error Handling (Done)
 - [x] Sign-in form handles EMAIL_NOT_CONFIRMED → redirects to /auth/confirm-email?email=...
@@ -55,6 +56,7 @@
 - [x] Fixed sign-up hang: dev SMTP fallback now uses jsonTransport (no network connection) instead of fake Ethereal credentials that caused 2-min timeout
 - [x] mail.service.ts no longer re-throws errors — emails are best-effort, failures logged only
 - [x] Fixed sign-out not deleting device: sidebar now calls removeSession (NestJS) before signOut (NextAuth) — prevents device accumulation and subsequent login failures
+- [x] Fixed sign-out-all-devices bug: sends a valid empty JSON payload with a real bearer token, and guards missing authenticated sessions before hitting the API.
 - [x] Added fetch-failure resiliency for auth flows: ipinfo lookup now fails safe, safeFetch now surfaces a friendly API-unreachable message with localhost/127.0.0.1 fallback retry, and sign-in normalizes fetch-failed AuthErrors
 - [x] Fixed reset-password OTP mismatch and security: UI now accepts 6-8 digits, schema/DTO aligned, and backend now verifies recovery OTP before allowing password change
 - [x] Improved resend-OTP errors by surfacing/logging provider error message instead of generic failure
@@ -83,12 +85,28 @@
 - [x] New `describeAxiosError()` names the failing step and includes VdoCipher's response body, so a future failure is no longer an opaque "Request failed with status code 403"
 
 ## Immediate Next Step (In Progress)
-### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering (In Progress)
+### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)
 - [x] Migration 010_msq_assignments_tests.sql written (questions now belong to test OR assignment, msq question_type, assignment_attempts/answers + option-junction tables, RLS)
 - [x] Sample import templates created: apps/web/public/templates/question-import-template.{csv,json,xlsx}
-- [ ] Apply migration 010_msq_assignments_tests.sql in Supabase
-- [ ] Backend: AssignmentsModule + TestsModule (CRUD, question/option CRUD, CSV/JSON/XLSX bulk import), lessons PDF delete endpoint
+- [x] Backend: AssignmentsModule + TestsModule (CRUD, question/option CRUD, CSV/JSON/XLSX bulk import), lessons PDF delete endpoint
 - [x] Frontend: admin course-detail UI — chapter/lesson up/down reorder buttons, publish/draft toggle buttons, video/pdf delete+reupload, assignment/test question builder + import UI
+- [x] Imported bulk questions append below existing questions instead of replacing them, while preserving question_number and sort_order offsets.
+- [x] Admin question editor accepts manual question numbers and no longer exposes reorder arrows as the ordering mechanism.
+- [x] Student lesson view includes prev/next lesson navigation and a manual completion action for video/PDF lessons.
+- [x] Video progress now persists at completion threshold, on natural end, and on unload/visibility hide so last_position_seconds is not lost.
+- [x] Mark as completed only when video progress is above 80% (manual action); auto-complete at 90% (unobtrusive)
+- [x] Prevent downgrade of completed status on re-watch (if already completed, toggle button is disabled)
+- [x] Chapter progression: first chapter always unlocked; other chapters unlock only when ALL lessons in previous chapter are completed
+- [x] Lock icon + disabled state + informative message shown for locked chapters
+- [x] PDF viewer with "CONTENT RESERVED" watermark (2x per page, light visible, rotated -45 degrees)
+- [x] PDF access requires active enrollment verification (server-side)
+- [x] Signed PDF URLs expire after 1 hour
+- [x] Responsive admin portal: mobile drawer sidebar (Sheet component), desktop fixed sidebar, proper flex layout
+- [x] Loading spinners for all async operations (OrbitalSpinner SVG component, 3 rotating orbits)
+- [x] Device limit flow: "Sign out all devices" button on device limit error using Supabase global signOut
+- [x] Type check passes: web (tsc --noEmit), api (nest build)
+- [x] Fixed student access to past attempts: the student detail route now queries attempt rows by both id and student_id instead of reusing the admin-only detail lookup, which was returning 404 even for valid student attempts.
+- [x] Added regression tests covering student-owned assignment/test attempt retrieval.
 
 ### Previously queued
 - Apply migration 008_profile_details.sql in Supabase

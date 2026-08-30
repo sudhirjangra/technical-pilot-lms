@@ -1,5 +1,4 @@
 import { auth } from '@/auth';
-import SessionAllLogout from '@/components/auth/session-all-logout';
 import SessionOtherLogout from '@/components/auth/session-other-logout';
 import { getAuthSessions } from '@/server/auth.server';
 import { Badge } from '@repo/shadcn/badge';
@@ -26,10 +25,6 @@ const SessionsSettings = async () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex justify-end">
-            <SessionAllLogout />
-          </div>
-
           <div className="space-y-4">
             {sessions
               .sort(
