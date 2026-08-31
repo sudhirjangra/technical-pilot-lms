@@ -71,7 +71,8 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
 
   let res: unknown;
   try {
-    res = await response.json();
+    const text = await response.text();
+    res = text.length > 0 ? JSON.parse(text) : {};
   } catch {
     return ['Invalid JSON response', null];
   }

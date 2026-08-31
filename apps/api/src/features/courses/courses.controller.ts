@@ -1,4 +1,4 @@
-import { Public, Roles, User } from '@/common/decorators';
+import { Permissions, Public, Roles, User } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -9,7 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import type { FastifyRequest } from 'fastify';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
@@ -17,14 +20,16 @@ import { CreateCourseDto, UpdateCourseDto } from './dto';
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post()
   async create(@Body() dto: CreateCourseDto, @User() user: { id: string }) {
     const data = await this.coursesService.create(dto, user.id);
     return { message: 'Course created successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:read')
   @Get('admin')
   async findAll(
     @Query('status') status?: string,
@@ -55,7 +60,8 @@ export class CoursesController {
     return { message: 'Course fetched successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -65,10 +71,21 @@ export class CoursesController {
     return { message: 'Course updated successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.coursesService.remove(id);
     return { message: 'Course deleted successfully' };
+  }
+
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post(':id/thumbnail')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } }, required: ['file'] } })
+  async uploadThumbnail(@Param('id', ParseUUIDPipe) id: string, @Req() request: FastifyRequest) {
+    const data = await this.coursesService.uploadThumbnail(id, request);
+    return { message: 'Thumbnail uploaded successfully', data };
   }
 }

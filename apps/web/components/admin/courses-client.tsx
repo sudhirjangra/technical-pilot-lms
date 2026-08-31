@@ -6,8 +6,8 @@ import {
   createCourse,
   deleteCourse,
   updateAdminCourse,
+  uploadCourseThumbnail,
 } from '@/server/admin/courses.server';
-import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import {
@@ -37,7 +37,7 @@ import {
   TableRow,
 } from '@repo/shadcn/table';
 import { Textarea } from '@repo/shadcn/textarea';
-import { slugify } from '@repo/utils';
+import { sanitizeSlugInput, slugify } from '@repo/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -121,6 +121,7 @@ export function CoursesClient({
   const [draft, setDraft] = useState<CourseDraft>(emptyDraft());
   const [slugTouched, setSlugTouched] = useState(false);
   const [statusPendingId, setStatusPendingId] = useState<string | null>(null);
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
   const filtered = useMemo(() => {
     const query = debouncedSearch.trim().toLowerCase();
@@ -255,6 +256,22 @@ export function CoursesClient({
   const handleSort = (key: CourseSortKey) =>
     setSort((current) => toggleSort(current, key));
 
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !editingId) return;
+    setThumbnailUploading(true);
+    const result = await uploadCourseThumbnail(editingId, file);
+    setThumbnailUploading(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    setDraft((current) => ({ ...current, thumbnail_url: result.data.thumbnail_url ?? '' }));
+    toast.success('Thumbnail updated');
+    router.refresh();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -328,7 +345,7 @@ export function CoursesClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto px-4 sm:px-6">
+          <div className="w-full overflow-x-auto px-6 sm:px-8">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
@@ -432,7 +449,7 @@ export function CoursesClient({
               </TableBody>
             </Table>
           </div>
-          <div className="px-3 pb-3 sm:px-4">
+          <div className="px-5 pb-3 sm:px-6">
             <TablePagination
               page={pagination.page}
               pageCount={pagination.pageCount}
@@ -488,7 +505,7 @@ export function CoursesClient({
                   setSlugTouched(true);
                   setDraft((current) => ({
                     ...current,
-                    slug: slugify(event.target.value),
+                    slug: sanitizeSlugInput(event.target.value),
                   }));
                 }}
               />
@@ -572,6 +589,32 @@ export function CoursesClient({
                   setDraft((current) => ({ ...current, description: event.target.value }))
                 }
               />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="course-thumbnail">Thumbnail</Label>
+              {editingId ? (
+                <div className="flex items-center gap-3">
+                  {draft.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.thumbnail_url}
+                      alt="Course thumbnail"
+                      className="size-14 rounded-md border object-cover"
+                    />
+                  ) : null}
+                  <Input
+                    id="course-thumbnail"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={thumbnailUploading}
+                    onChange={handleThumbnailUpload}
+                  />
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Save the course first, then upload a thumbnail image.
+                </p>
+              )}
             </div>
             <DialogFooter className="sm:col-span-2">
               <Button

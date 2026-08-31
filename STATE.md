@@ -2,6 +2,26 @@
 
 ## Completed
 
+### Phase 4: Admin Portal Bug Sweep + Sub-Admin RBAC + Media Storage (Done)
+- [x] Categories/courses slug: backend regex now allows underscore (`[-_]`); frontend live-typing no longer strips trailing hyphen/underscore mid-keystroke (new `sanitizeSlugInput`, `slugify` only runs on submit/blur)
+- [x] Categories/courses/enrollments admin tables: increased horizontal padding
+- [x] Removed dead unused `Badge` import from courses-client (no duplicate Published badge existed; status is dropdown-only)
+- [x] Fixed systemic bug: `safeFetch` threw "Invalid JSON response" on any empty-body 200/204 response (e.g. DELETE endpoints), making successful deletes look like failures — now tolerates empty bodies
+- [x] Doubt-session slot delete now returns `{ success: true }` body explicitly
+- [x] Verified already-working: admin→/admin redirect + /dashboard block (middleware + home page), lesson drag-and-drop reorder (already implemented via `@repo/shadcn` Sortable), question editor inline expand-in-place (already correct), manual grading endpoints for assignments/tests (already implemented)
+- [x] Sub-Admin RBAC: added missing `013_sub_admin_permissions.sql` migration; registered previously-unused `PermissionGuard` as a global `APP_GUARD`; widened `@Roles` to include `SUB_ADMIN` + added `@Permissions(...)` on courses, students (users), enrollments, doubt-sessions, and assignment/test grading endpoints
+- [x] Media storage: new public `course-media` Supabase Storage bucket (`014_course_media_bucket.sql`) for course/category thumbnails; added `uploadThumbnail` endpoints + services; admin UI now uploads image files (png/jpeg/webp) instead of external URLs
+- [x] Enrollment manual-enrollment modal: enhanced with iOS-style translucent glass panel (backdrop-blur + translucent background) in addition to the existing blurred overlay
+- [x] Fixed question-bank bulk import silently dropping the `topic`/subject column: `question-import.util.ts` never parsed a `topic` cell even though the DB, question builder UI, and analytics breakdown all support it — added parsing + propagated to CSV/JSON/XLSX templates
+- [x] Enrollment status labels clarified ("Access revoked" instead of "Expired") for course-access disable/restore
+- [x] Students list: added client-side "Export CSV" button (name, email, role, status, joined)
+
+### Next Step
+- Apply migrations `013_sub_admin_permissions.sql` and `014_course_media_bucket.sql` in Supabase
+- Wire granular `@Permissions` checks onto remaining assignment/test CRUD routes (currently only grading is permission-gated; others are role-gated to ADMIN+SUB_ADMIN without a fine-grained slug)
+- Build out full `/admin/students` payments + login/device-activity tabs (devices table exists but isn't surfaced in student detail yet)
+- Excel/CSV export server endpoint (current export is client-side CSV only, no XLSX)
+
 ### Phase 1: Auth + Profile + Cleanup (Done)
 - [x] Full auth flow: sign-up, sign-in, sign-out, confirm-email, forgot/reset password, change password, delete account
 - [x] Device tracking (max 2 devices) with sessions management UI

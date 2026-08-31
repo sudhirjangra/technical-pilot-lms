@@ -20,7 +20,7 @@ export class CreateCourseDto {
   @ApiProperty()
   @IsString()
   @MaxLength(220)
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug must be kebab-case' })
+  @Matches(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers, hyphens and underscores' })
   slug: string;
 
   @ApiPropertyOptional()
@@ -67,7 +67,7 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsString()
   @MaxLength(220)
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug must be kebab-case' })
+  @Matches(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers, hyphens and underscores' })
   slug?: string;
 
   @ApiPropertyOptional()

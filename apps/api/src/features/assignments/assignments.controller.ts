@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -28,21 +28,21 @@ import { AssignmentsService } from './assignments.service';
 export class AssignmentsController {
   constructor(private readonly assignmentsService: AssignmentsService) {}
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Post()
   async create(@Body() dto: CreateAssignmentDto) {
     const data = await this.assignmentsService.create(dto);
     return { message: 'Assignment created', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Get('lesson/:lessonId')
   async findByLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
     const data = await this.assignmentsService.findByLesson(lessonId);
     return { message: 'Assignment fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -52,14 +52,14 @@ export class AssignmentsController {
     return { message: 'Assignment updated', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.assignmentsService.remove(id);
     return { message: 'Assignment deleted' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Post(':id/questions')
   async createQuestion(
     @Param('id', ParseUUIDPipe) id: string,
@@ -69,7 +69,7 @@ export class AssignmentsController {
     return { message: 'Question created', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Patch('questions/:questionId')
   async updateQuestion(
     @Param('questionId', ParseUUIDPipe) questionId: string,
@@ -79,7 +79,7 @@ export class AssignmentsController {
     return { message: 'Question updated', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Delete('questions/:questionId')
   async removeQuestion(
     @Param('questionId', ParseUUIDPipe) questionId: string,
@@ -88,7 +88,7 @@ export class AssignmentsController {
     return { message: 'Question deleted' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Patch(':id/questions/reorder')
   async reorderQuestions(
     @Param('id', ParseUUIDPipe) id: string,
@@ -143,21 +143,22 @@ export class AssignmentsController {
 
   // ── Admin analytics routes ────────────────────────────────────────────────
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Get(':id/attempts')
   async getAssignmentAttempts(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.assignmentsService.getAssignmentAttempts(id);
     return { message: 'Attempts fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Get('attempts/:attemptId')
   async getAssignmentAttemptDetail(@Param('attemptId', ParseUUIDPipe) attemptId: string) {
     const data = await this.assignmentsService.getAssignmentAttemptDetail(attemptId);
     return { message: 'Attempt detail fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('assignments:grade')
   @Patch('attempts/:attemptId/grade')
   async gradeAttempt(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
@@ -178,7 +179,7 @@ export class AssignmentsController {
     return { message: 'Attempt detail fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
   @Post(':id/import')
   @ApiConsumes('multipart/form-data')
   @ApiBody({

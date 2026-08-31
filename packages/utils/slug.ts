@@ -12,3 +12,17 @@ export function slugify(value: string): string {
     .replace(/[^a-z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/**
+ * Sanitizes raw slug input while typing: lowercases and strips disallowed
+ * characters, but preserves trailing/consecutive hyphens and underscores so
+ * they aren't stripped mid-keystroke. Use `slugify` for final normalization.
+ */
+export function sanitizeSlugInput(value: string): string {
+  return value
+    .toString()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]/g, '');
+}

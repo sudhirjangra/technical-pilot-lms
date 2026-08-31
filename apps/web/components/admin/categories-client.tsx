@@ -5,6 +5,7 @@ import {
   createCategory,
   deleteCategory,
   updateCategory,
+  uploadCategoryThumbnail,
 } from '@/server/admin/categories.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
@@ -37,7 +38,7 @@ import {
   TableRow,
 } from '@repo/shadcn/table';
 import { Textarea } from '@repo/shadcn/textarea';
-import { slugify } from '@repo/utils';
+import { sanitizeSlugInput, slugify } from '@repo/utils';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
@@ -61,6 +62,7 @@ type CategoryDraft = {
   description: string;
   sort_order: string;
   is_active: boolean;
+  thumbnail_url: string;
 };
 
 const emptyDraft = (): CategoryDraft => ({
@@ -69,6 +71,7 @@ const emptyDraft = (): CategoryDraft => ({
   description: '',
   sort_order: '0',
   is_active: true,
+  thumbnail_url: '',
 });
 
 const draftFromCategory = (category: Category): CategoryDraft => ({
@@ -77,6 +80,7 @@ const draftFromCategory = (category: Category): CategoryDraft => ({
   description: category.description ?? '',
   sort_order: String(category.sort_order ?? 0),
   is_active: category.is_active !== false,
+  thumbnail_url: category.thumbnail_url ?? '',
 });
 
 const PAGE_SIZE = 10;
@@ -97,6 +101,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
   const [slugTouched, setSlugTouched] = useState(false);
   const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
   const [optimisticActive, setOptimisticActive] = useState<Record<string, boolean>>({});
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
   const isActiveOf = (category: Category) =>
     optimisticActive[category.id] ?? category.is_active !== false;
@@ -210,6 +215,22 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
   const handleSort = (key: CategorySortKey) =>
     setSort((current) => toggleSort(current, key));
 
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !editingId) return;
+    setThumbnailUploading(true);
+    const result = await uploadCategoryThumbnail(editingId, file);
+    setThumbnailUploading(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    setDraft((current) => ({ ...current, thumbnail_url: result.data.thumbnail_url ?? '' }));
+    toast.success('Thumbnail updated');
+    router.refresh();
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -268,7 +289,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto px-4 sm:px-6">
+          <div className="w-full overflow-x-auto px-6 sm:px-8">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
@@ -365,7 +386,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
               </TableBody>
             </Table>
           </div>
-          <div className="px-3 pb-3 sm:px-4">
+          <div className="px-5 pb-3 sm:px-6">
             <TablePagination
               page={pagination.page}
               pageCount={pagination.pageCount}
@@ -421,7 +442,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                   setSlugTouched(true);
                   setDraft((current) => ({
                     ...current,
-                    slug: slugify(event.target.value),
+                    slug: sanitizeSlugInput(event.target.value),
                   }));
                 }}
               />
@@ -447,6 +468,32 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                 }
               />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="category-thumbnail">Thumbnail</Label>
+              {editingId ? (
+                <div className="flex items-center gap-3">
+                  {draft.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.thumbnail_url}
+                      alt="Category thumbnail"
+                      className="size-12 rounded-md border object-cover"
+                    />
+                  ) : null}
+                  <Input
+                    id="category-thumbnail"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={thumbnailUploading}
+                    onChange={handleThumbnailUpload}
+                  />
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Save the category first, then upload a thumbnail image.
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Switch
                 id="category-is-active"
@@ -457,6 +504,11 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
               />
               <Label htmlFor="category-is-active">Active</Label>
             </div>
+            <p className="text-muted-foreground text-xs">
+              Deactivating hides this category from students browsing courses. Existing courses
+              keep working and stay assigned to it — they just won&apos;t appear under this
+              category&apos;s public filter until it&apos;s reactivated.
+            </p>
             <DialogFooter>
               <Button
                 type="button"

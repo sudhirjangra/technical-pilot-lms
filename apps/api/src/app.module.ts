@@ -1,4 +1,4 @@
-import { JwtAuthGuard, RolesGuard } from '@/common/guards';
+import { JwtAuthGuard, PermissionGuard, RolesGuard } from '@/common/guards';
 import {
   LoggerModule,
   NodeMailerModule,
@@ -38,6 +38,10 @@ import { MailModule } from './features/mail/mail.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
     },
     {
       provide: APP_GUARD,

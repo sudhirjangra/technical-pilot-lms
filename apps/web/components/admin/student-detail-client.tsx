@@ -438,7 +438,7 @@ export function StudentDetailClient({
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="expired">Expired</SelectItem>
+                        <SelectItem value="expired">Access revoked</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

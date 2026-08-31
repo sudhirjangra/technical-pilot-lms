@@ -260,7 +260,7 @@ export function EnrollmentsClient({
 
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
         <DialogContent
-          className="sm:max-w-md"
+          className="border-white/20 bg-background/80 shadow-2xl backdrop-blur-2xl sm:max-w-md dark:bg-background/70"
           overlayClassName="backdrop-blur-xl bg-background/60"
         >
           <DialogHeader>
@@ -322,7 +322,7 @@ export function EnrollmentsClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto px-4 sm:px-6">
+          <div className="w-full overflow-x-auto px-6 sm:px-8">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
@@ -377,7 +377,7 @@ export function EnrollmentsClient({
               </TableBody>
             </Table>
           </div>
-          <div className="px-3 pb-3 sm:px-4">
+          <div className="px-5 pb-3 sm:px-6">
             <TablePagination
               page={page}
               pageCount={pageCount}

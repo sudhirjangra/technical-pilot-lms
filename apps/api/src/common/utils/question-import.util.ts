@@ -15,6 +15,7 @@ export type ImportedQuizQuestion = {
   question_type: QuizQuestionType;
   points: number;
   explanation?: string;
+  topic?: string;
   correct_text_answer: string | null;
   sort_order: number;
   options: QuizQuestionOptionInput[];
@@ -205,6 +206,7 @@ type ParsedRow = {
   question_type: QuizQuestionType;
   points: number;
   explanation?: string;
+  topic?: string;
   correct_text_answer: string | null;
   options: QuizQuestionOptionInput[];
 };
@@ -225,6 +227,7 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
   );
   const points = normalizePoints(readCell(row, 'points'), context);
   const explanation = normalizeOptionalText(readCell(row, 'explanation'));
+  const topic = normalizeOptionalText(readCell(row, 'topic'));
 
   if (questionType === 'text') {
     for (const letter of OPTION_LETTERS) {
@@ -241,6 +244,7 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
       question_type: questionType,
       points,
       explanation,
+      topic,
       correct_text_answer: normalizeRequiredText(
         readCell(row, 'answer'),
         'answer',
@@ -256,6 +260,7 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
     question_type: questionType,
     points,
     explanation,
+    topic,
     correct_text_answer: null,
     options: buildOptions(row, questionType, context),
   };
@@ -291,6 +296,7 @@ function finalizeQuestions(
       question_type: question.question_type,
       points: question.points,
       explanation: question.explanation,
+      topic: question.topic,
       correct_text_answer: question.correct_text_answer,
       sort_order: number,
       options: question.options,

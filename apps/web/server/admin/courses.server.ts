@@ -130,3 +130,24 @@ export async function deleteCourse(id: string) {
   revalidatePath('/admin/courses');
   return { success: true };
 }
+
+export async function uploadCourseThumbnail(id: string, file: File) {
+  const session = await auth();
+  const formData = new FormData();
+  formData.append('file', file);
+  const [error, data] = await safeFetch(CourseResponseSchema, `/courses/${id}/thumbnail`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+    },
+    cache: 'no-store',
+    body: formData,
+  });
+  if (error) {
+    console.error('uploadCourseThumbnail failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/courses');
+  revalidatePath(`/admin/courses/${id}`);
+  return { data: data!.data };
+}

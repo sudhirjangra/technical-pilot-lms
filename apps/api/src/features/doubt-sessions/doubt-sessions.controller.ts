@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -28,19 +28,22 @@ export class DoubtSessionsController {
   // ── Admin endpoints ──
 
   @Post('slots')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   createSlot(@Body() dto: CreateSlotDto, @Req() req: { user: { id: string } }) {
     return this.service.createSlot(dto, req.user.id);
   }
 
   @Get('slots')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   getSlots(@Query('date') date?: string, @Query('status') status?: string) {
     return this.service.getSlots({ date, status });
   }
 
   @Patch('slots/:id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   updateSlot(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSlotDto,
@@ -49,19 +52,22 @@ export class DoubtSessionsController {
   }
 
   @Delete('slots/:id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   deleteSlot(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.deleteSlot(id);
   }
 
   @Get('slots/:id/bookings')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   getSlotBookings(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.getSlotBookings(id);
   }
 
   @Patch('bookings/:id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('doubt_sessions:manage')
   updateBooking(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBookingDto,

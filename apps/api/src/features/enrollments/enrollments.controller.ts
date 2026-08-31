@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -25,14 +25,16 @@ export class EnrollmentsController {
 
   /** Admin: manually enroll a student */
   @Post()
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('enrollments:write')
   create(@Body() dto: CreateEnrollmentDto) {
     return this.enrollmentsService.create(dto);
   }
 
   /** Admin: browse all enrollments with filters + pagination */
   @Get()
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('enrollments:read')
   findAll(@Query() query: ListEnrollmentsQueryDto) {
     return this.enrollmentsService.findAll(query);
   }

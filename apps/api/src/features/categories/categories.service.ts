@@ -6,7 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import type { FastifyRequest } from 'fastify';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
+
+type MultipartRequest = FastifyRequest & {
+  file: () => Promise<{ mimetype: string; toBuffer: () => Promise<Buffer> } | undefined>;
+};
 
 @Injectable()
 export class CategoriesService {
@@ -74,5 +79,39 @@ export class CategoriesService {
       .delete()
       .eq('id', id);
     if (error) throw new BadRequestException(error.message);
+  }
+
+  async uploadThumbnail(id: string, request: FastifyRequest) {
+    const { data: category } = await this.supabase
+      .from('categories')
+      .select('id')
+      .eq('id', id)
+      .single();
+    if (!category) throw new NotFoundException('Category not found');
+
+    const part = await (request as MultipartRequest).file();
+    if (!part || !['image/png', 'image/jpeg', 'image/webp'].includes(part.mimetype))
+      throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
+
+    const ext = part.mimetype.split('/')[1];
+    const filePath = `categories/${id}/thumbnail.${ext}`;
+    const buffer = await part.toBuffer();
+    const { error: uploadError } = await this.supabase.storage
+      .from('course-media')
+      .upload(filePath, buffer, { contentType: part.mimetype, upsert: true });
+    if (uploadError) throw new BadRequestException(uploadError.message);
+
+    const { data: publicUrlData } = this.supabase.storage
+      .from('course-media')
+      .getPublicUrl(filePath);
+
+    const { data, error: updateError } = await this.supabase
+      .from('categories')
+      .update({ thumbnail_url: publicUrlData.publicUrl })
+      .eq('id', id)
+      .select()
+      .single();
+    if (updateError) throw new BadRequestException(updateError.message);
+    return data;
   }
 }

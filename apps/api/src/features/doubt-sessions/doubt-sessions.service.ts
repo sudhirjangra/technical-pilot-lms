@@ -82,6 +82,7 @@ export class DoubtSessionsService {
       .delete()
       .eq('id', id);
     if (error) throw new BadRequestException(error.message);
+    return { success: true };
   }
 
   async bookSlot(dto: BookSlotDto, studentId: string) {

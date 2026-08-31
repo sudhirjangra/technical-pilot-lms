@@ -19,7 +19,7 @@ export class CreateCategoryDto {
   @ApiProperty()
   @IsString()
   @MaxLength(120)
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug must be kebab-case' })
+  @Matches(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers, hyphens and underscores' })
   slug: string;
 
   @ApiPropertyOptional()
@@ -56,7 +56,7 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug must be kebab-case' })
+  @Matches(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers, hyphens and underscores' })
   slug?: string;
 
   @ApiPropertyOptional()

@@ -119,3 +119,23 @@ export async function deleteCategory(id: string) {
   revalidatePath('/admin/categories');
   return { success: true };
 }
+
+export async function uploadCategoryThumbnail(id: string, file: File) {
+  const session = await auth();
+  const formData = new FormData();
+  formData.append('file', file);
+  const [error, data] = await safeFetch(CategoryResponseSchema, `/categories/${id}/thumbnail`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+    },
+    cache: 'no-store',
+    body: formData,
+  });
+  if (error) {
+    console.error('uploadCategoryThumbnail failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/categories');
+  return { data: data!.data };
+}

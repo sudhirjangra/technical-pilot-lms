@@ -2,6 +2,7 @@
 
 import { AdminUser } from '@/server/admin/users.server';
 import { Badge } from '@repo/shadcn/badge';
+import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import {
   Select,
@@ -87,6 +88,30 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
   const handleSort = (key: UserSortKey) =>
     setSort((current) => toggleSort(current, key));
 
+  const escapeCsvCell = (value: string) =>
+    /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+
+  const handleExportCsv = () => {
+    const header = ['Name', 'Email', 'Role', 'Status', 'Joined'];
+    const rows = filtered.map((user) => [
+      user.full_name ?? '',
+      user.email,
+      user.role,
+      user.is_active !== false ? 'Active' : 'Inactive',
+      new Date(user.created_at).toISOString(),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => escapeCsvCell(String(cell))).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -94,6 +119,9 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
           <h1 className="text-xl font-semibold sm:text-2xl">Students &amp; Users</h1>
           <p className="text-muted-foreground text-xs">{users.length} total</p>
         </div>
+        <Button size="sm" variant="outline" onClick={handleExportCsv}>
+          Export CSV
+        </Button>
       </div>
 
       <Card className="gap-3 py-3">
