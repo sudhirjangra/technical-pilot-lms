@@ -64,7 +64,7 @@ export function DashboardClient({
       </div>
 
       {/* My Courses */}
-      <Card>
+      <Card className="water-surface">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-base font-semibold">
             My Courses ({enrollments.length})
@@ -91,7 +91,7 @@ export function DashboardClient({
                   href={`/dashboard/courses/${en.course_id}`}
                   className="block"
                 >
-                  <Card className="h-full hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
+                  <Card className="water-surface h-full transition-transform duration-300 hover:-translate-y-1 hover:border-primary/40 cursor-pointer">
                     <CardContent className="pt-5">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h3 className="font-semibold text-sm leading-snug line-clamp-2 flex-1">

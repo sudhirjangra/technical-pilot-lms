@@ -996,6 +996,23 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
 
   // ── Start test ──────────────────────────────────────────────────────────────
 
+  async function markLessonCompleteIfPassed(
+    submitResult: SubmitResult | AssignmentSubmitResult,
+  ) {
+    if (!lessonId) return;
+    if (!('passed' in submitResult) || !submitResult.passed) return;
+
+    try {
+      await fetch(`/api/progress/${lessonId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed', progress_percent: 100 }),
+      });
+    } catch {
+      // swallow: progress sync is best effort, but the view should still show result.
+    }
+  }
+
   async function handleStart() {
     if (!test) return;
     setStarting(true);
@@ -1068,7 +1085,9 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
       setPhase('error');
       return;
     }
-    setResult(res.data);
+    const nextResult = res.data;
+    setResult(nextResult);
+    void markLessonCompleteIfPassed(nextResult);
     // Push a summary of this new attempt to allAttempts
     if (attempt) {
       const newSummary: AttemptSummary = {

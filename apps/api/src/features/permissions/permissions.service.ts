@@ -36,7 +36,7 @@ export class PermissionsService {
       throw new BadRequestException('User must have sub_admin role');
     }
 
-    const { data, error } = await this.supabase
+    const { error } = await this.supabase
       .from('sub_admin_permissions')
       .upsert(
         {
@@ -45,11 +45,9 @@ export class PermissionsService {
           granted_by: grantedBy,
         },
         { onConflict: 'user_id' },
-      )
-      .select('*')
-      .single();
+      );
     if (error) throw new BadRequestException(error.message);
-    return data;
+    return { success: true };
   }
 
   async getPermissions(userId: string): Promise<string[]> {
@@ -90,6 +88,7 @@ export class PermissionsService {
       .delete()
       .eq('user_id', userId);
     if (error) throw new BadRequestException(error.message);
+    return { success: true };
   }
 
   async promoteToSubAdmin(userId: string) {
@@ -98,6 +97,7 @@ export class PermissionsService {
       .update({ role: 'sub_admin' })
       .eq('id', userId);
     if (error) throw new BadRequestException(error.message);
+    return { success: true };
   }
 
   async demoteToStudent(userId: string) {
@@ -110,5 +110,6 @@ export class PermissionsService {
       .update({ role: 'student' })
       .eq('id', userId);
     if (error) throw new BadRequestException(error.message);
+    return { success: true };
   }
 }

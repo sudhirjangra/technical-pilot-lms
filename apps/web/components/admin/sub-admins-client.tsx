@@ -81,7 +81,14 @@ export function SubAdminsClient({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Sub-Admin Management</h1>
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">Sub-Admin Management</h1>
+        <p className="text-sm text-muted-foreground">
+          Sub-admins can manage enrollment, course content, doubt sessions, and student records
+          within the permissions assigned below. They cannot change platform-wide roles, billing,
+          or global admin settings unless an administrator explicitly grants those permissions.
+        </p>
+      </div>
 
       <Card>
         <CardHeader>

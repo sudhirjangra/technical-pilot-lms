@@ -6,6 +6,7 @@ import {
   ThrottleModule,
 } from '@/common/modules';
 import { validateEnv } from '@/common/utils';
+import { AnalyticsModule } from '@/features/analytics/analytics.module';
 import { AssignmentsModule } from '@/features/assignments/assignments.module';
 import { CategoriesModule } from '@/features/categories/categories.module';
 import { ChaptersModule } from '@/features/chapters/chapters.module';
@@ -60,6 +61,7 @@ import { MailModule } from './features/mail/mail.module';
     NodeMailerModule,
     LoggerModule,
     ThrottleModule,
+    AnalyticsModule,
     AssignmentsModule,
     UsersModule,
     AuthModule,

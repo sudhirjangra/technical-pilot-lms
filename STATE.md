@@ -105,6 +105,17 @@
 - [x] New `describeAxiosError()` names the failing step and includes VdoCipher's response body, so a future failure is no longer an opaque "Request failed with status code 403"
 
 ## Immediate Next Step (In Progress)
+### Requested Student/Admin UX Corrections (In Progress)
+- [x] Applied shared responsive liquid-glass surfaces, cursor-reactive ambient motion, and blurred modal/sheet backdrops across auth, student dashboard, My Courses, and admin routes.
+- [x] Removed Dashboard from the student sidebar; `/dashboard` now redirects to `/dashboard/courses`.
+- [x] My Courses now uses the correctly spelled `/dashboard/courses` route and library view; removed the legacy `/cources` routes.
+- [x] Admin sidebar now signs out instead of linking back to the site.
+- [x] Doubt-session DELETE no longer sends an empty JSON request body.
+- [x] Admin enrollment rows now include a View dialog with ordered chapter/lesson progress and PDF completion state.
+- [x] Admin student progress is grouped by course, chapter, and lesson hierarchy.
+- [x] Added student-scoped assignment/test attempt history and on-demand question analytics inside the enrollment progress dialog, including attempt timing, score/pass bars, marks, correctness, answers, and per-question time.
+- [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.
+
 ### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)
 - [x] Migration 010_msq_assignments_tests.sql written (questions now belong to test OR assignment, msq question_type, assignment_attempts/answers + option-junction tables, RLS)
 - [x] Sample import templates created: apps/web/public/templates/question-import-template.{csv,json,xlsx}

@@ -127,6 +127,78 @@ export async function getCourseEnrollments(courseId: string): Promise<Enrollment
   return data!.data;
 }
 
+const CourseProgressSchema = z
+  .object({
+    chapters: z.array(z.object({
+      id: z.string(),
+      title: z.string().nullable().optional(),
+      sort_order: z.coerce.number().default(0),
+      lessons: z.array(z.object({
+        id: z.string(),
+        title: z.string().nullable().optional(),
+        sort_order: z.coerce.number().default(0),
+        lesson_type: z.string().nullable().optional(),
+        assignments: z.array(z.object({
+          id: z.string(),
+          title: z.string().nullable().optional(),
+          due_days_after_start: z.coerce.number().nullable().optional(),
+        }).passthrough()).default([]),
+        tests: z.array(z.object({
+          id: z.string(),
+          title: z.string().nullable().optional(),
+          passing_score_percent: z.coerce.number().nullable().optional(),
+        }).passthrough()).default([]),
+        progress: z.object({
+          status: z.string().nullable().optional(),
+          progress_percent: z.coerce.number().nullable().optional(),
+        }).nullable().optional(),
+      }).passthrough()).default([]),
+    }).passthrough()).default([]),
+    overall_percent: z.coerce.number().default(0),
+  })
+  .passthrough();
+
+export type AdminCourseProgress = z.infer<typeof CourseProgressSchema>;
+
+export async function getStudentCourseProgress(courseId: string, studentId: string) {
+  const [error, data] = await safeFetch(
+    CourseProgressSchema,
+    `/progress/course/${courseId}/student/${studentId}`,
+    { headers: await authHeaders(false), cache: 'no-store' },
+  );
+  if (error) return null;
+  return data!;
+}
+
+const AssessmentAttemptSchema = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  student_name: z.string().nullable().optional(),
+  student_email: z.string().nullable().optional(),
+  started_at: z.string(),
+  completed_at: z.string().nullable().optional(),
+  score: z.coerce.number().nullable().optional(),
+  max_score: z.coerce.number().nullable().optional(),
+  time_spent_seconds: z.coerce.number().nullable().optional(),
+  percentage: z.coerce.number().nullable().optional(),
+  passed: z.boolean().nullable().optional(),
+}).passthrough();
+
+export type AssessmentAttempt = z.infer<typeof AssessmentAttemptSchema>;
+
+export async function getAssessmentAttempts(
+  assessmentId: string,
+  type: 'assignment' | 'test',
+): Promise<AssessmentAttempt[]> {
+  const [error, data] = await safeFetch(
+    z.object({ data: z.array(AssessmentAttemptSchema) }).passthrough(),
+    `/${type === 'assignment' ? 'assignments' : 'tests'}/${assessmentId}/attempts`,
+    { headers: await authHeaders(false), cache: 'no-store' },
+  );
+  if (error) return [];
+  return data!.data;
+}
+
 export async function createEnrollment(studentId: string, courseId: string) {
   const [error, data] = await safeFetch(
     z.object({ data: EnrollmentSchema.nullable().optional() }).passthrough(),

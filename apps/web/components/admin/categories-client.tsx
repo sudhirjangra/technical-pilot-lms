@@ -438,6 +438,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                 value={draft.slug}
                 required
                 placeholder="slug-like-this"
+                inputMode="text"
                 onChange={(event) => {
                   setSlugTouched(true);
                   setDraft((current) => ({

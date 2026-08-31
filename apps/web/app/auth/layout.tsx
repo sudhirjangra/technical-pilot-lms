@@ -1,4 +1,5 @@
 import LogoIcon from '@/components/logo-icon';
+import FollowCursor from '@repo/shadcn/follow-cursor';
 import { APP_NAME } from '@repo/constants/app';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import Link from 'next/link';
@@ -6,7 +7,8 @@ import { ReactNode } from 'react';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-dvh flex flex-col bg-background">
+    <div className="auth-shell min-h-dvh flex flex-col">
+      <FollowCursor color="oklch(0.55 0.16 160 / 0.18)" />
       {/* Top nav bar - only visible on small screens */}
       <header className="flex items-center justify-between px-6 py-4 lg:hidden border-b border-border/50">
         <Link href="/" className="flex items-center gap-2">
@@ -18,7 +20,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left brand panel — hidden on mobile */}
-        <aside className="hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col relative overflow-hidden bg-primary/5 dark:bg-primary/10 border-r border-border/50">
+        <aside className="water-surface hidden lg:flex lg:w-[480px] xl:w-[520px] flex-col relative overflow-hidden rounded-none border-y-0 border-l-0 bg-primary/5 dark:bg-primary/10">
           {/* Decorative gradient blobs */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-primary/20 blur-3xl opacity-60" />

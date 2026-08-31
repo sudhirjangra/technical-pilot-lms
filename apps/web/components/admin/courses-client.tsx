@@ -429,6 +429,16 @@ export function CoursesClient({
                           size="sm"
                           variant="outline"
                           className="h-11 sm:h-8"
+                          asChild
+                        >
+                          <Link href={`/admin/courses/${course.id}/analytics`}>
+                            Analytics
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-11 sm:h-8"
                           onClick={() => openEdit(course)}
                         >
                           Edit
@@ -501,6 +511,7 @@ export function CoursesClient({
                 value={draft.slug}
                 required
                 placeholder="slug-like-this"
+                inputMode="text"
                 onChange={(event) => {
                   setSlugTouched(true);
                   setDraft((current) => ({

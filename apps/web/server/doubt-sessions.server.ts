@@ -39,12 +39,13 @@ const BookingSchema = z.object({
 export type Slot = z.infer<typeof SlotSchema>;
 export type Booking = z.infer<typeof BookingSchema>;
 
-async function headers() {
+async function headers(includeContentType = true) {
   const session = await auth();
-  return {
-    'Content-Type': 'application/json',
+  const result: Record<string, string> = {
     Authorization: `Bearer ${session?.user?.tokens.access_token}`,
   };
+  if (includeContentType) result['Content-Type'] = 'application/json';
+  return result;
 }
 
 export async function getAdminSlots(date?: string): Promise<Slot[]> {
@@ -91,7 +92,7 @@ export async function updateSlot(id: string, payload: {
 }
 
 export async function deleteSlot(id: string) {
-  const h = await headers();
+  const h = await headers(false);
   const [error] = await safeFetch(z.any(), `/doubt-sessions/slots/${id}`, {
     method: 'DELETE', headers: h, cache: 'no-store',
   });

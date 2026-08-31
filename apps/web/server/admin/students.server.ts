@@ -117,6 +117,8 @@ const AttemptDetailSchema = z
             explanation: z.string().nullable().optional(),
             correctOptionIds: z.array(z.string()).optional(),
             selectedOptionIds: z.array(z.string()).optional(),
+            correctOptionTexts: z.array(z.string()).optional(),
+            selectedOptionTexts: z.array(z.string()).optional(),
             textAnswer: z.string().nullable().optional(),
           })
           .passthrough(),

@@ -15,8 +15,9 @@ export function slugify(value: string): string {
 
 /**
  * Sanitizes raw slug input while typing: lowercases and strips disallowed
- * characters, but preserves trailing/consecutive hyphens and underscores so
- * they aren't stripped mid-keystroke. Use `slugify` for final normalization.
+ * characters, while preserving both hyphen and underscore so editors can
+ * continue typing slug segments without the browser blocking them.
+ * Use `slugify` for final normalization before persisting.
  */
 export function sanitizeSlugInput(value: string): string {
   return value

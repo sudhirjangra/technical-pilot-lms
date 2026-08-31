@@ -4,6 +4,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -34,21 +36,25 @@ export class PermissionsController {
   }
 
   @Post()
+  @HttpCode(HttpStatus.OK)
   setPermissions(@Body() dto: SetPermissionsDto, @User() user: { id: string }) {
     return this.permissionsService.setPermissions(dto, user.id);
   }
 
   @Post(':userId/promote')
+  @HttpCode(HttpStatus.OK)
   promote(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.permissionsService.promoteToSubAdmin(userId);
   }
 
   @Post(':userId/demote')
+  @HttpCode(HttpStatus.OK)
   demote(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.permissionsService.demoteToStudent(userId);
   }
 
   @Delete(':userId')
+  @HttpCode(HttpStatus.OK)
   revoke(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.permissionsService.revokePermissions(userId);
   }

@@ -1266,6 +1266,9 @@ export function CourseDetailClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/admin/courses/${course.id}/analytics`}>Analytics</Link>
+          </Button>
           <Select
             value={course.status}
             onValueChange={(value) => handleStatusChange(value)}

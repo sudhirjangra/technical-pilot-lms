@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { getMyEnrollments } from '@/server/student/courses.server';
-import { DashboardClient } from '@/components/dashboard/dashboard-client';
+import { MyCoursesClient } from '@/components/dashboard/my-cources-client';
 import { redirect } from 'next/navigation';
 
 export default async function MyCoursesPage() {
@@ -8,5 +8,5 @@ export default async function MyCoursesPage() {
   if (!session?.user) redirect('/auth/sign-in');
 
   const enrollments = await getMyEnrollments();
-  return <DashboardClient enrollments={enrollments} user={session.user} />;
+  return <MyCoursesClient enrollments={enrollments} />;
 }

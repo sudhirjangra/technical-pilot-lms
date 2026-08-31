@@ -124,7 +124,7 @@ export class ProgressService {
     const { data: chapters } = await this.supabase
       .from('chapters')
       .select(
-        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, due_days_after_start))',
+        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start), tests(id, title, passing_score_percent))',
       )
       .eq('course_id', courseId)
       .eq('is_published', true)

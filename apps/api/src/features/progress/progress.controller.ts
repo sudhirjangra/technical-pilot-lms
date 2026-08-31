@@ -55,6 +55,16 @@ export class ProgressController {
     return this.progressService.getCourseProgress(courseId, req.user.id);
   }
 
+  /** Admin: get a student's progress for a course */
+  @Get('course/:courseId/student/:studentId')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  getStudentCourseProgress(
+    @Param('courseId', ParseUUIDPipe) courseId: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
+    return this.progressService.getCourseProgress(courseId, studentId);
+  }
+
   /** Admin: get a student's full progress */
   @Get('student/:studentId')
   @Roles('ADMIN')

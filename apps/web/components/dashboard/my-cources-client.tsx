@@ -29,7 +29,7 @@ function CourseThumbnail({ title, thumbnail }: { title: string; thumbnail: strin
   );
 }
 
-export function MyCourcesClient({ enrollments }: { enrollments: StudentEnrollment[] }) {
+export function MyCoursesClient({ enrollments }: { enrollments: StudentEnrollment[] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | CourseStatus>('all');
   const [sort, setSort] = useState<'recent' | 'oldest' | 'name'>('recent');

@@ -6,6 +6,7 @@ import { Button } from '@repo/shadcn/button';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@repo/shadcn/sidebar';
 import { Bell } from '@repo/shadcn/lucide';
+import FollowCursor from '@repo/shadcn/follow-cursor';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -28,12 +29,13 @@ export default async function DashboardLayout({
 
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider defaultOpen={defaultOpen} className="dashboard-shell">
+      <FollowCursor color="oklch(0.55 0.16 160 / 0.16)" />
       <DashboardSidebar />
 
       <SidebarInset className="flex flex-col min-h-dvh overflow-x-hidden">
         {/* ── Topbar ── */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md">
+        <header className="water-surface sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 rounded-none border-x-0 border-t-0 bg-background/70 px-4 backdrop-blur-md">
           {/* Sidebar toggle (mobile + desktop) */}
           <SidebarTrigger className="text-muted-foreground hover:text-foreground -ml-1" />
 

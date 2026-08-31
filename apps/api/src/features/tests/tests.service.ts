@@ -395,7 +395,7 @@ export class TestsService {
     const questionIds = (questions ?? []).map((q) => q.id);
     const { data: allOptions } = await this.supabase
       .from('question_options')
-      .select('id, question_id, is_correct')
+      .select('id, question_id, option_text, is_correct')
       .in('question_id', questionIds);
 
     const correctOptionsMap = new Map<string, Set<string>>();
@@ -731,12 +731,15 @@ export class TestsService {
       .select('id, question_id, is_correct')
       .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
 
+    const optionTextMap = new Map<string, string>();
     const correctOptionsMap = new Map<string, string[]>();
     for (const opt of allOptions ?? []) {
-      if (opt.is_correct) {
-        const current = correctOptionsMap.get(opt.question_id) ?? [];
-        current.push(opt.id);
-        correctOptionsMap.set(opt.question_id, current);
+      const option = opt as unknown as { id: string; question_id: string; option_text: string; is_correct: boolean };
+      optionTextMap.set(option.id, option.option_text);
+      if (option.is_correct) {
+        const current = correctOptionsMap.get(option.question_id) ?? [];
+        current.push(option.id);
+        correctOptionsMap.set(option.question_id, current);
       }
     }
 
@@ -754,9 +757,12 @@ export class TestsService {
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: answer?.time_spent_seconds ?? 0,
         points: q.points ?? 1,
+        pointsEarned: answer?.is_correct === true ? q.points ?? 1 : 0,
         explanation: (q as { explanation?: string | null }).explanation ?? null,
         correctOptionIds,
         selectedOptionIds,
+        correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) ?? id),
         textAnswer: answer?.text_answer ?? null,
       };
     });

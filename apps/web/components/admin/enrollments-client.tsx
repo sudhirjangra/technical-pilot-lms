@@ -6,7 +6,12 @@ import {
   Enrollment,
   EnrollmentsMeta,
   getEnrollments,
+  getAssessmentAttempts,
+  getStudentCourseProgress,
+  type AdminCourseProgress,
+  type AssessmentAttempt,
 } from '@/server/admin/enrollments.server';
+import { getAttemptDetail, type AttemptDetail } from '@/server/admin/students.server';
 import { AdminUser } from '@/server/admin/users.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
@@ -46,6 +51,7 @@ import {
   TableRow,
 } from '@repo/shadcn/table';
 import { cn } from '@repo/shadcn/lib/utils';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
   EmptyState,
@@ -156,6 +162,50 @@ export function EnrollmentsClient({
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [courseProgress, setCourseProgress] = useState<AdminCourseProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [assessmentAttempts, setAssessmentAttempts] = useState<Record<string, AssessmentAttempt[]>>({});
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedAttempt, setSelectedAttempt] = useState<string | null>(null);
+  const [attemptDetail, setAttemptDetail] = useState<AttemptDetail | null>(null);
+
+  const formatDuration = (seconds: number | null | undefined) => {
+    if (!seconds) return '0m';
+    const minutes = Math.floor(seconds / 60);
+    return minutes ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+  };
+
+  const openProgress = async (enrollment: Enrollment) => {
+    setCourseProgress(null);
+    setProgressDialogOpen(true);
+    setProgressLoading(true);
+    setAttemptsLoading(true);
+    setAssessmentAttempts({});
+    setSelectedStudentId(enrollment.student_id);
+    setSelectedAttempt(null);
+    setAttemptDetail(null);
+    const result = await getStudentCourseProgress(enrollment.course_id, enrollment.student_id);
+    setCourseProgress(result);
+    setProgressLoading(false);
+    if (result) {
+      const assessments = result.chapters.flatMap((chapter) =>
+        chapter.lessons.flatMap((lesson) => [
+          ...lesson.assignments.map((assessment) => ({ ...assessment, type: 'assignment' as const })),
+          ...lesson.tests.map((assessment) => ({ ...assessment, type: 'test' as const })),
+        ]),
+      );
+      const attemptEntries = await Promise.all(
+        assessments.map(async (assessment) => [
+          `${assessment.type}:${assessment.id}`,
+          await getAssessmentAttempts(assessment.id, assessment.type),
+        ] as const),
+      );
+      setAssessmentAttempts(Object.fromEntries(attemptEntries));
+    }
+    setAttemptsLoading(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -260,8 +310,8 @@ export function EnrollmentsClient({
 
       <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
         <DialogContent
-          className="border-white/20 bg-background/80 shadow-2xl backdrop-blur-2xl sm:max-w-md dark:bg-background/70"
-          overlayClassName="backdrop-blur-xl bg-background/60"
+          className="border-white/20 bg-white/20 shadow-[0_20px_80px_rgba(15,23,42,0.35)] backdrop-blur-[18px] sm:max-w-md dark:bg-slate-900/40"
+          overlayClassName="backdrop-blur-md bg-slate-950/35"
         >
           <DialogHeader>
             <DialogTitle>Manual Enrollment</DialogTitle>
@@ -269,10 +319,7 @@ export function EnrollmentsClient({
               Select a student and a course to create a new enrollment.
             </DialogDescription>
           </DialogHeader>
-          <form
-            onSubmit={handleEnroll}
-            className="flex flex-col gap-4"
-          >
+          <form onSubmit={handleEnroll} className="flex flex-col gap-4">
             <FilterField label="Student" className="w-full">
               <EntityPicker
                 id="enrollment-student"
@@ -315,6 +362,126 @@ export function EnrollmentsClient({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={progressDialogOpen} onOpenChange={setProgressDialogOpen}>
+        <DialogContent className="max-h-[92vh] w-[min(96vw,760px)] max-w-[96vw] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Course Progress</DialogTitle>
+            <DialogDescription>Chapter and lesson completion for this enrollment.</DialogDescription>
+          </DialogHeader>
+          {progressLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading progress...</p>
+          ) : !courseProgress ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Unable to load progress.</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">Overall progress: {courseProgress.overall_percent}%</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Assessment history</p>
+                  {attemptsLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+                </div>
+                {courseProgress.chapters.flatMap((chapter) => chapter.lessons.flatMap((lesson) => {
+                  const assessments = [
+                    ...lesson.assignments.map((assessment) => ({ ...assessment, type: 'assignment' as const })),
+                    ...lesson.tests.map((assessment) => ({ ...assessment, type: 'test' as const })),
+                  ];
+                  return assessments.map((assessment) => {
+                    const attempts = (assessmentAttempts[`${assessment.type}:${assessment.id}`] ?? [])
+                      .filter((attempt) => attempt.student_id === selectedStudentId);
+                    return (
+                      <details key={`${assessment.type}:${assessment.id}`} className="rounded-md border px-3 py-2">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 truncate font-medium">{assessment.title ?? 'Untitled assessment'}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{attempts.length} attempt{attempts.length === 1 ? '' : 's'}</span>
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                          {attempts.length === 0 ? <p className="text-xs text-muted-foreground">No attempts recorded.</p> : attempts.map((attempt, index) => {
+                            const percentage = attempt.percentage ?? 0;
+                            return (
+                              <div key={attempt.id} className="rounded border bg-muted/20 p-2 text-xs">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="font-medium">Attempt {attempts.length - index}</span>
+                                  <span>{attempt.score ?? 0}/{attempt.max_score ?? 0} ({Math.round(percentage)}%)</span>
+                                  <Badge variant={attempt.passed ? 'default' : 'secondary'}>{attempt.passed ? 'Passed' : 'Not passed'}</Badge>
+                                </div>
+                                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }} /></div>
+                                <p className="mt-1 text-muted-foreground">Started {new Date(attempt.started_at).toLocaleString()} · {formatDuration(attempt.time_spent_seconds)}</p>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mt-1 h-7 px-0 text-xs"
+                                  onClick={async () => {
+                                    const key = `${assessment.type}:${attempt.id}`;
+                                    if (selectedAttempt === key) {
+                                      setSelectedAttempt(null);
+                                      setAttemptDetail(null);
+                                      return;
+                                    }
+                                    setSelectedAttempt(key);
+                                    setAttemptDetail(null);
+                                    setAttemptDetail(await getAttemptDetail(attempt.id, assessment.type));
+                                  }}
+                                >
+                                  {selectedAttempt === `${assessment.type}:${attempt.id}` ? 'Hide questions' : 'Review questions'}
+                                </Button>
+                                {selectedAttempt === `${assessment.type}:${attempt.id}` && attemptDetail && (
+                                  <div className="mt-2 space-y-2 border-t pt-2">
+                                    {attemptDetail.questionReview?.map((question, questionIndex) => (
+                                      <div key={question.questionId} className="rounded border bg-background/60 p-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <p className="min-w-0 text-xs font-medium">{questionIndex + 1}. {question.questionText}</p>
+                                          <Badge variant={question.isCorrect ? 'default' : question.isCorrect === false ? 'destructive' : 'secondary'} className="shrink-0 text-[10px]">
+                                            {question.pointsEarned ?? (question.isCorrect ? question.points ?? 0 : 0)}/{question.points ?? 0} pts
+                                          </Badge>
+                                        </div>
+                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                          {question.isCorrect === true ? 'Correct' : question.isCorrect === false ? 'Incorrect' : 'Ungraded'} · {formatDuration(question.timeSpentSeconds)}
+                                        </p>
+                                        {question.textAnswer && <p className="mt-1 whitespace-pre-wrap text-[11px]">Answer: {question.textAnswer}</p>}
+                                        {question.selectedOptionTexts?.length ? <p className="text-[11px] text-muted-foreground">Selected: {question.selectedOptionTexts.join(', ')}</p> : null}
+                                        {question.correctOptionTexts?.length ? <p className="text-[11px] text-emerald-700 dark:text-emerald-400">Correct answer: {question.correctOptionTexts.join(', ')}</p> : null}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    );
+                  });
+                }))}
+              </div>
+              {courseProgress.chapters.map((chapter, chapterIndex) => {
+                const lessons = chapter.lessons ?? [];
+                const chapterPercent = lessons.length
+                  ? Math.round(lessons.reduce((sum, lesson) => sum + (lesson.progress?.status === 'completed' ? 100 : lesson.progress?.progress_percent ?? 0), 0) / lessons.length)
+                  : 0;
+                return (
+                  <Card key={chapter.id} className="p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="font-medium">{chapterIndex + 1}. {chapter.title ?? 'Untitled chapter'}</p>
+                      <Badge variant="secondary">{chapterPercent}%</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {lessons.map((lesson, lessonIndex) => {
+                        const percent = lesson.progress?.status === 'completed' ? 100 : lesson.progress?.progress_percent ?? 0;
+                        return <div key={lesson.id} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="min-w-0 truncate text-muted-foreground">{chapterIndex + 1}.{lessonIndex + 1} {lesson.title ?? 'Untitled lesson'}</span>
+                          <span className="shrink-0">{lesson.lesson_type === 'pdf' ? (percent === 100 ? 'Completed' : 'Not completed') : `${percent}%`}</span>
+                        </div>;
+                      })}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {!loading && enrollments.length === 0 ? (
         <EmptyState
           title="No enrollments found"
@@ -334,6 +501,7 @@ export function EnrollmentsClient({
                     Enrolled
                   </TableHead>
                   <TableHead className="px-2 py-1.5 text-xs uppercase">Status</TableHead>
+                  <TableHead className="px-2 py-1.5 text-xs uppercase">Progress</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -355,9 +523,12 @@ export function EnrollmentsClient({
                         </div>
                       </TableCell>
                       <TableCell className="hidden max-w-[220px] py-2 text-xs md:table-cell">
-                        <span className="truncate">
+                        <Link
+                          href={`/admin/courses/${enrollment.course_id}/analytics`}
+                          className="truncate hover:underline"
+                        >
                           {enrollment.courses?.title ?? enrollment.course_id}
-                        </span>
+                        </Link>
                       </TableCell>
                       <TableCell className="hidden py-2 text-xs sm:table-cell">
                         {new Date(enrollment.enrolled_at).toLocaleDateString()}
@@ -370,6 +541,11 @@ export function EnrollmentsClient({
                         >
                           {enrollment.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Button size="sm" variant="outline" onClick={() => void openProgress(enrollment)}>
+                          View
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

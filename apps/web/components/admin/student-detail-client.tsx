@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -13,6 +13,11 @@ import {
   toggleStudentActive,
   updateEnrollmentStatus,
 } from '@/server/admin/students.server';
+import type { AdminCourseProgress } from '@/server/admin/enrollments.server';
+import type {
+  StudentAnalytics,
+  StudentAttempt,
+} from '@/server/admin/analytics.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -33,8 +38,43 @@ import {
 import { OrbitalSpinner } from '@repo/shadcn/orbital-spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/shadcn/tabs';
 import { toast } from '@repo/shadcn/sonner';
+import { Progress } from '@repo/shadcn/progress';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@repo/shadcn/accordion';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@repo/shadcn/table';
+import { cn } from '@repo/shadcn/lib/utils';
+import {
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  GraduationCap,
+  Monitor,
+  Smartphone,
+  Activity,
+  CalendarDays,
+  FileText,
+  Video,
+  ClipboardCheck,
+  FlaskConical,
+  User,
+  Shield,
+} from '@repo/shadcn/lucide';
 
-function formatDate(dateStr: string) {
+/* ── Helpers ──────────────────────────────────────────────────────── */
+
+function formatDate(dateStr: string | null | undefined) {
+  if (!dateStr) return '--';
   return new Date(dateStr).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -42,47 +82,193 @@ function formatDate(dateStr: string) {
   });
 }
 
+function formatDateTime(dateStr: string | null | undefined) {
+  if (!dateStr) return '--';
+  const d = new Date(dateStr);
+  return `${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} ${d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function formatDuration(seconds: number | null | undefined) {
+  if (!seconds || seconds <= 0) return '--';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function relativeTime(dateStr: string | null | undefined) {
+  if (!dateStr) return '--';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return formatDate(dateStr);
+}
+
+function statusVariant(
+  status: string,
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (status) {
+    case 'completed':
+      return 'default';
+    case 'active':
+    case 'in_progress':
+      return 'secondary';
+    case 'expired':
+    case 'failed':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+}
+
+function statusColor(status: string) {
+  switch (status) {
+    case 'completed':
+      return 'bg-emerald-500/10 text-emerald-600 border-emerald-200';
+    case 'active':
+    case 'in_progress':
+      return 'bg-blue-500/10 text-blue-600 border-blue-200';
+    case 'expired':
+    case 'failed':
+      return 'bg-red-500/10 text-red-600 border-red-200';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+function lessonTypeIcon(type: string) {
+  switch (type) {
+    case 'video':
+      return <Video className="size-3.5" />;
+    case 'pdf':
+      return <FileText className="size-3.5" />;
+    case 'test':
+      return <FlaskConical className="size-3.5" />;
+    case 'assignment':
+      return <ClipboardCheck className="size-3.5" />;
+    default:
+      return <BookOpen className="size-3.5" />;
+  }
+}
+
+/* ── Stat Card ────────────────────────────────────────────────────── */
+
 function StatCard({
   label,
   value,
   sub,
+  icon,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <Card className="gap-1 px-4 py-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        {icon && <span className="text-muted-foreground">{icon}</span>}
+      </div>
       <p className="text-xl font-semibold">{value}</p>
       {sub && <p className="text-muted-foreground text-[11px]">{sub}</p>}
     </Card>
   );
 }
 
+/* ── Main Component ───────────────────────────────────────────────── */
+
 export function StudentDetailClient({
   student,
   enrollments,
   progress,
+  courseProgress,
+  analytics,
+  attempts,
 }: {
   student: StudentDetail;
   enrollments: StudentEnrollment[];
   progress: ProgressRecord[];
+  courseProgress: { course: string; progress: AdminCourseProgress | null }[];
+  analytics: StudentAnalytics | null;
+  attempts: StudentAttempt[] | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [attemptDialog, setAttemptDialog] = useState(false);
-  const [attemptDetail, setAttemptDetail] = useState<AttemptDetail | null>(null);
-  const [attemptType, setAttemptType] = useState<'assignment' | 'test'>('assignment');
+  const [attemptDetail, setAttemptDetail] = useState<AttemptDetail | null>(
+    null,
+  );
+  const [attemptType, setAttemptType] = useState<'assignment' | 'test'>(
+    'assignment',
+  );
   const [gradingState, setGradingState] = useState<
     Record<string, boolean | null>
   >({});
   const [gradingSaving, setGradingSaving] = useState(false);
+  const [attemptFilter, setAttemptFilter] = useState<
+    'all' | 'test' | 'assignment'
+  >('all');
 
   const isActive = student.is_active !== false;
 
-  const completedLessons = progress.filter((p) => p.status === 'completed').length;
-  const activeEnrollments = enrollments.filter((e) => e.status === 'active').length;
+  // Computed stats
+  const completedLessons =
+    analytics?.summary?.totalLessonsCompleted ??
+    progress.filter((p) => p.status === 'completed').length;
+  const activeEnrollments = enrollments.filter(
+    (e) => e.status === 'active',
+  ).length;
+  const completedEnrollments =
+    analytics?.summary?.completedCourses ??
+    enrollments.filter((e) => e.status === 'completed').length;
+  const totalAssessmentTime = (analytics?.summary?.totalTimeOnTestsSeconds ?? 0) + (analytics?.summary?.totalTimeOnAssignmentsSeconds ?? 0);
+
+  // Attempts stats
+  const filteredAttempts = useMemo(() => {
+    if (!attempts) return [];
+    if (attemptFilter === 'all') return attempts;
+    return attempts.filter((a) => a.type === attemptFilter);
+  }, [attempts, attemptFilter]);
+
+  const attemptStats = useMemo(() => {
+    if (!attempts || attempts.length === 0)
+      return { total: 0, avgScore: 0, passRate: 0 };
+    const withScore = attempts.filter((a) => a.percentage != null);
+    const passed = attempts.filter((a) => a.passed === true);
+    return {
+      total: attempts.length,
+      avgScore:
+        withScore.length > 0
+          ? withScore.reduce((sum, a) => sum + (a.percentage ?? 0), 0) /
+            withScore.length
+          : 0,
+      passRate:
+        withScore.length > 0 ? (passed.length / withScore.length) * 100 : 0,
+    };
+  }, [attempts]);
+
+  // Devices
+  const devices = analytics?.devices ?? [];
+  const lastActive = devices.length > 0
+    ? devices.reduce((latest, d) =>
+        new Date(d.last_active_at) > new Date(latest.last_active_at)
+          ? d
+          : latest,
+      ).last_active_at
+    : null;
+
+  // Recent activity
+  const recentActivity = analytics?.recentActivity ?? [];
+
+  /* ── Handlers ─────────────────────────────────────────────────── */
 
   const handleToggleActive = async () => {
     setLoading(true);
@@ -158,8 +344,11 @@ export function StudentDetailClient({
     router.refresh();
   };
 
+  /* ── Render ───────────────────────────────────────────────────── */
+
   return (
     <div className="space-y-6">
+      {/* Loading overlay */}
       {loading && (
         <div className="bg-background/70 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[2px]">
           <div className="border-border bg-card/95 flex flex-col items-center gap-3 rounded-xl border px-6 py-5 shadow-lg">
@@ -171,6 +360,7 @@ export function StudentDetailClient({
         </div>
       )}
 
+      {/* Attempt detail dialog */}
       <Dialog
         open={attemptDialog}
         onOpenChange={(open) => {
@@ -194,20 +384,23 @@ export function StudentDetailClient({
             <div className="space-y-4">
               <div className="flex flex-wrap gap-3 text-sm">
                 <span>
-                  Score: {attemptDetail.score ?? '—'} /{' '}
-                  {attemptDetail.max_score ?? '—'}
+                  Score: {attemptDetail.score ?? '--'} /{' '}
+                  {attemptDetail.max_score ?? '--'}
                 </span>
                 {attemptDetail.percentage != null && (
                   <span>({attemptDetail.percentage.toFixed(1)}%)</span>
                 )}
                 {attemptDetail.passed != null && (
-                  <Badge variant={attemptDetail.passed ? 'default' : 'destructive'}>
+                  <Badge
+                    variant={attemptDetail.passed ? 'default' : 'destructive'}
+                  >
                     {attemptDetail.passed ? 'Passed' : 'Failed'}
                   </Badge>
                 )}
                 {attemptDetail.time_spent_seconds != null && (
                   <span className="text-muted-foreground">
-                    Time: {Math.round(attemptDetail.time_spent_seconds / 60)}m
+                    Time:{' '}
+                    {formatDuration(attemptDetail.time_spent_seconds)}
                   </span>
                 )}
               </div>
@@ -252,7 +445,7 @@ export function StudentDetailClient({
                         <p className="text-muted-foreground text-xs">
                           Student answer:
                         </p>
-                        <p className="text-sm whitespace-pre-wrap rounded bg-muted/50 p-2">
+                        <p className="bg-muted/50 text-sm whitespace-pre-wrap rounded p-2">
                           {q.textAnswer}
                         </p>
                       </div>
@@ -260,8 +453,7 @@ export function StudentDetailClient({
 
                     {q.selectedOptionIds && q.selectedOptionIds.length > 0 && (
                       <p className="text-muted-foreground text-xs">
-                        Selected:{' '}
-                        {q.selectedOptionIds.length} option
+                        Selected: {q.selectedOptionIds.length} option
                         {q.selectedOptionIds.length > 1 ? 's' : ''}
                       </p>
                     )}
@@ -343,6 +535,7 @@ export function StudentDetailClient({
         </DialogContent>
       </Dialog>
 
+      {/* Breadcrumb */}
       <div className="flex items-center gap-3">
         <Link
           href="/admin/students"
@@ -352,6 +545,7 @@ export function StudentDetailClient({
         </Link>
       </div>
 
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">
@@ -359,10 +553,12 @@ export function StudentDetailClient({
           </h1>
           <p className="text-muted-foreground text-sm">
             {student.email}
-            {student.phone ? ` • ${student.phone}` : ''}
+            {student.phone ? ` · ${student.phone}` : ''}
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
-            <Badge variant={student.role === 'admin' ? 'default' : 'secondary'}>
+            <Badge
+              variant={student.role === 'admin' ? 'default' : 'secondary'}
+            >
               {student.role}
             </Badge>
             <Badge variant={isActive ? 'default' : 'destructive'}>
@@ -385,108 +581,592 @@ export function StudentDetailClient({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Enrollments" value={enrollments.length} />
-        <StatCard label="Active Courses" value={activeEnrollments} />
-        <StatCard label="Lessons Done" value={completedLessons} />
-        <StatCard
-          label="Member Since"
-          value={formatDate(student.created_at)}
-        />
-      </div>
-
-      <Tabs defaultValue="enrollments">
+      {/* Tabs */}
+      <Tabs defaultValue="overview">
         <TabsList className="flex w-full flex-wrap justify-start gap-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="enrollments">
             Enrollments ({enrollments.length})
           </TabsTrigger>
-          <TabsTrigger value="progress">
-            Progress ({progress.length})
+          <TabsTrigger value="assessments">
+            Assessments{attempts ? ` (${attempts.length})` : ''}
           </TabsTrigger>
+          <TabsTrigger value="sessions">Sessions</TabsTrigger>
         </TabsList>
 
+        {/* ── Tab 1: Overview ──────────────────────────────────── */}
+        <TabsContent value="overview" className="mt-4 space-y-5">
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard
+              label="Total Courses"
+              value={analytics?.summary?.totalCoursesEnrolled ?? enrollments.length}
+              icon={<BookOpen className="size-4" />}
+            />
+            <StatCard
+              label="Active Courses"
+              value={activeEnrollments}
+              icon={<Activity className="size-4" />}
+            />
+            <StatCard
+              label="Completed Courses"
+              value={completedEnrollments}
+              icon={<CheckCircle2 className="size-4" />}
+            />
+            <StatCard
+              label="Lessons Completed"
+              value={completedLessons}
+              icon={<GraduationCap className="size-4" />}
+            />
+            <StatCard
+              label="Assessment Time"
+              value={formatDuration(totalAssessmentTime)}
+              icon={<Clock className="size-4" />}
+            />
+            <StatCard
+              label="Member Since"
+              value={formatDate(student.created_at)}
+              icon={<CalendarDays className="size-4" />}
+            />
+            <StatCard
+              label="Last Active"
+              value={lastActive ? relativeTime(lastActive) : '--'}
+              sub={lastActive ? formatDate(lastActive) : undefined}
+              icon={<Monitor className="size-4" />}
+            />
+            <StatCard
+              label="Account Status"
+              value={isActive ? 'Active' : 'Disabled'}
+              sub={student.role}
+              icon={<Shield className="size-4" />}
+            />
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            {/* Recent Activity */}
+            <Card className="p-4">
+              <CardHeader className="p-0 pb-3">
+                <CardTitle className="text-sm font-semibold">
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {recentActivity.length === 0 ? (
+                  <p className="text-muted-foreground py-4 text-center text-xs">
+                    No recent activity recorded.
+                  </p>
+                ) : (
+                  <div className="space-y-0">
+                    {recentActivity.slice(0, 15).map((item: any, i: number) => (
+                      <div
+                        key={item.id ?? i}
+                        className="border-border flex items-start gap-3 border-b py-2 last:border-0"
+                      >
+                        <div className="bg-muted mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full">
+                          {lessonTypeIcon(item.lessonType ?? item.type ?? '')}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">
+                            {item.lessonTitle ?? item.title ?? 'Activity'}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {item.courseTitle ?? ''}{' '}
+                            {item.status && (
+                              <span
+                                className={cn(
+                                  'ml-1 inline-block rounded px-1.5 py-0.5 text-[10px]',
+                                  statusColor(item.status),
+                                )}
+                              >
+                                {item.status}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <span className="text-muted-foreground shrink-0 text-[11px]">
+                          {relativeTime(
+                            item.completedAt ?? item.updatedAt ?? item.createdAt,
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Enrollment list */}
+            <Card className="p-4">
+              <CardHeader className="p-0 pb-3">
+                <CardTitle className="text-sm font-semibold">
+                  Enrollments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {enrollments.length === 0 ? (
+                  <p className="text-muted-foreground py-4 text-center text-xs">
+                    No enrollments.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {enrollments.map((enrollment) => {
+                      const cp = courseProgress.find(
+                        (c) =>
+                          c.course ===
+                          (enrollment.courses?.title ?? enrollment.course_id),
+                      );
+                      const pct = cp?.progress?.overall_percent ?? 0;
+                      return (
+                        <div key={enrollment.id} className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="min-w-0 truncate text-sm font-medium">
+                              {enrollment.courses?.title ??
+                                enrollment.course_id}
+                            </p>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'shrink-0 text-[10px]',
+                                statusColor(enrollment.status),
+                              )}
+                            >
+                              {enrollment.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Progress value={pct} className="h-1.5 flex-1" />
+                            <span className="text-muted-foreground w-9 text-right text-[11px]">
+                              {pct}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ── Tab 2: Enrollments & Progress ────────────────────── */}
         <TabsContent value="enrollments" className="mt-4 space-y-3">
           {enrollments.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No enrollments found.
             </p>
           ) : (
-            enrollments.map((enrollment) => (
-              <Card key={enrollment.id} className="gap-2 p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {enrollment.courses?.title ?? enrollment.course_id}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      Enrolled: {formatDate(enrollment.enrolled_at)}
-                      {enrollment.completed_at &&
-                        ` • Completed: ${formatDate(enrollment.completed_at)}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={enrollment.status}
-                      onValueChange={(value) =>
-                        handleEnrollmentStatus(enrollment.id, value)
-                      }
-                      disabled={loading}
-                    >
-                      <SelectTrigger className="h-8 w-32 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="expired">Access revoked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </Card>
-            ))
+            <Accordion type="multiple" className="space-y-3">
+              {enrollments.map((enrollment) => {
+                const cp = courseProgress.find(
+                  (c) =>
+                    c.course ===
+                    (enrollment.courses?.title ?? enrollment.course_id),
+                );
+                const pct = cp?.progress?.overall_percent ?? 0;
+                return (
+                  <AccordionItem
+                    key={enrollment.id}
+                    value={enrollment.id}
+                    className="border-border rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3 px-4 pt-3">
+                      <div className="min-w-0 flex-1">
+                        <AccordionTrigger className="py-0 hover:no-underline">
+                          <div className="flex min-w-0 flex-1 flex-col gap-1">
+                            <p className="truncate text-left font-medium">
+                              {enrollment.courses?.title ??
+                                enrollment.course_id}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              <span className="text-muted-foreground">
+                                Enrolled:{' '}
+                                {formatDate(enrollment.enrolled_at)}
+                              </span>
+                              {enrollment.completed_at && (
+                                <span className="text-muted-foreground">
+                                  Completed:{' '}
+                                  {formatDate(enrollment.completed_at)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px]',
+                            statusColor(enrollment.status),
+                          )}
+                        >
+                          {enrollment.status}
+                        </Badge>
+                        <Select
+                          value={enrollment.status}
+                          onValueChange={(value) =>
+                            handleEnrollmentStatus(enrollment.id, value)
+                          }
+                          disabled={loading}
+                        >
+                          <SelectTrigger className="h-7 w-28 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="completed">
+                              Completed
+                            </SelectItem>
+                            <SelectItem value="expired">
+                              Access revoked
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 pb-2 pt-2">
+                      <Progress value={pct} className="h-1.5 flex-1" />
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {pct}%
+                      </span>
+                    </div>
+                    <AccordionContent className="px-4 pb-4 pt-0">
+                      {cp?.progress?.chapters &&
+                      cp.progress.chapters.length > 0 ? (
+                        <div className="space-y-4">
+                          {cp.progress.chapters.map(
+                            (chapter: any, ci: number) => (
+                              <div key={chapter.id}>
+                                <p className="mb-2 text-sm font-medium">
+                                  {ci + 1}. {chapter.title}
+                                </p>
+                                <div className="space-y-1 pl-3">
+                                  {chapter.lessons.map(
+                                    (lesson: any, li: number) => {
+                                      const lpct =
+                                        lesson.progress?.status === 'completed'
+                                          ? 100
+                                          : (lesson.progress
+                                              ?.progress_percent ?? 0);
+                                      return (
+                                        <div
+                                          key={lesson.id}
+                                          className="flex items-center gap-2 py-1 text-sm"
+                                        >
+                                          <span className="text-muted-foreground">
+                                            {lessonTypeIcon(
+                                              lesson.lesson_type ?? '',
+                                            )}
+                                          </span>
+                                          <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                                            {ci + 1}.{li + 1} {lesson.title}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              'text-[10px]',
+                                              lesson.lesson_type
+                                                ? ''
+                                                : 'hidden',
+                                            )}
+                                          >
+                                            {lesson.lesson_type}
+                                          </Badge>
+                                          {lesson.progress?.status && (
+                                            <Badge
+                                              variant="outline"
+                                              className={cn(
+                                                'text-[10px]',
+                                                statusColor(
+                                                  lesson.progress.status,
+                                                ),
+                                              )}
+                                            >
+                                              {lesson.progress.status}
+                                            </Badge>
+                                          )}
+                                          <span className="text-muted-foreground w-10 shrink-0 text-right text-xs">
+                                            {lesson.lesson_type === 'pdf'
+                                              ? lpct === 100
+                                                ? 'Done'
+                                                : '--'
+                                              : `${lpct}%`}
+                                          </span>
+                                        </div>
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">
+                          No detailed progress available.
+                        </p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           )}
         </TabsContent>
 
-        <TabsContent value="progress" className="mt-4 space-y-3">
-          {progress.length === 0 ? (
+        {/* ── Tab 3: Assessments ───────────────────────────────── */}
+        <TabsContent value="assessments" className="mt-4 space-y-4">
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <StatCard
+              label="Total Attempts"
+              value={attemptStats.total}
+              icon={<ClipboardCheck className="size-4" />}
+            />
+            <StatCard
+              label="Avg Score"
+              value={
+                attemptStats.avgScore > 0
+                  ? `${attemptStats.avgScore.toFixed(1)}%`
+                  : '--'
+              }
+              icon={<GraduationCap className="size-4" />}
+            />
+            <StatCard
+              label="Pass Rate"
+              value={
+                attemptStats.passRate > 0
+                  ? `${attemptStats.passRate.toFixed(0)}%`
+                  : '--'
+              }
+              icon={<CheckCircle2 className="size-4" />}
+            />
+          </div>
+
+          {/* Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Filter:</span>
+            {(['all', 'test', 'assignment'] as const).map((f) => (
+              <Button
+                key={f}
+                size="sm"
+                variant={attemptFilter === f ? 'default' : 'outline'}
+                className="h-7 text-xs"
+                onClick={() => setAttemptFilter(f)}
+              >
+                {f === 'all' ? 'All' : f === 'test' ? 'Tests' : 'Assignments'}
+              </Button>
+            ))}
+          </div>
+
+          {/* Table */}
+          {!attempts ? (
             <p className="text-muted-foreground text-sm">
-              No progress records.
+              Unable to load assessment data.
+            </p>
+          ) : filteredAttempts.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No attempts found.
             </p>
           ) : (
-            progress.map((record, idx) => (
-              <Card key={record.id ?? idx} className="gap-1 p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      {record.lessons?.title ?? record.lesson_id}
-                    </p>
-                    {record.completed_at && (
-                      <p className="text-muted-foreground text-xs">
-                        Completed: {formatDate(record.completed_at)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        record.status === 'completed'
-                          ? 'default'
-                          : 'secondary'
+            <Card className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Type</TableHead>
+                    <TableHead className="text-xs">Title</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Duration</TableHead>
+                    <TableHead className="text-xs">Score</TableHead>
+                    <TableHead className="text-xs">%</TableHead>
+                    <TableHead className="text-xs">Result</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAttempts.map((attempt) => (
+                    <TableRow
+                      key={attempt.id}
+                      className="cursor-pointer"
+                      onClick={() =>
+                        openAttemptDetail(
+                          attempt.id,
+                          attempt.type as 'assignment' | 'test',
+                        )
                       }
                     >
-                      {record.status}
-                    </Badge>
-                    {record.progress_percent != null && (
-                      <span className="text-muted-foreground text-xs">
-                        {record.progress_percent}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px]">
+                          {attempt.type === 'test' ? (
+                            <FlaskConical className="mr-1 size-3" />
+                          ) : (
+                            <ClipboardCheck className="mr-1 size-3" />
+                          )}
+                          {attempt.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm">
+                        {attempt.title ?? attempt.lessonTitle ?? '--'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {formatDate(attempt.startedAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {formatDuration(attempt.timeSpentSeconds)}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {attempt.score != null
+                          ? `${attempt.score}/${attempt.maxScore ?? '--'}`
+                          : '--'}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {attempt.percentage != null
+                          ? `${attempt.percentage.toFixed(1)}%`
+                          : '--'}
+                      </TableCell>
+                      <TableCell>
+                        {attempt.passed === true && (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px]">
+                            Passed
+                          </Badge>
+                        )}
+                        {attempt.passed === false && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            Failed
+                          </Badge>
+                        )}
+                        {attempt.passed == null && (
+                          <span className="text-muted-foreground text-xs">
+                            --
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
           )}
+        </TabsContent>
+
+        {/* ── Tab 4: Sessions & Activity ───────────────────────── */}
+        <TabsContent value="sessions" className="mt-4 space-y-5">
+          {/* Devices */}
+          <Card className="p-4">
+            <CardHeader className="p-0 pb-3">
+              <CardTitle className="text-sm font-semibold">
+                Devices & Sessions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {devices.length === 0 ? (
+                <p className="text-muted-foreground py-4 text-center text-xs">
+                  No device data available.
+                </p>
+              ) : (
+                <div className="space-y-0">
+                  {devices.map((device) => (
+                    <div
+                      key={device.id}
+                      className="border-border flex items-center gap-3 border-b py-3 last:border-0"
+                    >
+                      <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
+                        {device.platform?.toLowerCase().includes('mobile') ||
+                        device.platform?.toLowerCase().includes('android') ||
+                        device.platform?.toLowerCase().includes('ios') ? (
+                          <Smartphone className="text-muted-foreground size-4" />
+                        ) : (
+                          <Monitor className="text-muted-foreground size-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {device.device_name}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">
+                            {device.platform}
+                          </Badge>
+                          <span className="text-muted-foreground text-[11px]">
+                            First seen: {formatDate(device.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs font-medium">
+                          {relativeTime(device.last_active_at)}
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          {formatDateTime(device.last_active_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Activity Timeline */}
+          <Card className="p-4">
+            <CardHeader className="p-0 pb-3">
+              <CardTitle className="text-sm font-semibold">
+                Activity Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentActivity.length === 0 ? (
+                <p className="text-muted-foreground py-4 text-center text-xs">
+                  No activity data available.
+                </p>
+              ) : (
+                <div className="relative pl-5">
+                  <div className="bg-border absolute top-0 bottom-0 left-2 w-px" />
+                  {recentActivity.slice(0, 20).map((item: any, i: number) => (
+                    <div key={item.id ?? i} className="relative pb-4 last:pb-0">
+                      <div
+                        className={cn(
+                          'absolute -left-3 top-1 size-2.5 rounded-full border-2 border-background',
+                          item.status === 'completed'
+                            ? 'bg-emerald-500'
+                            : item.status === 'in_progress'
+                              ? 'bg-blue-500'
+                              : 'bg-muted-foreground',
+                        )}
+                      />
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm">
+                            {item.lessonTitle ?? item.title ?? 'Activity'}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {item.courseTitle ?? ''}
+                            {item.status && (
+                              <span
+                                className={cn(
+                                  'ml-1.5 inline-block rounded px-1.5 py-0.5 text-[10px]',
+                                  statusColor(item.status),
+                                )}
+                              >
+                                {item.status}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <span className="text-muted-foreground shrink-0 text-[11px]">
+                          {formatDateTime(
+                            item.completed_at ??
+                              item.updated_at ??
+                              item.created_at,
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

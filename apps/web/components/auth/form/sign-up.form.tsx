@@ -44,7 +44,7 @@ const SignUpForm = () => {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <Card>
+      <Card className="water-surface">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
             <LogoIcon width={48} height={48} />
