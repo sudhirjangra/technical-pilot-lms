@@ -53,7 +53,32 @@ export class UpdateSlotDto {
   status?: string;
 
   @IsOptional()
+  @IsDateString()
+  date?: string;
+
+  @IsOptional()
   @IsString()
+  start_time?: string;
+
+  @IsOptional()
+  @IsString()
+  end_time?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(5)
+  @Max(180)
+  duration_minutes?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  max_bookings?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   meeting_link?: string;
 
   @IsOptional()

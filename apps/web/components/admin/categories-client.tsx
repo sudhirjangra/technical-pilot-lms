@@ -268,7 +268,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto px-4 sm:px-6">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>

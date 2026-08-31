@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -55,6 +55,15 @@ import {
   DialogTitle,
 } from '@repo/shadcn/dialog';
 import { Input } from '@repo/shadcn/input';
+import { GripVertical } from '@repo/shadcn/lucide';
+import {
+  arrayMove,
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableItemHandle,
+  SortableOverlay,
+} from '@repo/shadcn/sortable';
 import { OrbitalSpinner } from '@repo/shadcn/orbital-spinner';
 import {
   Select,
@@ -248,6 +257,13 @@ export function CourseDetailClient({
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
+  const questionFormRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showQuestionForm && questionFormRef.current) {
+      questionFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [showQuestionForm, editingQuestionId]);
 
   const videoLessonMap = new Map(
     videoLessons.map((videoLesson) => [videoLesson.lesson_id, videoLesson]),
@@ -455,6 +471,24 @@ export function CourseDetailClient({
     const lessons = chapter.lessons ?? [];
     const reordered = moveItem(lessons, lessonIndex, direction);
     if (!reordered) return;
+    setLoading(true);
+    const result = await reorderLessons(buildReorderPayload(reordered));
+    setLoading(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Lesson order updated');
+    router.refresh();
+  };
+
+  const handleLessonDragReorder = async (
+    chapter: Chapter,
+    activeIndex: number,
+    overIndex: number,
+  ) => {
+    const lessons = chapter.lessons ?? [];
+    const reordered = arrayMove(lessons, activeIndex, overIndex);
     setLoading(true);
     const result = await reorderLessons(buildReorderPayload(reordered));
     setLoading(false);
@@ -845,6 +879,137 @@ export function CourseDetailClient({
     setImportFile(null);
   };
 
+  const renderQuestionForm = () => (
+    <div ref={questionFormRef} className="rounded-lg border p-3 sm:p-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="text-sm font-medium">Question number</label>
+          <Input
+            inputMode="numeric"
+            value={questionDraft.question_number}
+            onChange={(event) => handleQuestionDraftChange('question_number', event.target.value)}
+            placeholder="Optional"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Question type</label>
+          <Select
+            value={questionDraft.question_type}
+            onValueChange={(value) => handleQuestionTypeChange(value as QuestionType)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mcq">MCQ</SelectItem>
+              <SelectItem value="msq">MSQ</SelectItem>
+              <SelectItem value="text">Text</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium">Question text</label>
+          <Textarea
+            value={questionDraft.question_text}
+            onChange={(event) => handleQuestionDraftChange('question_text', event.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Points</label>
+          <Input
+            inputMode="numeric"
+            value={questionDraft.points}
+            onChange={(event) => handleQuestionDraftChange('points', event.target.value)}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="text-sm font-medium">Explanation (optional)</label>
+          <Textarea
+            value={questionDraft.explanation}
+            onChange={(event) => handleQuestionDraftChange('explanation', event.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Topic / Subject <span className="text-muted-foreground font-normal">(optional)</span></label>
+          <Input
+            value={questionDraft.topic}
+            onChange={(event) => handleQuestionDraftChange('topic', event.target.value)}
+            placeholder="e.g. Algebra, Chemistry, History"
+          />
+        </div>
+        {questionDraft.question_type === 'text' && (
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">
+              Expected answer{' '}
+              <span className="text-muted-foreground font-normal">(case-insensitive match — leave blank for manual grading)</span>
+            </label>
+            <Input
+              value={questionDraft.correct_text_answer}
+              onChange={(event) => handleQuestionDraftChange('correct_text_answer', event.target.value)}
+              placeholder="e.g. photosynthesis"
+            />
+          </div>
+        )}
+      </div>
+
+      {questionDraft.question_type !== 'text' && (
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium">Options</p>
+            <Button size="sm" variant="ghost" onClick={addOptionRow}>
+              + Option
+            </Button>
+          </div>
+          {questionDraft.options.map((option, optionIndex) => (
+            <div
+              key={`${editingQuestionId ?? 'new'}-${optionIndex}`}
+              className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
+            >
+              <Input
+                value={option.option_text}
+                onChange={(event) => handleOptionTextChange(optionIndex, event.target.value)}
+                placeholder={`Option ${optionIndex + 1}`}
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={option.is_correct}
+                  onCheckedChange={(checked) => handleOptionCorrectChange(optionIndex, checked === true)}
+                />
+                Correct
+              </label>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => removeOptionRow(optionIndex)}
+                disabled={questionDraft.options.length <= 2}
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button size="sm" onClick={handleSaveQuestion} disabled={builderSaving}>
+          {builderSaving ? (
+            <>
+              <OrbitalSpinner className="mr-2 size-3" />
+              Saving...
+            </>
+          ) : editingQuestionId ? (
+            'Save Question'
+          ) : (
+            'Add Question'
+          )}
+        </Button>
+        <Button size="sm" variant="outline" onClick={resetQuestionEditor}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {loading && (
@@ -1012,187 +1177,70 @@ export function CourseDetailClient({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {showQuestionForm && (
-                    <div className="rounded-lg border p-3 sm:p-4">
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="text-sm font-medium">Question number</label>
-                          <Input
-                            inputMode="numeric"
-                            value={questionDraft.question_number}
-                            onChange={(event) => handleQuestionDraftChange('question_number', event.target.value)}
-                            placeholder="Optional"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Question type</label>
-                          <Select
-                            value={questionDraft.question_type}
-                            onValueChange={(value) => handleQuestionTypeChange(value as QuestionType)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mcq">MCQ</SelectItem>
-                              <SelectItem value="msq">MSQ</SelectItem>
-                              <SelectItem value="text">Text</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-sm font-medium">Question text</label>
-                          <Textarea
-                            value={questionDraft.question_text}
-                            onChange={(event) => handleQuestionDraftChange('question_text', event.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Points</label>
-                          <Input
-                            inputMode="numeric"
-                            value={questionDraft.points}
-                            onChange={(event) => handleQuestionDraftChange('points', event.target.value)}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="text-sm font-medium">Explanation (optional)</label>
-                          <Textarea
-                            value={questionDraft.explanation}
-                            onChange={(event) => handleQuestionDraftChange('explanation', event.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Topic / Subject <span className="text-muted-foreground font-normal">(optional)</span></label>
-                          <Input
-                            value={questionDraft.topic}
-                            onChange={(event) => handleQuestionDraftChange('topic', event.target.value)}
-                            placeholder="e.g. Algebra, Chemistry, History"
-                          />
-                        </div>
-                        {questionDraft.question_type === 'text' && (
-                          <div className="md:col-span-2">
-                            <label className="text-sm font-medium">
-                              Expected answer{' '}
-                              <span className="text-muted-foreground font-normal">(case-insensitive match — leave blank for manual grading)</span>
-                            </label>
-                            <Input
-                              value={questionDraft.correct_text_answer}
-                              onChange={(event) => handleQuestionDraftChange('correct_text_answer', event.target.value)}
-                              placeholder="e.g. photosynthesis"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {questionDraft.question_type !== 'text' && (
-                        <div className="mt-4 space-y-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-medium">Options</p>
-                            <Button size="sm" variant="ghost" onClick={addOptionRow}>
-                              + Option
-                            </Button>
-                          </div>
-                          {questionDraft.options.map((option, optionIndex) => (
-                            <div
-                              key={`${editingQuestionId ?? 'new'}-${optionIndex}`}
-                              className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center"
-                            >
-                              <Input
-                                value={option.option_text}
-                                onChange={(event) => handleOptionTextChange(optionIndex, event.target.value)}
-                                placeholder={`Option ${optionIndex + 1}`}
-                              />
-                              <label className="flex items-center gap-2 text-sm">
-                                <Checkbox
-                                  checked={option.is_correct}
-                                  onCheckedChange={(checked) => handleOptionCorrectChange(optionIndex, checked === true)}
-                                />
-                                Correct
-                              </label>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeOptionRow(optionIndex)}
-                                disabled={questionDraft.options.length <= 2}
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Button size="sm" onClick={handleSaveQuestion} disabled={builderSaving}>
-                          {builderSaving ? (
-                            <>
-                              <OrbitalSpinner className="mr-2 size-3" />
-                              Saving...
-                            </>
-                          ) : editingQuestionId ? (
-                            'Save Question'
-                          ) : (
-                            'Add Question'
-                          )}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={resetQuestionEditor}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
                   {builderQuestions.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No questions yet.</p>
                   ) : (
                     <div className="space-y-3">
                       {builderQuestions.map((question, questionIndex) => (
                         <div key={question.id} className="rounded-lg border p-3 sm:p-4">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">
-                                  {question.question_number ?? questionIndex + 1}. {question.question_text}
-                                </span>
-                                <Badge variant="outline">{question.question_type.toUpperCase()}</Badge>
-                                <Badge variant="secondary">{question.points} pt{question.points === 1 ? '' : 's'}</Badge>
-                                {question.topic && (
-                                  <Badge variant="outline" className="text-[10px]">{question.topic}</Badge>
+                          {showQuestionForm && editingQuestionId === question.id ? (
+                            renderQuestionForm()
+                          ) : (
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-medium">
+                                    {question.question_number ?? questionIndex + 1}. {question.question_text}
+                                  </span>
+                                  <Badge variant="outline">{question.question_type.toUpperCase()}</Badge>
+                                  <Badge variant="secondary">{question.points} pt{question.points === 1 ? '' : 's'}</Badge>
+                                  {question.topic && (
+                                    <Badge variant="outline" className="text-[10px]">{question.topic}</Badge>
+                                  )}
+                                </div>
+                                {question.question_options.length > 0 && (
+                                  <div className="space-y-1">
+                                    {question.question_options.map((option) => (
+                                      <div key={option.id} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                        <span
+                                          className={`mt-0.5 inline-flex size-4 items-center justify-center border text-[10px] ${question.question_type === 'mcq' ? 'rounded-full' : 'rounded-sm'}`}
+                                        >
+                                          {option.is_correct ? '✓' : ''}
+                                        </span>
+                                        <span>{option.option_text}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {question.explanation && (
+                                  <details className="text-xs text-muted-foreground">
+                                    <summary className="cursor-pointer">Explanation</summary>
+                                    <p className="mt-1 whitespace-pre-wrap">{question.explanation}</p>
+                                  </details>
                                 )}
                               </div>
-                              {question.question_options.length > 0 && (
-                                <div className="space-y-1">
-                                  {question.question_options.map((option) => (
-                                    <div key={option.id} className="flex items-start gap-2 text-sm text-muted-foreground">
-                                      <span
-                                        className={`mt-0.5 inline-flex size-4 items-center justify-center border text-[10px] ${question.question_type === 'mcq' ? 'rounded-full' : 'rounded-sm'}`}
-                                      >
-                                        {option.is_correct ? '✓' : ''}
-                                      </span>
-                                      <span>{option.option_text}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {question.explanation && (
-                                <details className="text-xs text-muted-foreground">
-                                  <summary className="cursor-pointer">Explanation</summary>
-                                  <p className="mt-1 whitespace-pre-wrap">{question.explanation}</p>
-                                </details>
-                              )}
+                              <div className="flex flex-wrap gap-2">
+                                <Button size="sm" variant="outline" onClick={() => startEditingQuestion(question)}>
+                                  Edit
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteQuestion(question.id)}>
+                                  Delete
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Button size="sm" variant="outline" onClick={() => startEditingQuestion(question)}>
-                                Edit
-                              </Button>
-                              <Button size="sm" variant="destructive" onClick={() => handleDeleteQuestion(question.id)}>
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {showQuestionForm && !editingQuestionId && renderQuestionForm()}
+
+                  {builderQuestions.length > 0 && !showQuestionForm && (
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="outline" onClick={() => startEditingQuestion()}>
+                        + Add Question
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -1217,43 +1265,21 @@ export function CourseDetailClient({
             {course.categories ? ` • ${course.categories.name}` : ''}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-block size-2.5 rounded-full ${
-              course.status === 'published'
-                ? 'bg-emerald-500'
-                : course.status === 'archived'
-                  ? 'bg-slate-500'
-                  : 'bg-amber-500'
-            }`}
-            title={course.status}
-            aria-label={course.status}
-          />
-          {course.status !== 'published' && (
-            <Button size="sm" onClick={() => handleStatusChange('published')} disabled={loading}>
-              Publish
-            </Button>
-          )}
-          {course.status !== 'draft' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleStatusChange('draft')}
-              disabled={loading}
-            >
-              Move to Draft
-            </Button>
-          )}
-          {course.status !== 'archived' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleStatusChange('archived')}
-              disabled={loading}
-            >
-              Archive
-            </Button>
-          )}
+        <div className="flex items-center gap-2">
+          <Select
+            value={course.status}
+            onValueChange={(value) => handleStatusChange(value)}
+            disabled={loading}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -1392,14 +1418,26 @@ export function CourseDetailClient({
                 )}
 
                 {chapter.lessons && chapter.lessons.length > 0 ? (
-                  chapter.lessons.map((lesson, lessonIndex) => {
-                    const videoLesson = videoLessonMap.get(lesson.id);
-                    return (
-                      <div key={lesson.id} className="rounded border border-transparent p-3 hover:border-muted">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <span className="text-xs text-muted-foreground">{lessonIndex + 1}.</span>
-                            <span>{lesson.title}</span>
+                  <Sortable
+                    value={chapter.lessons}
+                    getItemValue={(lesson) => lesson.id}
+                    onMove={({ activeIndex, overIndex }) =>
+                      handleLessonDragReorder(chapter, activeIndex, overIndex)
+                    }
+                    orientation="vertical"
+                  >
+                    <SortableContent className="space-y-2">
+                      {chapter.lessons.map((lesson, lessonIndex) => {
+                        const videoLesson = videoLessonMap.get(lesson.id);
+                        return (
+                          <SortableItem key={lesson.id} value={lesson.id} className="rounded border border-transparent p-3 hover:border-muted">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex flex-wrap items-center gap-2 text-sm">
+                                <SortableItemHandle className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground" title="Drag to reorder">
+                                  <GripVertical className="size-3.5" />
+                                  {lessonIndex + 1}.
+                                </SortableItemHandle>
+                                <span>{lesson.title}</span>
                             <Badge variant="outline" className="text-xs">{lesson.lesson_type}</Badge>
                             <span
                               className={`inline-block size-2.5 rounded-full ${
@@ -1481,7 +1519,7 @@ export function CourseDetailClient({
                                     pdfFormLessonId === lesson.id ? null : lesson.id,
                                   )}
                                 >
-                                  Replace PDF
+                                  Upload PDF
                                 </Button>
                                 <Button
                                   size="sm"
@@ -1561,9 +1599,21 @@ export function CourseDetailClient({
                             </Button>
                           </form>
                         )}
-                      </div>
-                    );
-                  })
+                          </SortableItem>
+                        );
+                      })}
+                    </SortableContent>
+                    <SortableOverlay>
+                      {({ value }) => {
+                        const lesson = chapter.lessons?.find((l) => l.id === value);
+                        return lesson ? (
+                          <div className="rounded border border-border bg-card p-3 shadow-md">
+                            <span className="text-sm font-medium">{lesson.title}</span>
+                          </div>
+                        ) : null;
+                      }}
+                    </SortableOverlay>
+                  </Sortable>
                 ) : (
                   <p className="px-3 text-sm text-muted-foreground">No lessons yet</p>
                 )}

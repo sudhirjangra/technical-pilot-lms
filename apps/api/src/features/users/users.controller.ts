@@ -1,6 +1,6 @@
 import { Roles } from '@/common/decorators';
 import { RolesGuard } from '@/common/guards/roles.guard';
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -13,6 +13,16 @@ export class UsersController {
   async findAll() {
     const data = await this.usersService.findAll();
     return { message: 'Users fetched successfully', data };
+  }
+
+  @Roles('ADMIN')
+  @Patch(':id/toggle-active')
+  async toggleActive(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { is_active: boolean },
+  ) {
+    const data = await this.usersService.toggleActive(id, body.is_active);
+    return { message: 'User status updated', data };
   }
 
   @Roles('ADMIN')

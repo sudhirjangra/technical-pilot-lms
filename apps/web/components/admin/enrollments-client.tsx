@@ -12,6 +12,14 @@ import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@repo/shadcn/dialog';
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -147,6 +155,7 @@ export function EnrollmentsClient({
   });
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,6 +194,7 @@ export function EnrollmentsClient({
     }
     toast.success('Student enrolled');
     setStudentId('');
+    setEnrollDialogOpen(false);
     void load();
   };
 
@@ -201,6 +211,7 @@ export function EnrollmentsClient({
           <h1 className="text-xl font-semibold sm:text-2xl">Enrollments</h1>
           <p className="text-muted-foreground text-xs">{total} matching enrollments</p>
         </div>
+        <Button onClick={() => setEnrollDialogOpen(true)}>+ Manual Enrollment</Button>
       </div>
 
       <Card className="gap-3 py-3">
@@ -247,16 +258,22 @@ export function EnrollmentsClient({
         </CardContent>
       </Card>
 
-      <Card className="gap-3 py-3">
-        <CardHeader className="px-3 sm:px-4">
-          <CardTitle className="text-sm font-medium">Enroll a student</CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-4">
+      <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+        <DialogContent
+          className="sm:max-w-md"
+          overlayClassName="backdrop-blur-xl bg-background/60"
+        >
+          <DialogHeader>
+            <DialogTitle>Manual Enrollment</DialogTitle>
+            <DialogDescription>
+              Select a student and a course to create a new enrollment.
+            </DialogDescription>
+          </DialogHeader>
           <form
             onSubmit={handleEnroll}
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="flex flex-col gap-4"
           >
-            <FilterField label="Student" className="w-full sm:w-72">
+            <FilterField label="Student" className="w-full">
               <EntityPicker
                 id="enrollment-student"
                 items={students.map((student) => ({
@@ -271,7 +288,7 @@ export function EnrollmentsClient({
                 emptyText="No students found."
               />
             </FilterField>
-            <FilterField label="Course" className="w-full sm:w-64">
+            <FilterField label="Course" className="w-full">
               <EntityPicker
                 items={courses.map((course) => ({
                   id: course.id,
@@ -285,16 +302,18 @@ export function EnrollmentsClient({
                 emptyText="No courses found."
               />
             </FilterField>
-            <Button
-              type="submit"
-              className="h-11 sm:h-9"
-              disabled={enrolling || !courseId || !studentId}
-            >
-              {enrolling ? 'Enrolling...' : 'Enroll Student'}
-            </Button>
+            <DialogFooter>
+              <Button
+                type="submit"
+                className="w-full sm:w-auto"
+                disabled={enrolling || !courseId || !studentId}
+              >
+                {enrolling ? 'Enrolling...' : 'Enroll Student'}
+              </Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       {!loading && enrollments.length === 0 ? (
         <EmptyState
@@ -303,7 +322,7 @@ export function EnrollmentsClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto px-4 sm:px-6">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>

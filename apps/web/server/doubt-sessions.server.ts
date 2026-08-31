@@ -72,6 +72,11 @@ export async function createSlot(payload: {
 
 export async function updateSlot(id: string, payload: {
   status?: string;
+  date?: string;
+  start_time?: string;
+  end_time?: string;
+  duration_minutes?: number;
+  max_bookings?: number;
   meeting_link?: string;
   topic?: string;
   description?: string;

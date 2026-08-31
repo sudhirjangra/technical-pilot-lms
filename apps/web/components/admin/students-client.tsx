@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@repo/shadcn/table';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import {
   compareValues,
@@ -37,6 +38,7 @@ type UserSortKey = 'full_name' | 'email' | 'role' | 'created_at';
 const PAGE_SIZE = 15;
 
 export function StudentsClient({ users }: { users: AdminUser[] }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [role, setRole] = useState('all');
@@ -180,7 +182,11 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
               </TableHeader>
               <TableBody>
                 {pagination.pageItems.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow
+                    key={user.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => router.push(`/admin/students/${user.id}`)}
+                  >
                     <TableCell className="max-w-[200px] py-2">
                       <div className="flex flex-col">
                         <span className="truncate font-medium">

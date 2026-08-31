@@ -328,7 +328,7 @@ export function CoursesClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto px-4 sm:px-6">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
@@ -404,12 +404,6 @@ export function CoursesClient({
                             <SelectItem value="archived">Archived</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Badge
-                          variant={course.status === 'published' ? 'default' : 'secondary'}
-                          className="hidden lg:inline-flex"
-                        >
-                          {course.status}
-                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell className="py-2 text-right">
@@ -544,20 +538,6 @@ export function CoursesClient({
                   setDraft((current) => ({
                     ...current,
                     discount_price: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="course-thumbnail">Thumbnail URL</Label>
-              <Input
-                id="course-thumbnail"
-                value={draft.thumbnail_url}
-                placeholder="https://..."
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    thumbnail_url: event.target.value,
                   }))
                 }
               />

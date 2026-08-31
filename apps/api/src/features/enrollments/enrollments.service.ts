@@ -93,6 +93,7 @@ export class EnrollmentsService {
         { count: 'exact' },
       );
 
+    if (query.studentId) request = request.eq('student_id', query.studentId);
     if (query.courseId) request = request.eq('course_id', query.courseId);
     if (query.status) request = request.eq('status', query.status);
     if (studentIds) request = request.in('student_id', studentIds);

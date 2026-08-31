@@ -23,6 +23,11 @@ type CreateFormState = {
 };
 
 type EditFormState = {
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  max_bookings: number;
   topic: string;
   description: string;
   meeting_link: string;
@@ -56,7 +61,7 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<CreateFormState>(emptyForm());
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditFormState>({ topic: '', description: '', meeting_link: '' });
+  const [editForm, setEditForm] = useState<EditFormState>({ date: '', start_time: '', end_time: '', duration_minutes: 30, max_bookings: 1, topic: '', description: '', meeting_link: '' });
   const [editLoading, setEditLoading] = useState(false);
 
   function handleStartTimeChange(val: string) {
@@ -138,6 +143,11 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
   const openEdit = (slot: Slot) => {
     setEditingSlotId(slot.id);
     setEditForm({
+      date: slot.date,
+      start_time: slot.start_time.slice(0, 5),
+      end_time: slot.end_time.slice(0, 5),
+      duration_minutes: slot.duration_minutes,
+      max_bookings: slot.max_bookings,
       topic: slot.topic ?? '',
       description: slot.description ?? '',
       meeting_link: slot.meeting_link ?? '',
@@ -147,6 +157,11 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
   const handleEdit = async (id: string) => {
     setEditLoading(true);
     const result = await updateSlot(id, {
+      date: editForm.date || undefined,
+      start_time: editForm.start_time || undefined,
+      end_time: editForm.end_time || undefined,
+      duration_minutes: editForm.duration_minutes || undefined,
+      max_bookings: editForm.max_bookings || undefined,
       topic: editForm.topic || undefined,
       description: editForm.description || undefined,
       meeting_link: editForm.meeting_link || undefined,
@@ -328,7 +343,87 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
 
                 {editingSlotId === slot.id && (
                   <div className="mt-4 pt-4 border-t grid gap-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <Label className="text-xs">Date</Label>
+                        <Input
+                          type="date"
+                          value={editForm.date}
+                          onChange={e => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Start Time</Label>
+                        <Input
+                          type="time"
+                          value={editForm.start_time}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditForm(prev => {
+                              const updated = { ...prev, start_time: val };
+                              if (val && prev.duration_minutes > 0) {
+                                const startMins = timeToMinutes(val);
+                                updated.end_time = minutesToTime(startMins + prev.duration_minutes);
+                              }
+                              return updated;
+                            });
+                          }}
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">End Time</Label>
+                        <Input
+                          type="time"
+                          value={editForm.end_time}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditForm(prev => {
+                              const updated = { ...prev, end_time: val };
+                              if (prev.start_time && val) {
+                                const diff = timeToMinutes(val) - timeToMinutes(prev.start_time);
+                                if (diff > 0) updated.duration_minutes = diff;
+                              }
+                              return updated;
+                            });
+                          }}
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Duration (min)</Label>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={180}
+                          value={editForm.duration_minutes}
+                          onChange={e => {
+                            const val = Number(e.target.value);
+                            setEditForm(prev => {
+                              const updated = { ...prev, duration_minutes: val };
+                              if (prev.start_time && val > 0) {
+                                updated.end_time = minutesToTime(timeToMinutes(prev.start_time) + val);
+                              }
+                              return updated;
+                            });
+                          }}
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Max Bookings</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={50}
+                          value={editForm.max_bookings}
+                          onChange={e => setEditForm(prev => ({ ...prev, max_bookings: Number(e.target.value) }))}
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
                       <div>
                         <Label className="text-xs">Topic</Label>
                         <Input

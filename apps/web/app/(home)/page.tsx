@@ -1,25 +1,20 @@
 import { auth } from '@/auth';
 import HeroAviation from '@/components/hero-aviation';
-import LogoIcon from '@/components/logo-icon';
 import Session from '@/components/session';
 import { redirect } from 'next/navigation';
 import { Button } from '@repo/shadcn/button';
-import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import Link from 'next/link';
 
 const Page = async () => {
   const session = await auth();
-  if (session?.user) redirect('/dashboard');
+  if (session?.user) {
+    if (session.user.role === 'admin') redirect('/admin');
+    redirect('/dashboard');
+  }
   return (
     <section className="min-h-dvh container flex flex-col">
-      <nav className="w-full flex justify-between items-center py-5">
-        <Link href="/">
-          <LogoIcon width={30} height={30} />
-        </Link>
-        <div className="flex items-center gap-3">
-          <ModeSwitcher />
-          <Session />
-        </div>
+      <nav className="w-full flex justify-end items-center py-5">
+        <Session />
       </nav>
       <div className="flex flex-1 flex-col w-full justify-center items-center gap-5 py-10">
         <HeroAviation />

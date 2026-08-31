@@ -20,13 +20,19 @@ export default auth(async (req) => {
       await validateSessionIfExist();
     }
 
-    // Check if user needs to complete profile
-    if (req.auth && req.auth.user && req.nextUrl.pathname.startsWith('/dashboard')) {
+    if (req.auth && req.auth.user) {
       const user = req.auth.user;
-      const isProfileComplete = user.full_name && user.date_of_birth && user.phone;
-      if (!isProfileComplete) {
-        const completeProfileUrl = new URL('/auth/complete-profile', req.url);
-        return Response.redirect(completeProfileUrl);
+      const pathname = req.nextUrl.pathname;
+
+      if (user.role === 'admin' && pathname.startsWith('/dashboard')) {
+        return Response.redirect(new URL('/admin', req.url));
+      }
+
+      if (pathname.startsWith('/dashboard')) {
+        const isProfileComplete = user.full_name && user.date_of_birth && user.phone;
+        if (!isProfileComplete) {
+          return Response.redirect(new URL('/auth/complete-profile', req.url));
+        }
       }
     }
   } catch {

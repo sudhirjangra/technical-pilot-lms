@@ -25,6 +25,11 @@ export class UpdateEnrollmentDto {
 }
 
 export class ListEnrollmentsQueryDto {
+  @ApiPropertyOptional({ description: 'Filter by student id' })
+  @IsOptional()
+  @IsUUID()
+  studentId?: string;
+
   @ApiPropertyOptional({ description: 'Filter by course id' })
   @IsOptional()
   @IsUUID()

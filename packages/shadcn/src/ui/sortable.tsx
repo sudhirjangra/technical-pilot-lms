@@ -577,6 +577,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 }
 
 export {
+  arrayMove,
   SortableContent as Content,
   SortableItem as Item,
   SortableItemHandle as ItemHandle,
