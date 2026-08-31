@@ -222,8 +222,8 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
     setThumbnailUploading(true);
     const result = await uploadCategoryThumbnail(editingId, file);
     setThumbnailUploading(false);
-    if (result.error) {
-      toast.error(result.error);
+    if (result.error || !result.data) {
+      toast.error(result.error ?? 'Failed to upload thumbnail');
       return;
     }
     setDraft((current) => ({ ...current, thumbnail_url: result.data.thumbnail_url ?? '' }));
