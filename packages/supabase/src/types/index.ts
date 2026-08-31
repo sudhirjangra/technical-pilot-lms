@@ -61,6 +61,7 @@ export interface Database {
           is_active?: boolean;
           updated_at?: string;
         };
+        Relationships: [];
       };
       devices: {
         Row: {
@@ -86,6 +87,7 @@ export interface Database {
           device_name?: string;
           last_active_at?: string;
         };
+        Relationships: [];
       };
       sub_admin_permissions: {
         Row: {
@@ -108,6 +110,7 @@ export interface Database {
           permissions?: string[];
           updated_at?: string;
         };
+        Relationships: [];
       };
       courses: {
         Row: {
@@ -152,6 +155,7 @@ export interface Database {
           published_at?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       enrollments: {
         Row: {
@@ -174,6 +178,7 @@ export interface Database {
           status?: EnrollmentStatus;
           completed_at?: string | null;
         };
+        Relationships: [];
       };
       audit_logs: {
         Row: {
@@ -201,6 +206,7 @@ export interface Database {
         Update: {
           metadata?: Json | null;
         };
+        Relationships: [];
       };
       payments: {
         Row: {
@@ -240,6 +246,7 @@ export interface Database {
           refund_reason?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       categories: {
         Row: {
@@ -268,6 +275,7 @@ export interface Database {
           sort_order?: number;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       chapters: {
         Row: {
@@ -292,6 +300,7 @@ export interface Database {
           sort_order?: number;
           is_published?: boolean;
         };
+        Relationships: [];
       };
       lessons: {
         Row: {
@@ -320,6 +329,7 @@ lesson_type?: LessonType;
            sort_order?: number;
            is_published?: boolean;
         };
+        Relationships: [];
       };
     };
     Enums: {
@@ -332,5 +342,8 @@ lesson_type?: LessonType;
       booking_status: BookingStatus;
       device_platform: DevicePlatform;
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

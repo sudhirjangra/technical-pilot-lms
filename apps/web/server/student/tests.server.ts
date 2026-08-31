@@ -244,12 +244,28 @@ const AttemptDetailResponseSchema = z.object({
 
 export async function getStudentAttemptDetail(
   attemptId: string,
-): Promise<{ data: SubmitResult & { totalCount: number; correctCount: number } } | { error: string }> {
+): Promise<{ data: SubmitResult } | { error: string }> {
   const [error, data] = await safeFetch(
     AttemptDetailResponseSchema,
     `/tests/student/attempts/${attemptId}`,
     { headers: await authHeaders(false), cache: 'no-store' },
   );
   if (error) return { error };
-  return { data: data!.data as SubmitResult & { totalCount: number; correctCount: number } };
+  const attempt = data!.data;
+  const maxScore = attempt.max_score ?? 0;
+  const score = attempt.score ?? 0;
+  return {
+    data: {
+      score,
+      maxScore,
+      passed: attempt.passed ?? false,
+      percentage: attempt.percentage ?? (maxScore > 0 ? (score / maxScore) * 100 : 0),
+      correctCount: attempt.correctCount,
+      totalCount: attempt.totalCount,
+      questionReview: attempt.questionReview,
+      totalTimeSeconds: attempt.totalTimeSeconds,
+      topicBreakdown: attempt.topicBreakdown,
+      avgTimePerQuestion: attempt.avgTimePerQuestion,
+    },
+  };
 }
