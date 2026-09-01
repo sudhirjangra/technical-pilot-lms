@@ -81,6 +81,16 @@ export class CategoriesService {
     if (error) throw new BadRequestException(error.message);
   }
 
+  async reorder(categories: { id: string; sort_order: number }[]) {
+    const results = await Promise.all(
+      categories.map(({ id, sort_order }) =>
+        this.supabase.from('categories').update({ sort_order }).eq('id', id),
+      ),
+    );
+    const failed = results.find((result) => result.error);
+    if (failed?.error) throw new BadRequestException(failed.error.message);
+  }
+
   async uploadThumbnail(id: string, request: FastifyRequest) {
     const { data: category } = await this.supabase
       .from('categories')

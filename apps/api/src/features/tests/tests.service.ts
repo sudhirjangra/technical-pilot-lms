@@ -675,6 +675,45 @@ export class TestsService {
     });
   }
 
+  /** All of the current student's test attempts across every course, most recent first. */
+  async getMyAttempts(studentId: string) {
+    const { data: attempts, error } = await this.supabase
+      .from('test_attempts')
+      .select(
+        'id, started_at, completed_at, score, max_score, time_spent_seconds, test_id, tests(id, title, passing_score_percent, lesson_id, lessons(id, title, chapter_id, chapters(id, title, course_id, courses(id, title))))',
+      )
+      .eq('student_id', studentId)
+      .order('started_at', { ascending: false });
+    if (error) throw new BadRequestException(error.message);
+
+    return (attempts ?? []).map((a: any) => {
+      const test = a.tests;
+      const lesson = test?.lessons;
+      const chapter = lesson?.chapters;
+      const course = chapter?.courses;
+      const passingPct = test?.passing_score_percent ?? 60;
+      const percentage =
+        a.max_score && a.max_score > 0
+          ? Math.round(((a.score ?? 0) / a.max_score) * 100)
+          : null;
+      return {
+        id: a.id,
+        type: 'test' as const,
+        testTitle: test?.title ?? 'Test',
+        lessonId: lesson?.id ?? null,
+        courseId: course?.id ?? null,
+        courseTitle: course?.title ?? 'Unknown course',
+        started_at: a.started_at,
+        completed_at: a.completed_at,
+        score: a.score,
+        max_score: a.max_score,
+        time_spent_seconds: a.time_spent_seconds,
+        percentage,
+        passed: percentage !== null ? percentage >= passingPct : null,
+      };
+    });
+  }
+
   async getAttemptDetail(attemptId: string, studentId?: string) {
     const query = this.supabase
       .from('test_attempts')
@@ -728,11 +767,12 @@ export class TestsService {
     const questionIds = (questions ?? []).map((q) => q.id);
     const { data: allOptions } = await this.supabase
       .from('question_options')
-      .select('id, question_id, is_correct')
+      .select('id, question_id, option_text, is_correct')
       .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
 
     const optionTextMap = new Map<string, string>();
     const correctOptionsMap = new Map<string, string[]>();
+    const optionsByQuestion = new Map<string, { id: string; text: string; isCorrect: boolean }[]>();
     for (const opt of allOptions ?? []) {
       const option = opt as unknown as { id: string; question_id: string; option_text: string; is_correct: boolean };
       optionTextMap.set(option.id, option.option_text);
@@ -741,6 +781,9 @@ export class TestsService {
         current.push(option.id);
         correctOptionsMap.set(option.question_id, current);
       }
+      const list = optionsByQuestion.get(option.question_id) ?? [];
+      list.push({ id: option.id, text: option.option_text, isCorrect: option.is_correct });
+      optionsByQuestion.set(option.question_id, list);
     }
 
     const profile = attempt.profiles as { full_name?: string; email?: string } | null;
@@ -749,6 +792,7 @@ export class TestsService {
       const answer = (answers ?? []).find((a) => a.question_id === q.id);
       const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
       const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
+      const selectedSet = new Set(selectedOptionIds);
       return {
         questionId: q.id,
         questionText: (q as { question_text?: string }).question_text ?? '',
@@ -763,6 +807,10 @@ export class TestsService {
         selectedOptionIds,
         correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) ?? id),
         selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        options: (optionsByQuestion.get(q.id) ?? []).map((opt) => ({
+          ...opt,
+          isSelected: selectedSet.has(opt.id),
+        })),
         textAnswer: answer?.text_answer ?? null,
       };
     });

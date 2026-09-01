@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import SessionOtherLogout from '@/components/auth/session-other-logout';
+import SessionAllLogout from '@/components/auth/session-all-logout';
 import { getAuthSessions } from '@/server/auth.server';
 import { Badge } from '@repo/shadcn/badge';
 import {
@@ -18,11 +19,14 @@ const SessionsSettings = async () => {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Active Sessions</CardTitle>
-          <CardDescription>
-            Manage your active sessions across different devices
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Active Sessions</CardTitle>
+            <CardDescription>
+              Manage your active sessions across different devices
+            </CardDescription>
+          </div>
+          {sessions.length > 0 && <SessionAllLogout />}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-4">

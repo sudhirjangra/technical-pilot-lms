@@ -19,6 +19,7 @@ import {
   BookOpen,
   CalendarDays,
   ChevronsUpDown,
+  ClipboardList,
   GraduationCap,
   LogOut,
   Settings,
@@ -50,6 +51,7 @@ const navGroups = [
     items: [
       { label: 'My Courses', href: '/dashboard/courses', icon: BookOpen, exact: false },
       { label: 'Browse Courses', href: '/courses', icon: GraduationCap, exact: false },
+      { label: 'My Attempts', href: '/dashboard/attempts', icon: ClipboardList, exact: false },
     ],
   },
   {

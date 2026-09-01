@@ -112,6 +112,12 @@ export class TestsController {
     return { message: 'Test fetched', data };
   }
 
+  @Get('student/my-attempts')
+  async getMyAttempts(@Req() req: { user: { id: string } }) {
+    const data = await this.testsService.getMyAttempts(req.user.id);
+    return { message: 'Attempts fetched', data };
+  }
+
   @Post('student/:testId/attempts')
   async startAttempt(
     @Param('testId', ParseUUIDPipe) testId: string,

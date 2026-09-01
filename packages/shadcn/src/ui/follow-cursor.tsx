@@ -51,14 +51,6 @@ const FollowCursor: React.FC<FollowCursorProps> = ({ color = '#323232a6' }) => {
     const onMouseMove = (e: MouseEvent) => {
       cursor.x = e.clientX;
       cursor.y = e.clientY;
-      document.documentElement.style.setProperty(
-        '--water-x',
-        `${((e.clientX / width) - 0.5) * 10}px`,
-      );
-      document.documentElement.style.setProperty(
-        '--water-y',
-        `${((e.clientY / height) - 0.5) * 10}px`,
-      );
     };
 
     const onWindowResize = () => {
@@ -106,8 +98,6 @@ const FollowCursor: React.FC<FollowCursorProps> = ({ color = '#323232a6' }) => {
     const destroy = () => {
       if (canvas) canvas.remove();
       cancelAnimationFrame(animationFrame);
-      document.documentElement.style.removeProperty('--water-x');
-      document.documentElement.style.removeProperty('--water-y');
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onWindowResize);
     };

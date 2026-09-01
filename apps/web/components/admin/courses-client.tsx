@@ -6,8 +6,8 @@ import {
   createCourse,
   deleteCourse,
   updateAdminCourse,
-  uploadCourseThumbnail,
 } from '@/server/admin/courses.server';
+import { uploadFileDirect } from '@/lib/uploadDirect';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import {
@@ -40,6 +40,7 @@ import { Textarea } from '@repo/shadcn/textarea';
 import { sanitizeSlugInput, slugify } from '@repo/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useMemo, useState } from 'react';
 import {
   compareValues,
@@ -107,6 +108,7 @@ export function CoursesClient({
   categories: Category[];
 }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
@@ -261,13 +263,19 @@ export function CoursesClient({
     event.target.value = '';
     if (!file || !editingId) return;
     setThumbnailUploading(true);
-    const result = await uploadCourseThumbnail(editingId, file);
+    // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
+    const result = await uploadFileDirect<{ data: Course }>(
+      `/courses/${editingId}/thumbnail`,
+      file,
+      session?.user?.tokens.access_token,
+      'file',
+    );
     setThumbnailUploading(false);
     if (result.error || !result.data) {
       toast.error(result.error ?? 'Failed to upload thumbnail');
       return;
     }
-    setDraft((current) => ({ ...current, thumbnail_url: result.data.thumbnail_url ?? '' }));
+    setDraft((current) => ({ ...current, thumbnail_url: result.data!.data.thumbnail_url ?? '' }));
     toast.success('Thumbnail updated');
     router.refresh();
   };

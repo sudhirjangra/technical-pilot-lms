@@ -4,9 +4,10 @@ import {
   Category,
   createCategory,
   deleteCategory,
+  reorderCategories,
   updateCategory,
-  uploadCategoryThumbnail,
 } from '@/server/admin/categories.server';
+import { uploadFileDirect } from '@/lib/uploadDirect';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -20,6 +21,7 @@ import {
 } from '@repo/shadcn/dialog';
 import { Input } from '@repo/shadcn/input';
 import { Label } from '@repo/shadcn/label';
+import { GripVertical } from '@repo/shadcn/lucide';
 import {
   Select,
   SelectContent,
@@ -27,6 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/shadcn/select';
+import {
+  arrayMove,
+  Sortable,
+  SortableContent,
+  SortableItem,
+  SortableItemHandle,
+} from '@repo/shadcn/sortable';
 import { toast } from '@repo/shadcn/sonner';
 import { Switch } from '@repo/shadcn/switch';
 import {
@@ -40,6 +49,7 @@ import {
 import { Textarea } from '@repo/shadcn/textarea';
 import { sanitizeSlugInput, slugify } from '@repo/utils';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useMemo, useState } from 'react';
 import {
   compareValues,
@@ -87,6 +97,7 @@ const PAGE_SIZE = 10;
 
 export function CategoriesClient({ categories }: { categories: Category[] }) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
@@ -215,18 +226,48 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
   const handleSort = (key: CategorySortKey) =>
     setSort((current) => toggleSort(current, key));
 
+  const canDragReorder =
+    sort.key === 'sort_order' &&
+    sort.direction === 'asc' &&
+    statusFilter === 'all' &&
+    !debouncedSearch.trim();
+
+  const [reordering, setReordering] = useState(false);
+
+  const handleCategoryDragReorder = async (activeIndex: number, overIndex: number) => {
+    const pageOffset = (pagination.page - 1) * PAGE_SIZE;
+    const reordered = arrayMove(pagination.pageItems, activeIndex, overIndex);
+    setReordering(true);
+    const result = await reorderCategories(
+      reordered.map((category, index) => ({ id: category.id, sort_order: pageOffset + index + 1 })),
+    );
+    setReordering(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Category order updated');
+    router.refresh();
+  };
+
   const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || !editingId) return;
     setThumbnailUploading(true);
-    const result = await uploadCategoryThumbnail(editingId, file);
+    // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
+    const result = await uploadFileDirect<{ data: Category }>(
+      `/categories/${editingId}/thumbnail`,
+      file,
+      session?.user?.tokens.access_token,
+      'file',
+    );
     setThumbnailUploading(false);
     if (result.error || !result.data) {
       toast.error(result.error ?? 'Failed to upload thumbnail');
       return;
     }
-    setDraft((current) => ({ ...current, thumbnail_url: result.data.thumbnail_url ?? '' }));
+    setDraft((current) => ({ ...current, thumbnail_url: result.data!.data.thumbnail_url ?? '' }));
     toast.success('Thumbnail updated');
     router.refresh();
   };
@@ -289,10 +330,16 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
         />
       ) : (
         <Card className="gap-0 py-0">
+          {!canDragReorder && (
+            <p className="px-6 pt-3 text-xs text-muted-foreground sm:px-8">
+              Sort by &quot;Order&quot; ascending with no search/status filter to drag and reorder categories.
+            </p>
+          )}
           <div className="w-full overflow-x-auto px-6 sm:px-8">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8 px-2 py-1.5" />
                   <SortableHeader sortKey="name" sort={sort} onSort={handleSort}>
                     Name
                   </SortableHeader>
@@ -320,70 +367,96 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
-                {pagination.pageItems.map((category) => {
-                  const active = isActiveOf(category);
-                  return (
-                    <TableRow key={category.id}>
-                      <TableCell className="max-w-[220px] py-2">
-                        <div className="flex flex-col">
-                          <span className="truncate font-medium">{category.name}</span>
-                          <span className="text-muted-foreground truncate text-xs md:hidden">
-                            /{category.slug}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground hidden py-2 text-xs md:table-cell">
-                        /{category.slug}
-                      </TableCell>
-                      <TableCell className="hidden py-2 text-xs sm:table-cell">
-                        {category.sort_order ?? 0}
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id={`category-active-${category.id}`}
-                            checked={active}
-                            disabled={pendingToggleId === category.id}
-                            onCheckedChange={(checked) =>
-                              handleToggleActive(category, checked)
-                            }
-                          />
-                          <Label
-                            htmlFor={`category-active-${category.id}`}
-                            className="text-xs"
-                          >
-                            <Badge variant={active ? 'default' : 'secondary'}>
-                              {active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </Label>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-11 sm:h-8"
-                            onClick={() => openEdit(category)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-11 sm:h-8"
-                            disabled={loading}
-                            onClick={() => handleDelete(category.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
+              <Sortable
+                value={pagination.pageItems}
+                getItemValue={(category) => category.id}
+                onMove={({ activeIndex, overIndex }) =>
+                  handleCategoryDragReorder(activeIndex, overIndex)
+                }
+                orientation="vertical"
+              >
+                <SortableContent asChild>
+                  <TableBody>
+                    {pagination.pageItems.map((category) => {
+                      const active = isActiveOf(category);
+                      return (
+                        <SortableItem key={category.id} value={category.id} asChild disabled={!canDragReorder || reordering}>
+                          <TableRow>
+                            <TableCell className="w-8 px-2 py-2">
+                              {canDragReorder && (
+                                <SortableItemHandle asChild>
+                                  <button
+                                    type="button"
+                                    className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                                    aria-label="Drag to reorder"
+                                  >
+                                    <GripVertical className="size-4" />
+                                  </button>
+                                </SortableItemHandle>
+                              )}
+                            </TableCell>
+                            <TableCell className="max-w-[220px] py-2">
+                              <div className="flex flex-col">
+                                <span className="truncate font-medium">{category.name}</span>
+                                <span className="text-muted-foreground truncate text-xs md:hidden">
+                                  /{category.slug}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground hidden py-2 text-xs md:table-cell">
+                              /{category.slug}
+                            </TableCell>
+                            <TableCell className="hidden py-2 text-xs sm:table-cell">
+                              {category.sort_order ?? 0}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  id={`category-active-${category.id}`}
+                                  checked={active}
+                                  disabled={pendingToggleId === category.id}
+                                  onCheckedChange={(checked) =>
+                                    handleToggleActive(category, checked)
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`category-active-${category.id}`}
+                                  className="text-xs"
+                                >
+                                  <Badge variant={active ? 'default' : 'secondary'}>
+                                    {active ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </Label>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-2 text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-11 sm:h-8"
+                                  onClick={() => openEdit(category)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-11 sm:h-8"
+                                  disabled={loading}
+                                  onClick={() => handleDelete(category.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </SortableItem>
+                      );
+                    })}
+                  </TableBody>
+                </SortableContent>
+              </Sortable>
             </Table>
           </div>
           <div className="px-5 pb-3 sm:px-6">

@@ -234,3 +234,31 @@ export async function getStudentAssignmentAttemptDetail(
     },
   };
 }
+
+const MyAttemptSchema = z.object({
+  id: z.string(),
+  type: z.literal('assignment'),
+  testTitle: z.string(),
+  lessonId: z.string().nullable().optional(),
+  courseId: z.string().nullable().optional(),
+  courseTitle: z.string(),
+  started_at: z.string(),
+  completed_at: z.string().nullable().optional(),
+  score: z.coerce.number().nullable().optional(),
+  max_score: z.coerce.number().nullable().optional(),
+  time_spent_seconds: z.coerce.number().nullable().optional(),
+  percentage: z.coerce.number().nullable().optional(),
+  passed: z.boolean().nullable().optional(),
+});
+
+export type MyAssignmentAttempt = z.infer<typeof MyAttemptSchema>;
+
+export async function getMyAssignmentAttempts(): Promise<MyAssignmentAttempt[]> {
+  const [error, data] = await safeFetch(
+    z.object({ data: z.array(MyAttemptSchema).default([]) }),
+    '/assignments/student/my-attempts',
+    { headers: await authHeaders(false), cache: 'no-store' },
+  );
+  if (error) return [];
+  return data!.data;
+}

@@ -18,6 +18,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -45,17 +46,16 @@ export function AdminDashboardClient({ overview }: Props) {
     completed: c.completed,
   }));
 
-  const enrollmentChartData = overview.enrollmentsByMonth.map((e) => ({
-    month: e.month,
-    count: e.count,
-  }));
+  const enrollmentChartData = overview.enrollmentTrend.length > 0
+    ? overview.enrollmentTrend
+    : overview.enrollmentsByMonth.map((e) => ({ month: e.month, enrollments: e.count, signups: 0 }));
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Students"
           value={overview.totalStudents}
@@ -66,6 +66,16 @@ export function AdminDashboardClient({ overview }: Props) {
           value={overview.totalEnrollments}
           subtitle={`${overview.activeEnrollments} active`}
           icon={<BookOpen className="size-5 text-muted-foreground" />}
+        />
+        <StatCard
+          title="Completed"
+          value={overview.completedEnrollments}
+          subtitle={
+            overview.totalEnrollments > 0
+              ? `${Math.round((overview.completedEnrollments / overview.totalEnrollments) * 100)}% of enrollments`
+              : undefined
+          }
+          icon={<GraduationCap className="size-5 text-muted-foreground" />}
         />
         <StatCard
           title="Active Courses"
@@ -89,7 +99,7 @@ export function AdminDashboardClient({ overview }: Props) {
         {/* Enrollment Trend */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Enrollment Trend</CardTitle>
+            <CardTitle className="text-base">Signups vs Enrollments</CardTitle>
           </CardHeader>
           <CardContent>
             {enrollmentChartData.length === 0 ? (
@@ -118,9 +128,19 @@ export function AdminDashboardClient({ overview }: Props) {
                       fontSize: 13,
                     }}
                   />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Area
                     type="monotone"
-                    dataKey="count"
+                    dataKey="signups"
+                    name="Student signups"
+                    stroke="#f59e0b"
+                    fill="#f59e0b"
+                    fillOpacity={0.12}
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="enrollments"
                     name="Enrollments"
                     stroke="#3b82f6"
                     fill="#3b82f6"

@@ -35,6 +35,12 @@ const overviewSchema = z.object({
   enrollmentsByMonth: z.array(
     z.object({ month: z.string(), count: z.number() }),
   ),
+  signupsByMonth: z.array(
+    z.object({ month: z.string(), count: z.number() }),
+  ).default([]),
+  enrollmentTrend: z.array(
+    z.object({ month: z.string(), enrollments: z.number(), signups: z.number() }),
+  ).default([]),
   courseCompletionStats: z.array(
     z.object({
       courseId: z.string(),

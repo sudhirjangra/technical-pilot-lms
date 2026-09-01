@@ -129,7 +129,7 @@ export function SubAdminsClient({
                 <Button size="sm" variant="outline" onClick={() => handleEditPerms(sa)}>
                   Edit Permissions
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleDemote(sa.id)}>
+                <Button size="sm" variant="destructive" disabled={loading} onClick={() => handleDemote(sa.id)}>
                   Demote
                 </Button>
               </div>

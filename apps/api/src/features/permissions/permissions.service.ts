@@ -92,24 +92,49 @@ export class PermissionsService {
   }
 
   async promoteToSubAdmin(userId: string) {
-    const { error } = await this.supabase
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single();
+    if (!profile) throw new NotFoundException('User not found');
+
+    const { data, error } = await this.supabase
       .from('profiles')
       .update({ role: 'sub_admin' })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id')
+      .single();
     if (error) throw new BadRequestException(error.message);
+    if (!data) throw new BadRequestException('Failed to promote user');
     return { success: true };
   }
 
   async demoteToStudent(userId: string) {
-    await this.supabase
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', userId)
+      .single();
+    if (!profile) throw new NotFoundException('User not found');
+    if (profile.role !== 'sub_admin') {
+      throw new BadRequestException('User is not a sub-admin');
+    }
+
+    const { error: revokeError } = await this.supabase
       .from('sub_admin_permissions')
       .delete()
       .eq('user_id', userId);
-    const { error } = await this.supabase
+    if (revokeError) throw new BadRequestException(revokeError.message);
+
+    const { data, error } = await this.supabase
       .from('profiles')
       .update({ role: 'student' })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id')
+      .single();
     if (error) throw new BadRequestException(error.message);
+    if (!data) throw new BadRequestException('Failed to demote user');
     return { success: true };
   }
 }

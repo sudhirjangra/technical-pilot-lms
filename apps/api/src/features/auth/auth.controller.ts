@@ -149,6 +149,17 @@ export class AuthController {
   }
 
   /**
+   * Signs the current user out of all devices/sessions.
+   *
+   * @returns {Promise<MessageResponse>} Response message.
+   */
+  @Delete('sessions')
+  async signOutAll(@Req() req: any): Promise<MessageResponse> {
+    await this.authService.signOutAll(req.user.id);
+    return { message: 'Signed out of all devices successfully' };
+  }
+
+  /**
    * Retrieves all sessions for a user.
    *
    * @param {string} userId - ID of the user.

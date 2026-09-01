@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@repo/supabase/server';
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { encode } from 'next-auth/jwt';
 
 export async function GET(request: Request) {
@@ -29,7 +30,10 @@ export async function GET(request: Request) {
       }),
     });
 
-    if (!response.ok) return redirect('/auth/sign-in?error=sync_failed');
+    if (!response.ok) {
+      if (response.status === 401) return redirect('/auth/sign-in?disabled=1');
+      return redirect('/auth/sign-in?error=sync_failed');
+    }
 
     const data: any = await response.json();
 
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
           date_of_birth: data.data.date_of_birth,
           phone: data.data.phone,
           avatar_url: data.data.avatar_url,
-          is_active: true,
+          is_active: data.data.is_active !== false,
           created_at: data.data.created_at,
           updated_at: data.data.updated_at,
           tokens: data.tokens,
@@ -66,7 +70,8 @@ export async function GET(request: Request) {
         'Set-Cookie': cookieValue,
       },
     });
-  } catch {
+  } catch (err) {
+    if (isRedirectError(err)) throw err;
     return redirect('/auth/sign-in?error=oauth_failed');
   }
 }

@@ -120,6 +120,25 @@ export async function deleteCategory(id: string) {
   return { success: true };
 }
 
+export async function reorderCategories(categories: { id: string; sort_order: number }[]) {
+  const session = await auth();
+  const [error] = await safeFetch(z.any(), '/categories/reorder', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+    },
+    cache: 'no-store',
+    body: JSON.stringify({ categories }),
+  });
+  if (error) {
+    console.error('reorderCategories failed:', error);
+    return { error };
+  }
+  revalidatePath('/admin/categories');
+  return { success: true };
+}
+
 export async function uploadCategoryThumbnail(id: string, file: File) {
   const session = await auth();
   const formData = new FormData();

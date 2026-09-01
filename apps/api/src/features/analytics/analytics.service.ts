@@ -23,11 +23,13 @@ export class AnalyticsService {
       recentEnrollmentsRes,
       allEnrollmentsRes,
       publishedCoursesListRes,
+      studentSignupsRes,
     ] = await Promise.all([
       this.supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
-        .eq('role', 'student'),
+        .eq('role', 'student')
+        .eq('is_active', true),
       this.supabase
         .from('courses')
         .select('id', { count: 'exact', head: true }),
@@ -64,6 +66,11 @@ export class AnalyticsService {
         .from('courses')
         .select('id, title')
         .eq('status', 'published'),
+      // Student signups for monthly grouping (joining trend)
+      this.supabase
+        .from('profiles')
+        .select('created_at')
+        .eq('role', 'student'),
     ]);
 
     const totalRevenue = (paymentsRes.data ?? []).reduce(
@@ -76,6 +83,18 @@ export class AnalyticsService {
       (allEnrollmentsRes.data ?? []).map((e: { enrolled_at: string }) => e.enrolled_at),
       12,
     );
+
+    // Group student signups by month (last 12 months) to compare against enrollment trend
+    const signupsByMonth = this.groupByMonth(
+      (studentSignupsRes.data ?? []).map((p: { created_at: string }) => p.created_at),
+      12,
+    );
+
+    const enrollmentTrend = enrollmentsByMonth.map((entry, index) => ({
+      month: entry.month,
+      enrollments: entry.count,
+      signups: signupsByMonth[index]?.count ?? 0,
+    }));
 
     // Course completion stats for each published course
     const publishedCourses = publishedCoursesListRes.data ?? [];
@@ -98,6 +117,8 @@ export class AnalyticsService {
         status: e.status,
       })),
       enrollmentsByMonth,
+      signupsByMonth,
+      enrollmentTrend,
       courseCompletionStats,
     };
   }
@@ -208,6 +229,37 @@ export class AnalyticsService {
         stats: lessonStats.get(l.id) ?? { completed: 0, in_progress: 0, not_started: totalEnrolled },
       })),
     }));
+
+    // Per-chapter completion: a student "completes" a chapter only once every lesson in it is completed.
+    const studentLessonStatus = new Map<string, Map<string, string>>();
+    for (const p of progressRows) {
+      const byLesson = studentLessonStatus.get(p.student_id) ?? new Map<string, string>();
+      byLesson.set(p.lesson_id, p.status);
+      studentLessonStatus.set(p.student_id, byLesson);
+    }
+    const chapterLessonIds = new Map<string, string[]>();
+    for (const l of allLessons) {
+      const existing = chapterLessonIds.get(l.chapterId) ?? [];
+      existing.push(l.id);
+      chapterLessonIds.set(l.chapterId, existing);
+    }
+    const chapterCompletionMap = new Map<string, number>();
+    for (const chapterId of chapterIds) {
+      const lessonsInChapter = chapterLessonIds.get(chapterId) ?? [];
+      if (lessonsInChapter.length === 0) {
+        chapterCompletionMap.set(chapterId, 0);
+        continue;
+      }
+      const completedStudentsForChapter = studentIds.filter((sid: string) => {
+        const byLesson = studentLessonStatus.get(sid);
+        if (!byLesson) return false;
+        return lessonsInChapter.every((lid) => byLesson.get(lid) === 'completed');
+      }).length;
+      chapterCompletionMap.set(chapterId, completedStudentsForChapter);
+    }
+    for (const chapter of enrichedChapters) {
+      (chapter as any).studentsCompleted = chapterCompletionMap.get(chapter.id) ?? 0;
+    }
 
     // Student rankings
     const studentRankings = await this.buildStudentRankings(enrollments, lessonIds, progressRows, allLessons);
@@ -858,18 +910,19 @@ export class AnalyticsService {
 
     const { data: enrollments } = await this.supabase
       .from('enrollments')
-      .select('course_id, status')
+      .select('course_id, student_id, status')
       .in('course_id', courseIds);
 
-    // For each course, count enrolled and completed
-    const enrollmentsByCourse = new Map<string, { enrolled: number; completed: number }>();
+    // For each course, count enrolled and completed, and track enrolled student ids
+    const enrollmentsByCourse = new Map<string, { enrolled: number; completed: number; studentIds: string[] }>();
     for (const cid of courseIds) {
-      enrollmentsByCourse.set(cid, { enrolled: 0, completed: 0 });
+      enrollmentsByCourse.set(cid, { enrolled: 0, completed: 0, studentIds: [] });
     }
     for (const e of enrollments ?? []) {
       const stats = enrollmentsByCourse.get((e as any).course_id);
       if (stats) {
         stats.enrolled++;
+        stats.studentIds.push((e as any).student_id);
         if ((e as any).status === 'completed') stats.completed++;
       }
     }
@@ -894,32 +947,33 @@ export class AnalyticsService {
     const { data: progressRows } = allLessonIds.length
       ? await this.supabase
           .from('progress')
-          .select('lesson_id, progress_percent')
+          .select('lesson_id, student_id, progress_percent')
+          .in('lesson_id', allLessonIds)
       : { data: [] };
 
-    // Avg progress by lesson
-    const progressByLesson = new Map<string, number[]>();
+    // Progress percent by lesson, keyed by student
+    const progressByLessonAndStudent = new Map<string, Map<string, number>>();
     for (const p of (progressRows ?? []) as any[]) {
-      const arr = progressByLesson.get(p.lesson_id) ?? [];
-      arr.push(p.progress_percent ?? 0);
-      progressByLesson.set(p.lesson_id, arr);
+      const byStudent = progressByLessonAndStudent.get(p.lesson_id) ?? new Map<string, number>();
+      byStudent.set(p.student_id, p.progress_percent ?? 0);
+      progressByLessonAndStudent.set(p.lesson_id, byStudent);
     }
 
     return courses.map((c) => {
-      const stats = enrollmentsByCourse.get(c.id) ?? { enrolled: 0, completed: 0 };
+      const stats = enrollmentsByCourse.get(c.id) ?? { enrolled: 0, completed: 0, studentIds: [] };
       const courseLessons = lessonsByCourse.get(c.id) ?? [];
       let avgProgress = 0;
       if (courseLessons.length > 0 && stats.enrolled > 0) {
-        let totalProgress = 0;
-        let count = 0;
-        for (const lid of courseLessons) {
-          const percents = progressByLesson.get(lid) ?? [];
-          for (const p of percents) {
-            totalProgress += p;
-            count++;
-          }
-        }
-        avgProgress = count > 0 ? Math.round(totalProgress / count) : 0;
+        // Average each enrolled student's overall course progress (missing lesson progress counts as 0%),
+        // then average those per-student percentages across all enrolled students.
+        const totalAcrossStudents = stats.studentIds.reduce((sum, studentId) => {
+          const studentTotal = courseLessons.reduce((lessonSum, lessonId) => {
+            const percent = progressByLessonAndStudent.get(lessonId)?.get(studentId) ?? 0;
+            return lessonSum + percent;
+          }, 0);
+          return sum + studentTotal / courseLessons.length;
+        }, 0);
+        avgProgress = Math.round(totalAcrossStudents / stats.enrolled);
       }
       return {
         courseId: c.id,

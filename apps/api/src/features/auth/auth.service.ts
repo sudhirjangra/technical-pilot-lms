@@ -239,6 +239,12 @@ export class AuthService {
     if (profileError || !profile)
       throw new NotFoundException('Profile not found');
 
+    if (profile.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator. Please contact support for assistance.',
+      );
+    }
+
     const { data: existingDevices } = await this.supabase
       .from('devices')
       .select('id, device_name, platform, last_active_at, created_at')
@@ -673,6 +679,14 @@ export class AuthService {
     if (error) throw new NotFoundException('Session not found');
   }
 
+  async signOutAll(userId: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('devices')
+      .delete()
+      .eq('user_id', userId);
+    if (error) throw new BadRequestException(error.message);
+  }
+
   async refreshToken(dto: RefreshTokenDto): Promise<RefreshTokenInterface> {
     const { data: userData, error } =
       await this.supabase.auth.admin.getUserById(dto.user_id);
@@ -878,6 +892,12 @@ export class AuthService {
 
     if (profileError || !profile) {
       throw new NotFoundException('Profile not found');
+    }
+
+    if (profile.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator. Please contact support for assistance.',
+      );
     }
 
     // Check device limit

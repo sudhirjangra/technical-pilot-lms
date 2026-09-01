@@ -1,13 +1,16 @@
 import { Env } from '@/common/utils';
+import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import {
   CanActivate,
   ExecutionContext,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from 'src/common/decorators';
 
@@ -29,6 +32,7 @@ export class JwtAuthGuard implements CanActivate {
     private jwtService: JwtService,
     private reflector: Reflector,
     private configService: ConfigService<Env>,
+    @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
   ) {}
 
   /**
@@ -60,6 +64,21 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Invalid Access Token');
     }
+
+    const userId = request.user?.sub ?? request.user?.id;
+    if (userId) {
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('id', userId)
+        .single();
+      if (profile?.is_active === false) {
+        throw new UnauthorizedException(
+          'Your account has been disabled by an administrator.',
+        );
+      }
+    }
+
     return true;
   }
 

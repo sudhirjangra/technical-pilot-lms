@@ -103,6 +103,7 @@ export class ChaptersService {
   async startChapter(chapterId: string, studentId: string) {
     const courseId = await this.getCourseIdForChapter(chapterId);
     await this.ensureActiveEnrollment(studentId, courseId);
+    await this.ensurePreviousChapterCompleted(chapterId, courseId, studentId);
 
     const { error } = await this.supabase.from('chapter_starts').upsert(
       { student_id: studentId, chapter_id: chapterId },
@@ -111,6 +112,57 @@ export class ChaptersService {
     if (error) throw new BadRequestException(error.message);
 
     return this.getChapterStart(chapterId, studentId);
+  }
+
+  /**
+   * A chapter can only be started once every lesson in the immediately preceding
+   * (by sort_order) published chapter has been marked completed for this student.
+   */
+  private async ensurePreviousChapterCompleted(
+    chapterId: string,
+    courseId: string,
+    studentId: string,
+  ) {
+    const { data: chapters, error } = await this.supabase
+      .from('chapters')
+      .select('id, sort_order, is_published, lessons(id, is_published)')
+      .eq('course_id', courseId)
+      .eq('is_published', true)
+      .order('sort_order', { ascending: true });
+    if (error) throw new BadRequestException(error.message);
+
+    const ordered = (chapters ?? []) as {
+      id: string;
+      sort_order: number;
+      lessons: { id: string; is_published?: boolean }[];
+    }[];
+    const currentIndex = ordered.findIndex((ch) => ch.id === chapterId);
+    if (currentIndex <= 0) return; // first chapter or not found — nothing to gate on
+
+    const previousChapter = ordered[currentIndex - 1];
+    const lessonIds = (previousChapter.lessons ?? [])
+      .filter((l) => l.is_published !== false)
+      .map((l) => l.id);
+    if (lessonIds.length === 0) return;
+
+    const { data: progressRows, error: progressError } = await this.supabase
+      .from('progress')
+      .select('lesson_id, status')
+      .eq('student_id', studentId)
+      .in('lesson_id', lessonIds);
+    if (progressError) throw new BadRequestException(progressError.message);
+
+    const completedLessonIds = new Set(
+      (progressRows ?? [])
+        .filter((p) => p.status === 'completed')
+        .map((p) => p.lesson_id),
+    );
+    const allCompleted = lessonIds.every((id) => completedLessonIds.has(id));
+    if (!allCompleted) {
+      throw new BadRequestException(
+        'Complete every lesson in the previous chapter before starting this one.',
+      );
+    }
   }
 
   /** Current student's chapter_start row, or null when not started yet. */

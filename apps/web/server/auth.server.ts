@@ -311,6 +311,24 @@ export const signOutOtherDevice = safeAction
   });
 
 /**
+ * Sign out of all devices/sessions for the current user, then end the local session.
+ */
+export const signOutAllDevices = safeAction.action(async () => {
+  const session = await auth();
+  const [error] = await safeFetch(DefaultReturnSchema, '/auth/sessions', {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+      Accept: 'application/json',
+    },
+  });
+  if (error) throw new Error(error);
+  revalidateTag('nest-auth-sessions');
+  await signOut({ redirect: true, redirectTo: '/auth/sign-in' });
+  return 'success';
+});
+
+/**
  * Change password for the current user.
  * @schema ChangePasswordSchema
  */
@@ -527,21 +545,30 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
 };
 
 /**
- * Validate session if exist from server session
+ * Validate session if exist from server session. Returns `{ signedOut: true }`
+ * when the session was forcibly cleared (e.g. account disabled by an admin).
  */
-export const validateSessionIfExist = async (): Promise<GetSession | null> => {
+export const validateSessionIfExist = async (): Promise<{
+  data: GetSession | null;
+  signedOut: boolean;
+}> => {
   const [error, data] = await getSessionById();
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
-    // Only sign out if the error indicates the session is truly invalid (404),
-    // not when the API is just unreachable (network errors)
-    if (error.includes('Session not found') || error.includes('Invalid Access Token')) {
+    // Only sign out if the error indicates the session is truly invalid (404) or the
+    // account has been disabled by an admin, not when the API is just unreachable.
+    if (
+      error.includes('Session not found') ||
+      error.includes('Invalid Access Token') ||
+      error.includes('disabled')
+    ) {
       await signOut({
         redirect: false,
       });
+      return { data: null, signedOut: true };
     }
   }
-  return data;
+  return { data: data ?? null, signedOut: false };
 };
 
 /**

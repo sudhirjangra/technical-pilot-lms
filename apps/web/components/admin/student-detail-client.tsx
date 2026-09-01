@@ -438,6 +438,11 @@ export function StudentDetailClient({
                           Ungraded
                         </Badge>
                       )}
+                      {q.timeSpentSeconds != null && (
+                        <span className="text-muted-foreground text-[10px]">
+                          {formatDuration(q.timeSpentSeconds)}
+                        </span>
+                      )}
                     </div>
 
                     {q.textAnswer && (
@@ -451,11 +456,31 @@ export function StudentDetailClient({
                       </div>
                     )}
 
-                    {q.selectedOptionIds && q.selectedOptionIds.length > 0 && (
-                      <p className="text-muted-foreground text-xs">
-                        Selected: {q.selectedOptionIds.length} option
-                        {q.selectedOptionIds.length > 1 ? 's' : ''}
-                      </p>
+                    {Array.isArray((q as any).options) && (q as any).options.length > 0 && (
+                      <ul className="mt-1 space-y-1">
+                        {(q as any).options.map(
+                          (opt: { id: string; text: string; isCorrect: boolean; isSelected: boolean }) => (
+                            <li
+                              key={opt.id}
+                              className={cn(
+                                'flex items-center gap-2 rounded px-2 py-1 text-xs',
+                                opt.isCorrect && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+                                opt.isSelected && !opt.isCorrect && 'bg-destructive/10 text-destructive',
+                              )}
+                            >
+                              <span className="flex-1">{opt.text}</span>
+                              {opt.isSelected && (
+                                <Badge variant="outline" className="text-[9px]">
+                                  Selected
+                                </Badge>
+                              )}
+                              {opt.isCorrect && (
+                                <Badge className="bg-emerald-600 text-[9px]">Correct</Badge>
+                              )}
+                            </li>
+                          ),
+                        )}
+                      </ul>
                     )}
 
                     {q.explanation && (

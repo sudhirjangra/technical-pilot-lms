@@ -2,6 +2,7 @@
 
 import Script from 'next/script';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface VideoPlayerProps {
   lessonId: string;
@@ -104,6 +105,7 @@ function WatermarkOverlay() {
 }
 
 export function VideoPlayer({ lessonId }: VideoPlayerProps) {
+  const router = useRouter();
   const [otpData, setOtpData] = useState<OtpData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,6 +117,10 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
   const playerRef = useRef<VdoPlayerInstance | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSavedRef = useRef(0);
+  // Highest playback position naturally reached — used to block forward seeking/scrubbing.
+  const maxWatchedRef = useRef(0);
+  const seekingBackRef = useRef(false);
+  const hasNotifiedCompleteRef = useRef(false);
 
   // ── Fetch resume position from server ────────────────────────────────────
   useEffect(() => {
@@ -171,7 +177,14 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
       body: JSON.stringify(dto),
       keepalive: true,
     }).catch(() => null);
-  }, [lessonId]);
+
+    // Refresh server-rendered progress (sidebar, unlock state) exactly once when this
+    // lesson transitions to completed, instead of on every timeupdate tick.
+    if (finalCompleted && !hasNotifiedCompleteRef.current) {
+      hasNotifiedCompleteRef.current = true;
+      router.refresh();
+    }
+  }, [lessonId, router]);
 
   // ── Wire VdoCipher SDK after both iframe + api.js are ready ──────────────
   const initPlayer = useCallback(() => {
@@ -182,6 +195,7 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
 
     // Seek to saved position once metadata is loaded
     if (resumeAt > 5) {
+      maxWatchedRef.current = resumeAt;
       const onLoaded = () => {
         player.video.currentTime = resumeAt;
         player.video.removeEventListener('loadedmetadata', onLoaded);
@@ -193,11 +207,29 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
     const onTimeUpdate = () => {
       const pos = player.video.currentTime;
       const dur = player.video.duration;
+      if (!seekingBackRef.current && pos > maxWatchedRef.current) {
+        maxWatchedRef.current = pos;
+      }
       if (dur > 0 && pos / dur >= COMPLETION_THRESHOLD) {
         saveProgress(pos, true, true);
       }
     };
     player.video.addEventListener('timeupdate', onTimeUpdate);
+
+    // Prevent forward seeking/scrubbing past the furthest point naturally watched —
+    // the video must be watched fully to be marked complete, not skipped ahead.
+    const SEEK_TOLERANCE_SECONDS = 2;
+    const onSeeked = () => {
+      const pos = player.video.currentTime;
+      if (pos > maxWatchedRef.current + SEEK_TOLERANCE_SECONDS) {
+        seekingBackRef.current = true;
+        player.video.currentTime = maxWatchedRef.current;
+        setTimeout(() => {
+          seekingBackRef.current = false;
+        }, 200);
+      }
+    };
+    player.video.addEventListener('seeked', onSeeked);
 
     // Save on natural end
     const onEnded = () => {
@@ -207,6 +239,7 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
 
     return () => {
       player.video.removeEventListener('timeupdate', onTimeUpdate);
+      player.video.removeEventListener('seeked', onSeeked);
       player.video.removeEventListener('ended', onEnded);
     };
   }, [resumeAt, saveProgress]);

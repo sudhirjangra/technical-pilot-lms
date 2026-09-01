@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { uploadFileDirect } from '@/lib/uploadDirect';
 import {
   createAssignment,
   createAssignmentQuestion,
@@ -40,7 +42,6 @@ import {
 } from '@/server/admin/tests.server';
 import {
   deleteVideoLesson,
-  uploadVideoLesson,
   VideoLesson,
 } from '@/server/admin/videos.server';
 import { Badge } from '@repo/shadcn/badge';
@@ -248,6 +249,8 @@ export function CourseDetailClient({
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderSaving, setBuilderSaving] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [importingQuestions, setImportingQuestions] = useState(false);
   const [activeBuilderLesson, setActiveBuilderLesson] = useState<BuilderLesson | null>(null);
   const [builderRecordId, setBuilderRecordId] = useState<string | null>(null);
   const [builderMeta, setBuilderMeta] = useState<BuilderMetaDraft>(defaultBuilderMeta());
@@ -257,7 +260,9 @@ export function CourseDetailClient({
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const questionFormRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
     if (showQuestionForm && questionFormRef.current) {
@@ -280,18 +285,30 @@ export function CourseDetailClient({
     lessonId: string,
   ) => {
     event.preventDefault();
-    setUploadingLessonId(lessonId);
-    setLoading(true);
     const formData = new FormData(event.currentTarget);
     const file = formData.get('video');
-    const result = file instanceof File && file.size > 0
-      ? await uploadVideoLesson(lessonId, file)
-      : { error: 'Please select a video file' };
+    if (!(file instanceof File) || file.size === 0) {
+      toast.error('Please select a video file');
+      return;
+    }
+
+    setUploadingLessonId(lessonId);
+    setLoading(true);
+    setVideoUploadProgress(0);
+    // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
+    const result = await uploadFileDirect<{ data: VideoLesson }>(
+      `/videos/lesson/${lessonId}/upload`,
+      file,
+      session?.user?.tokens.access_token,
+      'file',
+      setVideoUploadProgress,
+    );
 
     setLoading(false);
     setUploadingLessonId(null);
-    if (result.error) {
-      toast.error(typeof result.error === 'string' ? result.error : 'Failed to upload video');
+    setVideoUploadProgress(null);
+    if (result.error || !result.data) {
+      toast.error(result.error ?? 'Failed to upload video');
       return;
     }
 
@@ -422,7 +439,12 @@ export function CourseDetailClient({
     const file = formData.get('asset');
     const uploadResult: { error?: string } = file instanceof File && file.size > 0
       ? lessonType === 'video'
-        ? await uploadVideoLesson(createdLesson.id, file)
+        ? await uploadFileDirect(
+          `/videos/lesson/${createdLesson.id}/upload`,
+          file,
+          session?.user?.tokens.access_token,
+          'file',
+        )
         : lessonType === 'pdf'
           ? await uploadPdfLesson(createdLesson.id, file)
           : {}
@@ -534,6 +556,8 @@ export function CourseDetailClient({
     setBuilderOpen(true);
     setBuilderLoading(true);
     setBuilderSaving(false);
+    setSavingDetails(false);
+    setImportingQuestions(false);
     setActiveBuilderLesson(lesson);
     setBuilderRecordId(null);
     setBuilderMeta(defaultBuilderMeta(lesson.title));
@@ -592,7 +616,7 @@ export function CourseDetailClient({
       return;
     }
 
-    setBuilderSaving(true);
+    setSavingDetails(true);
 
     const commonPayload = {
       title,
@@ -620,7 +644,7 @@ export function CourseDetailClient({
           max_score: parseOptionalNumber(builderMeta.maxScore),
         });
 
-    setBuilderSaving(false);
+    setSavingDetails(false);
     if (result.error || !result.data) {
       toast.error(result.error ?? 'Failed to save details');
       return;
@@ -846,11 +870,11 @@ export function CourseDetailClient({
     }
     if (!confirm('Importing will append these questions below the existing ones. Continue?')) return;
 
-    setBuilderSaving(true);
+    setImportingQuestions(true);
     const result = activeBuilderLesson.lesson_type === 'test'
       ? await importTestQuestions(builderRecordId, importFile)
       : await importAssignmentQuestions(builderRecordId, importFile);
-    setBuilderSaving(false);
+    setImportingQuestions(false);
     if (result.error || !result.data) {
       toast.error(result.error ?? 'Failed to import questions');
       return;
@@ -1106,8 +1130,8 @@ export function CourseDetailClient({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={handleSaveBuilderMeta} disabled={builderSaving}>
-                      {builderSaving ? (
+                    <Button size="sm" onClick={handleSaveBuilderMeta} disabled={savingDetails}>
+                      {savingDetails ? (
                         <>
                           <OrbitalSpinner className="mr-2 size-3" />
                           Saving...
@@ -1153,8 +1177,8 @@ export function CourseDetailClient({
                         onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
                       />
                     </div>
-                    <Button size="sm" onClick={handleImportQuestions} disabled={builderSaving || !importFile}>
-                      {builderSaving ? (
+                    <Button size="sm" onClick={handleImportQuestions} disabled={importingQuestions || !importFile}>
+                      {importingQuestions ? (
                         <>
                           <OrbitalSpinner className="mr-2 size-3" />
                           Importing...
@@ -1569,7 +1593,11 @@ export function CourseDetailClient({
                                 className="mt-1 text-xs"
                               />
                             </div>
-                            <Button type="submit" size="sm" disabled={loading}>Upload</Button>
+                            <Button type="submit" size="sm" disabled={loading}>
+                              {uploadingLessonId === lesson.id
+                                ? `Uploading${videoUploadProgress != null ? ` ${videoUploadProgress}%` : '...'}`
+                                : 'Upload'}
+                            </Button>
                           </form>
                         )}
 

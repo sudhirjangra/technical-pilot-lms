@@ -4,6 +4,7 @@ import { AdminUser } from '@/server/admin/users.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
+import { OrbitalSpinner } from '@repo/shadcn/orbital-spinner';
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from '@repo/shadcn/table';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import {
   compareValues,
   EmptyState,
@@ -40,6 +41,8 @@ const PAGE_SIZE = 15;
 
 export function StudentsClient({ users }: { users: AdminUser[] }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
   const [role, setRole] = useState('all');
@@ -87,6 +90,13 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
 
   const handleSort = (key: UserSortKey) =>
     setSort((current) => toggleSort(current, key));
+
+  const handleViewStudent = (userId: string) => {
+    setViewingId(userId);
+    startTransition(() => {
+      router.push(`/admin/students/${userId}`);
+    });
+  };
 
   const escapeCsvCell = (value: string) =>
     /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
@@ -206,15 +216,14 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
                   >
                     Joined
                   </SortableHeader>
+                  <TableHead className="px-2 py-1.5 text-right text-xs uppercase">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pagination.pageItems.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => router.push(`/admin/students/${user.id}`)}
-                  >
+                  <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell className="max-w-[200px] py-2">
                       <div className="flex flex-col">
                         <span className="truncate font-medium">
@@ -242,6 +251,24 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden py-2 text-xs sm:table-cell">
                       {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        disabled={isPending && viewingId === user.id}
+                        onClick={() => handleViewStudent(user.id)}
+                      >
+                        {isPending && viewingId === user.id ? (
+                          <>
+                            <OrbitalSpinner className="mr-2 size-3" />
+                            Opening...
+                          </>
+                        ) : (
+                          'View'
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

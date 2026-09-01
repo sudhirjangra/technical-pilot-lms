@@ -14,7 +14,7 @@ import {
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { CategoriesService } from './categories.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto';
+import { CreateCategoryDto, ReorderCategoriesDto, UpdateCategoryDto } from './dto';
 
 @Controller('categories')
 export class CategoriesController {
@@ -41,6 +41,13 @@ export class CategoriesController {
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     const data = await this.categoriesService.findOne(id);
     return { message: 'Category fetched successfully', data };
+  }
+
+  @Roles('ADMIN')
+  @Patch('reorder')
+  async reorder(@Body() dto: ReorderCategoriesDto) {
+    await this.categoriesService.reorder(dto.categories);
+    return { message: 'Categories reordered successfully' };
   }
 
   @Roles('ADMIN')

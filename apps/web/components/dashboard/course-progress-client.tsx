@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ClipboardList,
   FileText,
+  Lock,
   PlayCircle,
   Timer,
 } from '@repo/shadcn/lucide';
@@ -80,24 +81,27 @@ function LessonRow({
   courseId,
   lesson,
   index,
+  locked = false,
 }: {
   courseId: string;
   lesson: StudentLessonProgress;
   index: string;
+  locked?: boolean;
 }) {
   const Icon = LESSON_ICONS[lesson.lesson_type] ?? FileText;
   const status = lesson.progress?.status ?? 'not_started';
   const due =
     lesson.lesson_type === 'assignment' && lesson.due_at ? dueState(lesson.due_at) : null;
 
-  return (
-    <Link
-      href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
-      className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/60 sm:px-3"
-    >
+  const content = (
+    <>
       <span className="flex min-w-0 items-center gap-2">
         <span className="w-8 shrink-0 text-xs text-muted-foreground">{index}</span>
-        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        {locked ? (
+          <Lock className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <Icon className="size-4 shrink-0 text-muted-foreground" />
+        )}
         <span className="truncate text-sm">{lesson.title}</span>
       </span>
 
@@ -118,13 +122,32 @@ function LessonRow({
           }
           className="text-[10px]"
         >
-          {status === 'completed'
-            ? 'Done'
-            : status === 'in_progress'
-              ? `${lesson.progress?.progress_percent ?? 0}%`
-              : 'Not Started'}
+          {locked
+            ? 'Locked'
+            : status === 'completed'
+              ? 'Done'
+              : status === 'in_progress'
+                ? `${lesson.progress?.progress_percent ?? 0}%`
+                : 'Not Started'}
         </Badge>
       </span>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-2 text-muted-foreground opacity-60 sm:px-3">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
+      className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/60 sm:px-3"
+    >
+      {content}
     </Link>
   );
 }
@@ -190,6 +213,14 @@ export function CourseProgressClient({
           const done = chapter.lessons.filter(
             (lesson) => lesson.progress?.status === 'completed',
           ).length;
+          const previousChapter = chapterIndex > 0 ? chapters[chapterIndex - 1] : null;
+          const unlocked =
+            chapterIndex === 0 ||
+            (previousChapter?.lessons.length
+              ? previousChapter.lessons.every(
+                (lesson) => lesson.progress?.status === 'completed',
+              )
+              : false);
 
           return (
             <Card key={chapter.id}>
@@ -203,9 +234,15 @@ export function CourseProgressClient({
                     {chapter.started_at
                       ? ` · Started ${formatDate(chapter.started_at)}`
                       : ''}
+                    {!unlocked ? ' · Locked' : ''}
                   </p>
                 </div>
-                {chapter.started_at ? (
+                {!unlocked ? (
+                  <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                    <Lock className="size-3" />
+                    Locked
+                  </Badge>
+                ) : chapter.started_at ? (
                   <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
                     <CheckCircle2 className="size-3" />
                     Started
@@ -216,12 +253,18 @@ export function CourseProgressClient({
               </CardHeader>
 
               <CardContent className="space-y-1">
+                {!unlocked && (
+                  <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                    Complete the previous chapter to unlock this content.
+                  </p>
+                )}
                 {chapter.lessons.map((lesson, lessonIndex) => (
                   <LessonRow
                     key={lesson.id}
                     courseId={courseId}
                     lesson={lesson}
                     index={`${chapterIndex + 1}.${lessonIndex + 1}`}
+                    locked={!unlocked}
                   />
                 ))}
                 {chapter.lessons.length === 0 && (

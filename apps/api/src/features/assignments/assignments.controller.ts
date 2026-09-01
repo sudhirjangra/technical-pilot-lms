@@ -109,6 +109,12 @@ export class AssignmentsController {
     return { message: 'Assignment fetched', data };
   }
 
+  @Get('student/my-attempts')
+  async getMyAttempts(@Req() req: { user: { id: string } }) {
+    const data = await this.assignmentsService.getMyAttempts(req.user.id);
+    return { message: 'Attempts fetched', data };
+  }
+
   @Post('student/:assignmentId/attempts')
   async startAttempt(
     @Param('assignmentId', ParseUUIDPipe) assignmentId: string,

@@ -31,7 +31,7 @@ import { Laptop, Loader2, LogOut, Smartphone, Chrome } from '@repo/shadcn/lucide
 import { Google } from '@repo/shadcn/google';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ChangeEvent, useEffect, useState } from 'react';
 
 interface DeviceSession {
@@ -44,6 +44,8 @@ interface DeviceSession {
 
 const SignInForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const accountDisabled = searchParams.get('disabled') === '1';
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
@@ -131,14 +133,16 @@ const SignInForm = () => {
           <CardDescription
             className={cn(
               'text-sm sm:text-base',
-              serverError && !serverError.includes('DEVICE_LIMIT')
+              (accountDisabled || (serverError && !serverError.includes('DEVICE_LIMIT')))
                 ? 'text-destructive'
                 : '',
             )}
           >
-            {serverError && !serverError.includes('DEVICE_LIMIT')
-              ? serverError
-              : `Sign in to your ${APP_NAME} account`}
+            {accountDisabled
+              ? 'Your account has been disabled by an administrator. Please contact support for assistance.'
+              : serverError && !serverError.includes('DEVICE_LIMIT')
+                ? serverError
+                : `Sign in to your ${APP_NAME} account`}
           </CardDescription>
         </CardHeader>
 

@@ -291,7 +291,7 @@ function InstructionsScreen({
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/40 border-b border-border/40">
-                  <th className="px-3 py-2 text-left text-muted-foreground font-medium">Date</th>
+                  <th className="px-3 py-2 text-left text-muted-foreground font-medium">Submitted</th>
                   <th className="px-3 py-2 text-center text-muted-foreground font-medium">Score</th>
                   <th className="px-3 py-2 text-center text-muted-foreground font-medium">Result</th>
                   <th className="px-3 py-2 text-center text-muted-foreground font-medium">View</th>
@@ -301,7 +301,11 @@ function InstructionsScreen({
                 {allAttempts.map((a, i) => (
                   <tr key={a.id} className={cn('border-b border-border/20 last:border-0', i === 0 ? 'bg-muted/20' : '')}>
                     <td className="px-3 py-2 text-muted-foreground">
-                      {a.started_at ? new Date(a.started_at).toLocaleDateString() : '—'}
+                      {a.completed_at
+                        ? new Date(a.completed_at).toLocaleDateString()
+                        : a.started_at
+                          ? `Started ${new Date(a.started_at).toLocaleDateString()}`
+                          : '—'}
                     </td>
                     <td className="px-3 py-2 text-center font-mono font-medium">
                       {a.percentage !== null && a.percentage !== undefined ? `${a.percentage}%` : '—'}
@@ -706,7 +710,7 @@ function ResultsScreen({
               <thead>
                 <tr className="bg-muted/40 border-b border-border/40">
                   <th className="px-3 py-2 text-left text-muted-foreground font-medium">#</th>
-                  <th className="px-3 py-2 text-left text-muted-foreground font-medium">Date</th>
+                  <th className="px-3 py-2 text-left text-muted-foreground font-medium">Submitted</th>
                   <th className="px-3 py-2 text-center text-muted-foreground font-medium">Score</th>
                   <th className="px-3 py-2 text-center text-muted-foreground font-medium">Result</th>
                   <th className="px-3 py-2 text-right text-muted-foreground font-medium">Time</th>
@@ -717,7 +721,11 @@ function ResultsScreen({
                   <tr key={a.id} className={cn('border-b border-border/20 last:border-0', i === 0 ? 'bg-primary/5' : '')}>
                     <td className="px-3 py-2 text-muted-foreground font-mono">{allAttempts.length - i}</td>
                     <td className="px-3 py-2 text-muted-foreground">
-                      {a.started_at ? new Date(a.started_at).toLocaleDateString() : '—'}
+                      {a.completed_at
+                        ? new Date(a.completed_at).toLocaleDateString()
+                        : a.started_at
+                          ? `Started ${new Date(a.started_at).toLocaleDateString()}`
+                          : '—'}
                     </td>
                     <td className="px-3 py-2 text-center font-mono font-medium">
                       {a.percentage !== null && a.percentage !== undefined ? `${a.percentage}%` : '—'}

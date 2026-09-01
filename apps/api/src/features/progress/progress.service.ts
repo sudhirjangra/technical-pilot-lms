@@ -120,17 +120,19 @@ export class ProgressService {
 
   /** Get all progress for a student in a course */
   async getCourseProgress(courseId: string, studentId: string) {
-    // Get all lessons for the course
-    const { data: chapters } = await this.supabase
+    // Get all lessons for the course. Note: nested-table dot filters (e.g. "lessons.is_published")
+    // are not reliably applied by PostgREST without an `!inner` join hint, and silently return
+    // no matching rows in some client versions — so publish filtering for lessons is done in JS below.
+    const { data: chapters, error: chaptersError } = await this.supabase
       .from('chapters')
       .select(
         'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start), tests(id, title, passing_score_percent))',
       )
       .eq('course_id', courseId)
       .eq('is_published', true)
-      .eq('lessons.is_published', true)
       .order('sort_order', { ascending: true })
       .order('sort_order', { referencedTable: 'lessons', ascending: true });
+    if (chaptersError) throw new BadRequestException(chaptersError.message);
 
     // Filter out unpublished chapters in JS (belt-and-suspenders; PostgREST nested filter quirk)
     const visibleChapters = (chapters ?? []).filter(

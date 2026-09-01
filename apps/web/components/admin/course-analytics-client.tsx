@@ -181,7 +181,7 @@ function ChapterCompletionChart({
   const data = chapters.map((ch: any, idx: number) => ({
     name: `Ch ${idx + 1}`,
     enrolled: totalEnrolled,
-    completed: ch.lessons?.reduce?.((sum: number, l: any) => sum + (l.stats?.completed ?? 0), 0) ?? 0,
+    completed: ch.studentsCompleted ?? 0,
   }));
 
   if (data.length === 0) {

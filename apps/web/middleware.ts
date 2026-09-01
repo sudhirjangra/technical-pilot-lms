@@ -17,7 +17,10 @@ export default auth(async (req) => {
       }
     }
     if (req.auth && req.auth.user) {
-      await validateSessionIfExist();
+      const { signedOut } = await validateSessionIfExist();
+      if (signedOut) {
+        return Response.redirect(new URL('/auth/sign-in?disabled=1', req.url));
+      }
     }
 
     if (req.auth && req.auth.user) {
