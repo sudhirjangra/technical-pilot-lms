@@ -196,7 +196,7 @@ export function StudentDetailClient({
   student: StudentDetail;
   enrollments: StudentEnrollment[];
   progress: ProgressRecord[];
-  courseProgress: { course: string; progress: AdminCourseProgress | null }[];
+  courseProgress: { courseId?: string; course: string; progress: AdminCourseProgress | null }[];
   analytics: StudentAnalytics | null;
   attempts: StudentAttempt[] | null;
 }) {
@@ -785,8 +785,8 @@ export function StudentDetailClient({
               {enrollments.map((enrollment) => {
                 const cp = courseProgress.find(
                   (c) =>
-                    c.course ===
-                    (enrollment.courses?.title ?? enrollment.course_id),
+                    c.courseId === enrollment.course_id ||
+                    c.course === (enrollment.courses?.title ?? enrollment.course_id),
                 );
                 const pct = cp?.progress?.overall_percent ?? 0;
                 return (
@@ -1030,8 +1030,11 @@ export function StudentDetailClient({
                           {attempt.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-sm">
-                        {attempt.title ?? attempt.lessonTitle ?? '--'}
+                      <TableCell className="max-w-[250px] text-sm">
+                        <p className="truncate font-medium">{attempt.title ?? '--'}</p>
+                        {attempt.lessonTitle && attempt.lessonTitle !== attempt.title && (
+                          <p className="truncate text-[10px] text-muted-foreground">{attempt.lessonTitle}</p>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {formatDate(attempt.startedAt)}

@@ -6,6 +6,7 @@ import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Progress } from '@repo/shadcn/progress';
 import {
+  AlertTriangle,
   BookOpen,
   CheckCircle2,
   Clock3,
@@ -136,13 +137,22 @@ function AvailableCourseCard({ course }: { course: PublicCourse }) {
   );
 }
 
+interface DueItem {
+  courseTitle: string;
+  lessonTitle: string;
+  dueAt: string;
+  courseId: string;
+}
+
 export function DashboardClient({
   enrollments,
   availableCourses,
+  upcomingDue = [],
   user,
 }: {
   enrollments: StudentEnrollment[];
   availableCourses: PublicCourse[];
+  upcomingDue?: DueItem[];
   user: DashboardUser;
 }) {
   const activeCourses = enrollments.filter((e) => e.status === 'active');
@@ -187,6 +197,35 @@ export function DashboardClient({
           }
         />
       </div>
+
+      {/* Assignment Due Reminders */}
+      {upcomingDue.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="size-4" />
+              Upcoming Deadlines
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {upcomingDue.map((item, i) => {
+              const daysLeft = Math.ceil((new Date(item.dueAt).getTime() - Date.now()) / 86_400_000);
+              const isOverdue = daysLeft < 0;
+              return (
+                <Link key={i} href={`/dashboard/courses/${item.courseId}`} className="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-amber-100/50 dark:hover:bg-amber-900/20">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{item.lessonTitle}</p>
+                    <p className="text-xs text-muted-foreground">{item.courseTitle}</p>
+                  </div>
+                  <Badge variant={isOverdue ? 'destructive' : 'secondary'} className="shrink-0 text-[10px]">
+                    {isOverdue ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
+                  </Badge>
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Continue Learning */}
       {activeCourses.length > 0 && (

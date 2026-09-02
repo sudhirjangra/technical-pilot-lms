@@ -28,6 +28,7 @@ export default async function AdminStudentDetailPage({
 
   const courseProgress = await Promise.all(
     enrollments.map(async (enrollment) => ({
+      courseId: enrollment.course_id,
       course: enrollment.courses?.title ?? enrollment.course_id,
       progress: await getStudentCourseProgress(enrollment.course_id, id),
     })),

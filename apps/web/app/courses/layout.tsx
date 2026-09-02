@@ -1,8 +1,7 @@
 import { auth } from '@/auth';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { APP_NAME } from '@repo/constants/app';
-import { Button } from '@repo/shadcn/button';
-import { Bell } from '@repo/shadcn/lucide';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@repo/shadcn/sidebar';
 import { cookies } from 'next/headers';
@@ -30,11 +29,7 @@ export default async function CoursesLayout({ children }: { children: ReactNode 
             </Link>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-              <Bell className="size-4" />
-              <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary" />
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <NotificationBell />
             <ModeSwitcher />
           </div>
         </header>

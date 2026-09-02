@@ -1,11 +1,10 @@
 import { auth } from '@/auth';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 import { APP_NAME } from '@repo/constants/app';
-import { Button } from '@repo/shadcn/button';
 
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@repo/shadcn/sidebar';
-import { Bell } from '@repo/shadcn/lucide';
 import FollowCursor from '@repo/shadcn/follow-cursor';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
@@ -49,17 +48,8 @@ export default async function DashboardLayout({
             </Link>
           </div>
 
-          {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Notifications bell */}
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground">
-              <Bell className="size-4" />
-              {/* Notification dot — can wire up later */}
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
-              <span className="sr-only">Notifications</span>
-            </Button>
-
-            {/* Theme switcher */}
+            <NotificationBell />
             <ModeSwitcher />
           </div>
         </header>

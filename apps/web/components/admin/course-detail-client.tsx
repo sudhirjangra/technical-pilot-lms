@@ -1653,29 +1653,65 @@ export function CourseDetailClient({
           ))}
         </TabsContent>
 
-        <TabsContent value="enrollments" className="mt-4">
+        <TabsContent value="enrollments" className="mt-4 space-y-4">
           {enrollments.length === 0 ? (
             <p className="text-muted-foreground">No enrollments yet.</p>
           ) : (
-            <div className="grid gap-3">
-              {enrollments.map((enrollment) => (
-                <Card key={enrollment.id} className="p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {enrollment.profiles?.full_name ?? enrollment.profiles?.email ?? enrollment.student_id}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Enrolled: {new Date(enrollment.enrolled_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge variant={enrollment.status === 'active' ? 'default' : 'secondary'}>
-                      {enrollment.status}
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Card className="px-4 py-3"><p className="text-muted-foreground text-xs">Total Enrolled</p><p className="text-xl font-semibold">{enrollments.length}</p></Card>
+                <Card className="px-4 py-3"><p className="text-muted-foreground text-xs">Active</p><p className="text-xl font-semibold">{enrollments.filter(e => e.status === 'active').length}</p></Card>
+                <Card className="px-4 py-3"><p className="text-muted-foreground text-xs">Completed</p><p className="text-xl font-semibold">{enrollments.filter(e => e.status === 'completed').length}</p></Card>
+                <Card className="px-4 py-3"><p className="text-muted-foreground text-xs">Expired</p><p className="text-xl font-semibold">{enrollments.filter(e => e.status === 'expired').length}</p></Card>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">Students</h3>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href={`/admin/courses/${course.id}/analytics`}>View full analytics</Link>
+                </Button>
+              </div>
+
+              <div className="rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Student</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Enrolled</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {enrollments.map((enrollment) => (
+                      <tr key={enrollment.id} className="border-b last:border-0">
+                        <td className="px-4 py-2.5">
+                          <Link href={`/admin/students/${enrollment.student_id}`} className="hover:underline">
+                            <p className="font-medium text-sm">{enrollment.profiles?.full_name ?? enrollment.profiles?.email ?? 'Unknown'}</p>
+                            {enrollment.profiles?.email && enrollment.profiles?.full_name && (
+                              <p className="text-xs text-muted-foreground">{enrollment.profiles.email}</p>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                          {new Date(enrollment.enrolled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant={enrollment.status === 'active' ? 'default' : enrollment.status === 'completed' ? 'secondary' : 'destructive'} className="text-[10px]">
+                            {enrollment.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Button size="sm" variant="ghost" asChild className="h-7 text-xs">
+                            <Link href={`/admin/students/${enrollment.student_id}`}>View</Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </TabsContent>
       </Tabs>

@@ -24,6 +24,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   Settings,
   ShieldCheck,
   Users,
@@ -74,6 +75,7 @@ const navGroups = [
     items: [
       { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false },
       { label: 'Doubt Sessions', href: '/admin/doubt-sessions', icon: CalendarDays, exact: false },
+      { label: 'Student Queries', href: '/admin/queries', icon: MessageSquare, exact: false },
     ],
   },
 ];
@@ -164,7 +166,7 @@ export function AdminSidebar() {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">
-      <SidebarHeader className="flex h-14 items-center border-b border-sidebar-border px-3">
+      <SidebarHeader className="flex flex-row h-14 items-center border-b border-sidebar-border px-3 py-0">
         <Link href="/admin" className="flex items-center gap-2.5 group">
           <div className="shrink-0 transition-transform group-hover:scale-105">
             <LogoIcon width={logoSize} height={logoSize} className="transition-all duration-200" />
