@@ -1,16 +1,19 @@
 import { auth } from '@/auth';
-import { DashboardClient } from '@/components/dashboard/dashboard-client';
 import { CourseBrowseClient } from '@/components/courses/browse-client';
-import { getMyEnrollments, getPublishedCourses } from '@/server/student/courses.server';
+import { getPublishedCourses, getMyEnrollments } from '@/server/student/courses.server';
 
 export default async function CoursesPage() {
-  const session = await auth();
+  const [courses, session] = await Promise.all([
+    getPublishedCourses(),
+    auth(),
+  ]);
 
+  let enrolledCourseIds: string[] = [];
   if (session?.user) {
     const enrollments = await getMyEnrollments();
-    return <DashboardClient enrollments={enrollments} user={session.user} />;
+    enrolledCourseIds = enrollments.map((e) => e.course_id);
   }
 
-  const courses = await getPublishedCourses();
-  return <CourseBrowseClient courses={courses} />;
+  const available = courses.filter((c) => !enrolledCourseIds.includes(c.id));
+  return <CourseBrowseClient courses={available} />;
 }

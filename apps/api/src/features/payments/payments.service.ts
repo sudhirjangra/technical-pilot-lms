@@ -117,6 +117,36 @@ export class PaymentsService {
       throw new ForbiddenException('Invalid payment signature');
     }
 
+    // Webhooks can complete the payment before the browser reaches this endpoint.
+    const { data: existingPayment, error: lookupError } = await this.supabase
+      .from('payments')
+      .select('*')
+      .eq('razorpay_order_id', dto.razorpay_order_id)
+      .eq('student_id', studentId)
+      .single();
+
+    if (lookupError || !existingPayment)
+      throw new BadRequestException('Payment record not found');
+    if (
+      existingPayment.razorpay_payment_id &&
+      existingPayment.razorpay_payment_id !== dto.razorpay_payment_id
+    ) {
+      throw new BadRequestException('Payment ID does not match the order');
+    }
+
+    if (existingPayment.status === 'completed') {
+      await this.supabase
+        .from('enrollments')
+        .upsert(
+          { student_id: studentId, course_id: existingPayment.course_id },
+          { onConflict: 'student_id,course_id' },
+        );
+      return { message: 'Payment already verified, enrollment activated', payment: existingPayment };
+    }
+
+    if (existingPayment.status !== 'pending')
+      throw new BadRequestException('Payment is not awaiting verification');
+
     // Update payment record
     const { data: payment, error } = await this.supabase
       .from('payments')
@@ -187,6 +217,18 @@ export class PaymentsService {
             { onConflict: 'student_id,course_id' },
           );
       }
+    } else if (event === 'payment.failed') {
+      const paymentEntity = (payload['payment'] as Record<string, unknown>)[
+        'entity'
+      ] as Record<string, unknown>;
+      const orderId = paymentEntity['order_id'] as string;
+      const paymentId = paymentEntity['id'] as string;
+
+      await this.supabase
+        .from('payments')
+        .update({ razorpay_payment_id: paymentId, status: 'failed' })
+        .eq('razorpay_order_id', orderId)
+        .eq('status', 'pending');
     }
 
     return { received: true };

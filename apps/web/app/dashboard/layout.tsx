@@ -35,7 +35,7 @@ export default async function DashboardLayout({
 
       <SidebarInset className="flex flex-col min-h-dvh overflow-x-hidden">
         {/* ── Topbar ── */}
-        <header className="water-surface sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 rounded-none border-x-0 border-t-0 bg-background/70 px-4 backdrop-blur-md">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur-md">
           {/* Sidebar toggle (mobile + desktop) */}
           <SidebarTrigger className="text-muted-foreground hover:text-foreground -ml-1" />
 

@@ -1,5 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('react-pdf', () => ({
+  Document: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Page: () => <div data-testid="pdf-page" />,
+  pdfjs: { version: 'test', GlobalWorkerOptions: {} },
+}));
+vi.mock('./pdf-document', () => ({
+  PDFDocument: () => <div data-testid="pdf-page" />,
+}));
+
 import { PDFViewer } from './pdf-viewer';
 
 describe('PDFViewer', () => {
@@ -8,14 +18,14 @@ describe('PDFViewer', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ pdfUrl: 'https://example.com/demo.pdf' }),
+        arrayBuffer: async () => new ArrayBuffer(4),
       }),
     );
 
     render(<PDFViewer lessonId="lesson-1" studentEmail="student@example.com" />);
 
     await waitFor(() => {
-      expect(screen.getByTitle('PDF Lesson')).toBeTruthy();
+      expect(screen.getByTestId('pdf-page')).toBeTruthy();
     });
 
     expect(screen.queryByText('CONTENT RESERVED')).toBeNull();

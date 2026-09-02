@@ -106,6 +106,9 @@
 
 ## Immediate Next Step (In Progress)
 ### Requested Student/Admin UX Corrections (In Progress)
+- [x] Secured course PDFs: the API now validates JWT + active enrollment and streams private Supabase bytes through the Next.js proxy; no Supabase URL, bucket, object key, or signed URL reaches the browser.
+- [x] Added migration `015_private_course_materials.sql` to force `course-materials` private and remove common public-read policies.
+- [x] VdoCipher playback remains OTP-gated with provider-side watermarking and a short configurable TTL; the provider iframe URL necessarily remains visible to the browser for DRM playback.
 - [x] Applied shared responsive liquid-glass surfaces, cursor-reactive ambient motion, and blurred modal/sheet backdrops across auth, student dashboard, My Courses, and admin routes.
 - [x] Removed Dashboard from the student sidebar; `/dashboard` now redirects to `/dashboard/courses`.
 - [x] My Courses now uses the correctly spelled `/dashboard/courses` route and library view; removed the legacy `/cources` routes.
@@ -114,6 +117,11 @@
 - [x] Admin enrollment rows now include a View dialog with ordered chapter/lesson progress and PDF completion state.
 - [x] Admin student progress is grouped by course, chapter, and lesson hierarchy.
 - [x] Added student-scoped assignment/test attempt history and on-demand question analytics inside the enrollment progress dialog, including attempt timing, score/pass bars, marks, correctness, answers, and per-question time.
+- [x] `safeFetch` retries transient API connection failures during concurrent web/API startup, preventing initial course-progress loads from failing on the startup race.
+- [x] Student `/courses` now always shows published courses, including for authenticated students; enrolled-course content remains under `/dashboard/courses`.
+- [x] Paid course enrollment now creates a Razorpay order, opens Checkout, verifies the payment signature server-side, and activates enrollment.
+- [x] Razorpay payment verification is idempotent when `payment.captured` reaches the webhook before the browser callback; Checkout now prefills the signed-in email.
+- [x] Razorpay `payment.failed` webhook events now mark pending payment rows as failed instead of leaving stale pending orders.
 - [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.
 
 ### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)

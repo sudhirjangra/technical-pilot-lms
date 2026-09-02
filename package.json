@@ -34,7 +34,7 @@
       "path": "cz-conventional-changelog"
     }
   },
-  "devDependencies": {
+"devDependencies": {
     "@changesets/cli": "^3.0.1",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
@@ -50,7 +50,7 @@
     "prettier-plugin-packagejson": "^3.0.2",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "turbo": "^2.10.12",
-    "typescript": "5.8.3",
+    "typescript": "^5.8.3",
     "zod": "^4.5.4"
   },
   "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",

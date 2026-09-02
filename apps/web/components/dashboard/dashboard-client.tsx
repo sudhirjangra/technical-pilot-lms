@@ -1,9 +1,21 @@
 'use client';
 
-import { StudentEnrollment } from '@/server/student/courses.server';
+import type { PublicCourse, StudentEnrollment } from '@/server/student/courses.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
+import { Progress } from '@repo/shadcn/progress';
+import {
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  GraduationCap,
+  Play,
+  ShoppingCart,
+  Sparkles,
+  TrendingUp,
+} from '@repo/shadcn/lucide';
+import Image from 'next/image';
 import Link from 'next/link';
 
 interface DashboardUser {
@@ -12,116 +24,268 @@ interface DashboardUser {
   role?: string;
 }
 
+function CourseCard({ enrollment }: { enrollment: StudentEnrollment }) {
+  const course = enrollment.courses;
+  const isCompleted = enrollment.status === 'completed';
+
+  return (
+    <Link href={`/dashboard/courses/${enrollment.course_id}`} className="group block">
+      <Card className="h-full overflow-hidden transition-all duration-200 group-hover:shadow-md group-hover:ring-1 group-hover:ring-primary/30">
+        <div className="aspect-[16/8] overflow-hidden bg-muted">
+          {course?.thumbnail_url ? (
+            <Image
+              src={course.thumbnail_url}
+              alt={course.title}
+              width={400}
+              height={200}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+              <BookOpen className="size-10" strokeWidth={1.5} />
+            </div>
+          )}
+        </div>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
+              {course?.title ?? 'Unknown Course'}
+            </h3>
+            <Badge
+              variant={isCompleted ? 'secondary' : 'default'}
+              className="shrink-0 text-[10px]"
+            >
+              {isCompleted ? 'Completed' : 'In Progress'}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Enrolled{' '}
+            {new Date(enrollment.enrolled_at).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </p>
+          <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
+            {isCompleted ? (
+              <><CheckCircle2 className="size-4" /> Review course</>
+            ) : (
+              <><Play className="size-4" /> Continue learning</>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function AvailableCourseCard({ course }: { course: PublicCourse }) {
+  const effectivePrice = course.discount_price ?? course.price;
+  const isFree = Number(effectivePrice) === 0;
+
+  return (
+    <Link href={`/courses/${course.slug}`} className="group block">
+      <Card className="h-full overflow-hidden transition-all duration-200 group-hover:shadow-md group-hover:ring-1 group-hover:ring-primary/30">
+        <div className="aspect-[16/8] overflow-hidden bg-muted">
+          {course.thumbnail_url ? (
+            <Image
+              src={course.thumbnail_url}
+              alt={course.title}
+              width={400}
+              height={200}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+              <GraduationCap className="size-10" strokeWidth={1.5} />
+            </div>
+          )}
+        </div>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
+              {course.title}
+            </h3>
+            {course.categories && (
+              <Badge variant="outline" className="shrink-0 text-[10px]">
+                {course.categories.name}
+              </Badge>
+            )}
+          </div>
+          {course.description && (
+            <p className="line-clamp-2 text-xs text-muted-foreground">{course.description}</p>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {isFree ? (
+                <span className="text-sm font-bold text-green-600">Free</span>
+              ) : course.discount_price ? (
+                <>
+                  <span className="text-sm font-bold">₹{course.discount_price}</span>
+                  <span className="text-xs text-muted-foreground line-through">₹{course.price}</span>
+                </>
+              ) : (
+                <span className="text-sm font-bold">₹{course.price}</span>
+              )}
+            </div>
+            <ShoppingCart className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export function DashboardClient({
   enrollments,
+  availableCourses,
   user,
 }: {
   enrollments: StudentEnrollment[];
+  availableCourses: PublicCourse[];
   user: DashboardUser;
 }) {
+  const activeCourses = enrollments.filter((e) => e.status === 'active');
+  const completedCourses = enrollments.filter((e) => e.status === 'completed');
+  const greeting = getGreeting();
+
   return (
-    <section className="container py-8 space-y-6">
-      {/* Welcome header */}
+    <section className="container max-w-7xl py-6 sm:py-8 space-y-8">
+      {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {user.full_name ?? user.email?.split('@')[0]}
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          {greeting}, {user.full_name ?? user.email?.split('@')[0]}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Here&apos;s a summary of your learning progress.
+          Here&apos;s your learning overview.
         </p>
       </div>
 
-      {/* Stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
-              Enrolled Courses
-            </p>
-            <p className="text-3xl font-bold mt-1">{enrollments.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
-              Active
-            </p>
-            <p className="text-3xl font-bold mt-1">
-              {enrollments.filter((e) => e.status === 'active').length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="hidden sm:block">
-          <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
-              Completed
-            </p>
-            <p className="text-3xl font-bold mt-1">
-              {enrollments.filter((e) => e.status === 'completed').length}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard
+          icon={BookOpen}
+          label="Enrolled"
+          value={enrollments.length}
+        />
+        <StatCard
+          icon={Clock3}
+          label="In Progress"
+          value={activeCourses.length}
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Completed"
+          value={completedCourses.length}
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Completion Rate"
+          value={enrollments.length > 0
+            ? `${Math.round((completedCourses.length / enrollments.length) * 100)}%`
+            : '—'
+          }
+        />
       </div>
 
-      {/* My Courses */}
-      <Card className="water-surface">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-base font-semibold">
-            My Courses ({enrollments.length})
-          </CardTitle>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/courses">Browse more</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {enrollments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">
-                You haven&apos;t enrolled in any courses yet.
-              </p>
-              <Button asChild>
-                <Link href="/courses">Browse Courses</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enrollments.map((en) => (
-                <Link
-                  key={en.id}
-                  href={`/dashboard/courses/${en.course_id}`}
-                  className="block"
-                >
-                  <Card className="water-surface h-full transition-transform duration-300 hover:-translate-y-1 hover:border-primary/40 cursor-pointer">
-                    <CardContent className="pt-5">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-sm leading-snug line-clamp-2 flex-1">
-                          {en.courses?.title ?? 'Unknown Course'}
-                        </h3>
-                        <Badge
-                          variant={
-                            en.status === 'active' ? 'default' : 'secondary'
-                          }
-                          className="shrink-0 text-xs"
-                        >
-                          {en.status}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Enrolled:{' '}
-                        {new Date(en.enrolled_at).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Continue Learning */}
+      {activeCourses.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Play className="size-5 text-primary" />
+              Continue Learning
+            </h2>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/courses">View all</Link>
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {activeCourses.slice(0, 3).map((enrollment) => (
+              <CourseCard key={enrollment.id} enrollment={enrollment} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Completed Courses */}
+      {completedCourses.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <CheckCircle2 className="size-5 text-green-600" />
+            Completed
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {completedCourses.slice(0, 3).map((enrollment) => (
+              <CourseCard key={enrollment.id} enrollment={enrollment} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* New Courses Available */}
+      {availableCourses.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="size-5 text-amber-500" />
+              New Courses Available
+            </h2>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/courses">Browse all</Link>
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {availableCourses.slice(0, 6).map((course) => (
+              <AvailableCourseCard key={course.id} course={course} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {enrollments.length === 0 && availableCourses.length === 0 && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <GraduationCap className="mb-3 size-12 text-muted-foreground/50" />
+            <h2 className="font-semibold text-lg">Welcome aboard!</h2>
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+              No courses available yet. Check back soon or contact your institution.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </section>
   );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="rounded-lg bg-primary/10 p-2">
+          <Icon className="size-5 text-primary" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold leading-none">{value}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }

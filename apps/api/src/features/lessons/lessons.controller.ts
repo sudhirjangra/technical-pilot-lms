@@ -9,8 +9,9 @@ import {
   Patch,
   Post,
   Req,
+  Res,
 } from '@nestjs/common';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { CreateLessonDto, ReorderLessonsDto, UpdateLessonDto } from './dto';
 import { LessonsService } from './lessons.service';
 
@@ -42,11 +43,20 @@ export class LessonsController {
     return { message: 'PDF deleted' };
   }
 
-  /** Student: get signed URL for PDF access */
+  /** Student: stream PDF bytes after JWT and enrollment checks. */
   @Get(':id/pdf-url')
-  async getPdfUrl(@Param('id', ParseUUIDPipe) id: string, @Req() req: FastifyRequest) {
-    const pdfUrl = await this.lessonsService.getPdfUrl(id, req);
-    return { pdfUrl };
+  async getPdf(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: FastifyRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const pdf = await this.lessonsService.getPdf(id, req);
+    return reply
+      .type('application/pdf')
+      .header('Content-Disposition', 'inline')
+      .header('Cache-Control', 'private, no-store')
+      .header('X-Content-Type-Options', 'nosniff')
+      .send(pdf);
   }
 
   @Get('chapter/:chapterId')

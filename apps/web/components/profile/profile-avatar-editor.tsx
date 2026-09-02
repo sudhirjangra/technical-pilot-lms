@@ -20,14 +20,16 @@ const ProfileAvatarEditor = () => {
   );
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<null | string>(null);
-  const onDrop = useCallback((acceptedFiles: FileWithPath[]) => {
+  const onDrop = useCallback(<T extends File>(acceptedFiles: T[]) => {
     const file = acceptedFiles[0];
     if (!file) {
       alert('Selected image is too large!');
       return;
     }
 
-    const fileWithPreview = Object.assign(file, {
+    const fileWithPreview: FileWithPreview = Object.assign(file, {
+      path: file.name,
+      relativePath: file.name,
       preview: URL.createObjectURL(file),
     });
 

@@ -1,8 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2 } from '@repo/shadcn/lucide';
 import { Alert, AlertDescription } from '@repo/shadcn/alert';
+
+const PDFDocument = dynamic(
+  () => import('./pdf-document').then((module) => module.PDFDocument),
+  { ssr: false },
+);
 
 interface PDFViewerProps {
   lessonId: string;
@@ -12,35 +18,27 @@ interface PDFViewerProps {
 /**
  * PDF viewer component with watermark overlay.
  * Shows "Content Reserved" watermark 2x per page, light visible.
- * Fetches PDF URL from the lesson.
+ * Loads protected PDF bytes through the application proxy.
  */
 export function PDFViewer({ lessonId, studentEmail }: PDFViewerProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPdfUrl = async () => {
-      try {
-        const response = await fetch(`/api/lessons/${lessonId}/pdf-url`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load PDF');
-        }
-
-        const data = await response.json();
-        setPdfUrl(data.pdfUrl);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load PDF');
-      } finally {
+    const controller = new AbortController();
+    fetch(`/api/lessons/${lessonId}/pdf-url`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Failed to load PDF');
+        setPdfData(await response.arrayBuffer());
         setLoading(false);
-      }
-    };
-
-    fetchPdfUrl();
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        setLoading(false);
+      });
+    return () => controller.abort();
   }, [lessonId]);
 
   if (loading) {
@@ -51,7 +49,7 @@ export function PDFViewer({ lessonId, studentEmail }: PDFViewerProps) {
     );
   }
 
-  if (error || !pdfUrl) {
+  if (error || !pdfData) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="size-4" />
@@ -60,18 +58,5 @@ export function PDFViewer({ lessonId, studentEmail }: PDFViewerProps) {
     );
   }
 
-  return (
-    <div className="relative w-full rounded-lg border border-muted overflow-hidden">
-      <iframe
-        src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-        className="w-full border-0"
-        style={{ height: 'min(75vh, 900px)', minHeight: '480px' }}
-        title="PDF Lesson"
-        allow="fullscreen"
-      />
-      <div className="bg-muted/60 px-4 py-1.5 text-[11px] text-muted-foreground text-center border-t border-border">
-        Protected content — copying or sharing prohibited
-      </div>
-    </div>
-  );
+  return <PDFDocument pdfData={pdfData} />;
 }

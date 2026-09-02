@@ -11,5 +11,12 @@ export default async function CourseViewPage({ params }: { params: Promise<{ slu
   const session = await auth();
   const isEnrolled = session?.user ? await checkEnrollment(course.id) : false;
 
-  return <CourseViewClient course={course} isEnrolled={isEnrolled} isLoggedIn={!!session?.user} />;
+  return (
+    <CourseViewClient
+      course={course}
+      isEnrolled={isEnrolled}
+      isLoggedIn={!!session?.user}
+      email={session?.user?.email}
+    />
+  );
 }

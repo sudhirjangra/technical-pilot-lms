@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: Context) {
   }
 
   try {
-    // Call backend API to get the PDF URL
+    // Proxy PDF bytes so the browser never receives a Supabase URL or object key.
     const apiRes = await fetch(`${env.API_URL}/lessons/${lessonId}/pdf-url`, {
       headers: { Authorization: `Bearer ${session.user.tokens.access_token}` },
       cache: 'no-store',
@@ -27,8 +27,15 @@ export async function GET(_req: NextRequest, { params }: Context) {
       return NextResponse.json(error, { status: apiRes.status });
     }
 
-    const data = await apiRes.json();
-    return NextResponse.json(data);
+    return new NextResponse(apiRes.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
   } catch (error) {
     console.error('PDF URL fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

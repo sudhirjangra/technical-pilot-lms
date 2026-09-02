@@ -114,8 +114,72 @@ export class ProgressService {
       .upsert(payload, { onConflict: 'student_id,lesson_id' })
       .select('*')
       .single();
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw new BadRequestException('Failed to update progress');
+
+    if (dto.status === 'completed') {
+      this.checkAndUpdateEnrollmentCompletion(lessonId, studentId).catch(() => {});
+    }
+
     return data;
+  }
+
+  private async checkAndUpdateEnrollmentCompletion(lessonId: string, studentId: string) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, chapters(course_id)')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson) return;
+
+    const courseId = (lesson.chapters as unknown as { course_id: string }).course_id;
+
+    const { data: chapters } = await this.supabase
+      .from('chapters')
+      .select('id, is_published, lessons(id, is_published)')
+      .eq('course_id', courseId)
+      .eq('is_published', true);
+
+    const allLessonIds = (chapters ?? []).flatMap((ch: any) =>
+      ((ch.lessons ?? []) as any[])
+        .filter((l: any) => l.is_published !== false)
+        .map((l: any) => l.id),
+    );
+
+    if (allLessonIds.length === 0) return;
+
+    const { data: progressRows } = await this.supabase
+      .from('progress')
+      .select('lesson_id, status')
+      .eq('student_id', studentId)
+      .in('lesson_id', allLessonIds);
+
+    const completedCount = (progressRows ?? []).filter(
+      (p: any) => p.status === 'completed',
+    ).length;
+
+    if (completedCount >= allLessonIds.length) {
+      await this.supabase
+        .from('enrollments')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('student_id', studentId)
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+    } else {
+      const overallStatus = completedCount > 0 ? 'active' : 'active';
+      const { data: enrollment } = await this.supabase
+        .from('enrollments')
+        .select('status')
+        .eq('student_id', studentId)
+        .eq('course_id', courseId)
+        .single();
+      if (enrollment?.status === 'completed' && completedCount < allLessonIds.length) {
+        await this.supabase
+          .from('enrollments')
+          .update({ status: 'active', completed_at: null })
+          .eq('student_id', studentId)
+          .eq('course_id', courseId);
+      }
+    }
   }
 
   /** Get all progress for a student in a course */

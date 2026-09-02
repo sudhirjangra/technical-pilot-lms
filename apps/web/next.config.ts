@@ -20,7 +20,6 @@ const nextConfig = {
     ],
   },
   experimental: {
-    viewTransition: true,
     authInterrupts: true,
     serverActions: {
       bodySizeLimit: '30mb',
@@ -39,8 +38,9 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.vdocipher.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.vdocipher.com https://checkout.razorpay.com",
               "style-src 'self' 'unsafe-inline'",
+              "worker-src 'self' blob:",
               "img-src 'self' data: blob: https:",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://api.razorpay.com https://*.vdocipher.com https://*.supabase.co",

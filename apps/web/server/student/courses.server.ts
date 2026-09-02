@@ -158,6 +158,64 @@ export async function enrollFreeCourse(courseId: string): Promise<{ error?: stri
   return {};
 }
 
+const PaymentOrderSchema = z.object({
+  payment_id: z.string(),
+  razorpay_order_id: z.string(),
+  razorpay_key_id: z.string(),
+  amount: z.coerce.number(),
+  currency: z.string(),
+  course_title: z.string(),
+});
+
+export type PaymentOrder = z.infer<typeof PaymentOrderSchema>;
+
+export async function createPaymentOrder(
+  courseId: string,
+): Promise<{ error?: string; order?: PaymentOrder }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+
+  const [error, data] = await safeFetch(
+    PaymentOrderSchema,
+    '/payments/order',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ course_id: courseId }),
+      cache: 'no-store',
+    },
+  );
+  if (error) return { error: typeof error === 'string' ? error : 'Unable to start payment' };
+  return { order: data! };
+}
+
+export async function verifyPayment(payment: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+
+  const [error] = await safeFetch(
+    z.object({ message: z.string() }).passthrough(),
+    '/payments/verify',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payment),
+      cache: 'no-store',
+    },
+  );
+  return error ? { error: typeof error === 'string' ? error : 'Payment verification failed' } : {};
+}
+
 export async function getCourseProgress(
   courseId: string,
 ): Promise<StudentCourseProgress | null> {

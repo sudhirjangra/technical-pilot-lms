@@ -33,7 +33,7 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
   url: URL | RequestInfo,
   init?: RequestInit,
 ): Promise<[string, null] | [null, z.TypeOf<T>]> => {
-  let response: Response;
+  let response: Response | null = null;
   const relativePath = getRelativePath(url);
   const apiBase = new URL(env.API_URL);
   const canRetryWithLoopback =
@@ -55,19 +55,29 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
       ? new URL(relativePath, fallbackBase).toString()
       : null;
 
-  try {
-    response = await fetch(requestUrl, init);
-  } catch {
-    if (fallbackUrl) {
-      try {
-        response = await fetch(fallbackUrl, init);
-      } catch {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      response = await fetch(requestUrl, init);
+      break;
+    } catch {
+      if (fallbackUrl) {
+        try {
+          response = await fetch(fallbackUrl, init);
+          break;
+        } catch {
+          response = null;
+        }
+      }
+
+      if (attempt === 2) {
         return [API_UNREACHABLE_MESSAGE, null];
       }
-    } else {
-      return [API_UNREACHABLE_MESSAGE, null];
+
+      await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)));
     }
   }
+
+  if (!response) return [API_UNREACHABLE_MESSAGE, null];
 
   let res: unknown;
   try {
@@ -83,15 +93,14 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
 
   if (!response.ok) {
     const body = res as Record<string, unknown>;
-    // If response has structured error data (code, sessions, etc.), pass full JSON
     if (body.code) {
       return [JSON.stringify(body), null];
     }
     const msg = body.message;
-    if (typeof msg === 'object' && msg !== null) {
-      return [JSON.stringify(msg), null];
+    if (typeof msg === 'string') {
+      return [msg, null];
     }
-    return [(msg as string) ?? 'Request failed', null];
+    return ['Request failed', null];
   }
 
   const validateFields = schema.safeParse(res);

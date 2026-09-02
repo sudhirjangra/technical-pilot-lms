@@ -18,6 +18,32 @@ interface FastifyRequestLike {
   method: string;
 }
 
+const SAFE_CLIENT_MESSAGES: Record<number, string> = {
+  400: 'Invalid request',
+  401: 'Authentication required',
+  403: 'Access denied',
+  404: 'Resource not found',
+  409: 'Conflict',
+  429: 'Too many requests. Please try again later.',
+  500: 'Something went wrong. Please try again later.',
+};
+
+function isSafeMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return !(
+    lower.includes('relation ') ||
+    lower.includes('column ') ||
+    lower.includes('table ') ||
+    lower.includes('schema ') ||
+    lower.includes('constraint ') ||
+    lower.includes('supabase') ||
+    lower.includes('postgrest') ||
+    lower.includes('pg_') ||
+    lower.includes('stack trace') ||
+    lower.includes('at /')
+  );
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -30,7 +56,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let errorCode = 'INTERNAL_ERROR';
-    let details: Record<string, unknown> | undefined;
     let responseData: Record<string, unknown> | undefined;
 
     if (exception instanceof HttpException) {
@@ -39,33 +64,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const res = exceptionResponse as Record<string, unknown>;
-        message = (res.message as string) ?? exception.message;
+        const rawMessage = (res.message as string) ?? exception.message;
+        message = isSafeMessage(rawMessage) ? rawMessage : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
         errorCode = (res.errorCode as string) ?? exception.constructor.name;
-        details = res.details as Record<string, unknown> | undefined;
         responseData = {
           ...(typeof res.code === 'string' && { code: res.code }),
           ...(Array.isArray(res.sessions) && { sessions: res.sessions }),
         };
       } else {
-        message = exception.message;
+        const rawMessage = exception.message;
+        message = isSafeMessage(rawMessage) ? rawMessage : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
         errorCode = exception.constructor.name;
       }
     } else if (exception instanceof PostgrestError) {
       status = HttpStatus.BAD_REQUEST;
-      message = 'Database query failed';
+      message = SAFE_CLIENT_MESSAGES[400]!;
       errorCode = 'QUERY_FAILED';
-      details = {
-        code: exception.code,
-        details: exception.details,
-        hint: exception.hint,
-      };
       this.logger.error(
-        { error: exception.message, code: exception.code },
+        { error: exception.message, code: exception.code, details: exception.details, hint: exception.hint },
         'Database query failed',
       );
     } else if (exception instanceof Error) {
-      message = exception.message;
-      errorCode = exception.name;
+      message = SAFE_CLIENT_MESSAGES[500]!;
+      errorCode = 'INTERNAL_ERROR';
       this.logger.error({ error: exception.stack }, 'Unhandled exception');
     }
 
@@ -74,8 +95,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error: errorCode,
       message,
       timestamp: new Date().toISOString(),
-      path: request.url,
-      ...(details && { details }),
       ...responseData,
     };
 
@@ -85,7 +104,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         path: request.url,
         method: request.method,
         errorCode,
-        message,
       },
       'Request failed',
     );

@@ -5,7 +5,11 @@ overrides:
   # Force a single fastify instance; @nestjs/platform-fastify pins 5.11.x which
   # otherwise conflicts with the direct 5.12.x dependency and breaks plugin types.
   fastify: ^5.12.1
+  # chokidar 4.x is required by @angular-devkit/core (via @nestjs/schematics)
+  # nunjucks@3.2.4 (via @nestjs-modules/mailer) wants ^3.3.0 but 4.x is compat
+  chokidar: ^4.0.3
 allowBuilds:
+  '@parcel/watcher': true
   '@scarf/scarf': true
   '@swc/core': true
   argon2: true
@@ -23,3 +27,8 @@ onlyBuiltDependencies:
   - esbuild
   - nestjs-pino
   - sharp
+minimumReleaseAgeExclude:
+  - '@ai-sdk/gateway@4.0.72'
+  - '@ai-sdk/provider-utils@5.0.36'
+  - '@ai-sdk/provider@4.0.10'
+  - ai@7.0.90

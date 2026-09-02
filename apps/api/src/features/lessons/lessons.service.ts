@@ -71,15 +71,17 @@ export class LessonsService {
     if (deleteError) throw new BadRequestException(deleteError.message);
   }
 
-  async getPdfUrl(lessonId: string, req: FastifyRequest) {
+  async getPdf(lessonId: string, req: FastifyRequest): Promise<Buffer> {
     // Verify lesson exists and is a PDF
     const { data: lesson, error: lessonError } = await this.supabase
       .from('lessons')
-      .select('id, lesson_type, chapter_id, chapters(course_id)')
+      .select('id, lesson_type, is_published, chapter_id, chapters!inner(course_id)')
       .eq('id', lessonId)
       .single();
-    if (lessonError || !lesson) throw new NotFoundException('Lesson not found');
-    if (lesson.lesson_type !== 'pdf') throw new BadRequestException('This lesson does not have a PDF');
+    if (lessonError || !lesson || !lesson.is_published)
+      throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'pdf')
+      throw new BadRequestException('This lesson does not have a PDF');
 
     // Get user from request
     const user = (req as any).user;
@@ -92,6 +94,7 @@ export class LessonsService {
       .select('id')
       .eq('course_id', chapter.course_id)
       .eq('student_id', user.id)
+      .eq('status', 'active')
       .single();
     if (enrollmentError || !enrollment) 
       throw new BadRequestException('Not enrolled in this course');
@@ -105,14 +108,14 @@ export class LessonsService {
     if (pdfError || !pdfNote?.file_path) 
       throw new NotFoundException('PDF not available for this lesson');
 
-    // Generate signed URL (1 hour expiry)
-    const { data: signedUrlData, error: urlError } = await this.supabase.storage
+    // Download through the API so provider details never reach the browser.
+    const { data: pdfBlob, error: downloadError } = await this.supabase.storage
       .from('course-materials')
-      .createSignedUrl(pdfNote.file_path as string, 3600);
-    if (urlError || !signedUrlData?.signedUrl) 
-      throw new BadRequestException('Failed to generate PDF URL');
+      .download(pdfNote.file_path as string);
+    if (downloadError || !pdfBlob)
+      throw new NotFoundException('PDF file not available');
 
-    return signedUrlData.signedUrl;
+    return Buffer.from(await pdfBlob.arrayBuffer());
   }
 
   async create(dto: CreateLessonDto) {

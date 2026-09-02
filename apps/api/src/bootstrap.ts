@@ -18,10 +18,8 @@ import { join } from 'path';
  * @returns {Promise<void>} Resolves when the application has started.
  */
 export const bootstrap = async (app: NestFastifyApplication): Promise<void> => {
-  // Logger instance for logging application events
   const logger = app.get(Logger);
 
-  // Configuration service to get environment variables and other settings
   const configService = app.get(ConfigService<Env>);
 
   // Set up security headers using helmet (Fastify plugin)

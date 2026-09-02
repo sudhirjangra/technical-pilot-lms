@@ -283,7 +283,7 @@ const signOutBySessionToken = async (token: string) => {
 
   if (error) throw error;
 
-  revalidateTag('nest-auth-sessions');
+  revalidateTag('nest-auth-sessions', 'max');
 };
 
 /**
@@ -323,7 +323,7 @@ export const signOutAllDevices = safeAction.action(async () => {
     },
   });
   if (error) throw new Error(error);
-  revalidateTag('nest-auth-sessions');
+  revalidateTag('nest-auth-sessions', 'max');
   await signOut({ redirect: true, redirectTo: '/auth/sign-in' });
   return 'success';
 });
