@@ -55,10 +55,11 @@ export async function setPermissions(userId: string, permissions: string[]) {
   return { success: true };
 }
 
-export async function promoteUser(userId: string) {
+export async function promoteUser(userId: string, role: 'sub_admin' | 'admin' = 'sub_admin') {
   const h = await headers();
   const [error] = await safeFetch(z.any(), `/permissions/${userId}/promote`, {
     method: 'POST', headers: h, cache: 'no-store',
+    body: JSON.stringify({ role }),
   });
   if (error) return { error };
   return { success: true };
@@ -68,6 +69,7 @@ export async function demoteUser(userId: string) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), `/permissions/${userId}/demote`, {
     method: 'POST', headers: h, cache: 'no-store',
+    body: '{}',
   });
   if (error) return { error };
   return { success: true };
@@ -76,7 +78,9 @@ export async function demoteUser(userId: string) {
 export async function revokePermissions(userId: string) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), `/permissions/${userId}`, {
-    method: 'DELETE', headers: h, cache: 'no-store',
+    method: 'DELETE',
+    headers: { Authorization: h.Authorization },
+    cache: 'no-store',
   });
   if (error) return { error };
   return { success: true };

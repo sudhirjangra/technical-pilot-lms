@@ -27,4 +27,5 @@ export * from './file';
 export * from './hashString';
 export * from './otp';
 export * from './question-import.util';
+export * from './storage';
 export * from './validateEnv';

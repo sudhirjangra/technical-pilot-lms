@@ -33,8 +33,8 @@ export class ProgressService {
       .select('id')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
     if (!enrollment)
       throw new ForbiddenException(
         'Active enrollment required to access this content',
@@ -190,7 +190,7 @@ export class ProgressService {
     const { data: chapters, error: chaptersError } = await this.supabase
       .from('chapters')
       .select(
-        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start), tests(id, title, passing_score_percent))',
+        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start, max_attempts, passing_score_percent), tests(id, title, passing_score_percent, max_attempts))',
       )
       .eq('course_id', courseId)
       .eq('is_published', true)
@@ -286,6 +286,11 @@ export class ProgressService {
           ? 'in_progress'
           : 'not_started';
 
+    const assessmentMap = await this.buildAssessmentStatuses(
+      visibleChapters,
+      studentId,
+    );
+
     const enrichedChapters = visibleChapters.map(
       (ch: {
         id: string;
@@ -306,6 +311,7 @@ export class ProgressService {
               ...l,
               progress: progressMap.get(l.id) ?? null,
               due_at: this.computeDueAt(startedAt, l.assignments),
+              assessment: assessmentMap.get(l.id) ?? null,
             })),
         };
       },
@@ -316,6 +322,154 @@ export class ProgressService {
       overall_percent: overallPercent,
       overall_status: overallStatus,
     };
+  }
+
+  /**
+   * Per-assessment attempt summary so the UI can distinguish "not started" from
+   * "failed every attempt" and offer an extra-attempt request when exhausted.
+   */
+  private async buildAssessmentStatuses(
+    chapters: {
+      id: string;
+      lessons?: {
+        id: string;
+        lesson_type?: string;
+        assignments?: unknown;
+        tests?: unknown;
+        is_published?: boolean;
+      }[];
+    }[],
+    studentId: string,
+  ) {
+    type Meta = {
+      id: string;
+      max_attempts?: number | null;
+      passing_score_percent?: number | null;
+    };
+    const first = (value: unknown): Meta | null => {
+      if (Array.isArray(value)) return (value[0] as Meta) ?? null;
+      return (value as Meta) ?? null;
+    };
+
+    const assignmentLessons = new Map<string, { lessonId: string; chapterId: string; meta: Meta }>();
+    const testLessons = new Map<string, { lessonId: string; chapterId: string; meta: Meta }>();
+
+    for (const chapter of chapters) {
+      for (const lesson of chapter.lessons ?? []) {
+        if (lesson.is_published === false) continue;
+        if (lesson.lesson_type === 'assignment') {
+          const meta = first(lesson.assignments);
+          if (meta?.id) assignmentLessons.set(meta.id, { lessonId: lesson.id, chapterId: chapter.id, meta });
+        } else if (lesson.lesson_type === 'test') {
+          const meta = first(lesson.tests);
+          if (meta?.id) testLessons.set(meta.id, { lessonId: lesson.id, chapterId: chapter.id, meta });
+        }
+      }
+    }
+
+    const assignmentIds = [...assignmentLessons.keys()];
+    const testIds = [...testLessons.keys()];
+
+    const [assignmentAttempts, testAttempts, grants] = await Promise.all([
+      assignmentIds.length
+        ? this.supabase
+            .from('assignment_attempts')
+            .select('assignment_id, score, max_score, completed_at')
+            .eq('student_id', studentId)
+            .in('assignment_id', assignmentIds)
+        : Promise.resolve({ data: [] }),
+      testIds.length
+        ? this.supabase
+            .from('test_attempts')
+            .select('test_id, score, max_score, completed_at')
+            .eq('student_id', studentId)
+            .in('test_id', testIds)
+        : Promise.resolve({ data: [] }),
+      assignmentIds.length
+        ? this.supabase
+            .from('assessment_attempt_grants')
+            .select('assignment_id, extra_attempts')
+            .eq('student_id', studentId)
+            .in('assignment_id', assignmentIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const grantMap = new Map<string, number>();
+    for (const g of ((grants as { data?: unknown[] }).data ?? []) as {
+      assignment_id: string;
+      extra_attempts: number;
+    }[]) {
+      grantMap.set(g.assignment_id, g.extra_attempts ?? 0);
+    }
+
+    const result = new Map<string, unknown>();
+
+    type AttemptRow = {
+      score: number | null;
+      max_score: number | null;
+      completed_at: string | null;
+    };
+
+    const summarize = (
+      kind: 'assignment' | 'test',
+      entries: Map<string, { lessonId: string; chapterId: string; meta: Meta }>,
+      attemptsById: Map<string, AttemptRow[]>,
+    ) => {
+      for (const [id, entry] of entries) {
+        const attempts = attemptsById.get(id) ?? [];
+        const completed = attempts.filter((a) => a.completed_at);
+        const passingPct = entry.meta.passing_score_percent ?? 60;
+        const passed = completed.some((a) => {
+          const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
+          return pct >= passingPct;
+        });
+        const baseMax = entry.meta.max_attempts ?? null;
+        const maxAttempts = baseMax === null ? null : baseMax + (grantMap.get(id) ?? 0);
+        const attemptsUsed = attempts.length;
+        const exhausted = maxAttempts !== null && attemptsUsed >= maxAttempts;
+
+        result.set(entry.lessonId, {
+          kind,
+          assessment_id: id,
+          chapter_id: entry.chapterId,
+          attempts_used: attemptsUsed,
+          max_attempts: maxAttempts,
+          passed,
+          exhausted,
+          failed: exhausted && !passed && completed.length > 0,
+        });
+      }
+    };
+
+    const groupBy = (rows: Record<string, unknown>[], key: string) => {
+      const map = new Map<string, AttemptRow[]>();
+      for (const row of rows) {
+        const id = row[key] as string;
+        const list = map.get(id) ?? [];
+        list.push(row as unknown as AttemptRow);
+        map.set(id, list);
+      }
+      return map;
+    };
+
+    summarize(
+      'assignment',
+      assignmentLessons,
+      groupBy(
+        ((assignmentAttempts as { data?: unknown[] }).data ?? []) as Record<string, unknown>[],
+        'assignment_id',
+      ),
+    );
+    summarize(
+      'test',
+      testLessons,
+      groupBy(
+        ((testAttempts as { data?: unknown[] }).data ?? []) as Record<string, unknown>[],
+        'test_id',
+      ),
+    );
+
+    return result;
   }
 
   /**

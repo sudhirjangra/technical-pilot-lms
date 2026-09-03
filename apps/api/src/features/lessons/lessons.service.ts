@@ -94,8 +94,8 @@ export class LessonsService {
       .select('id')
       .eq('course_id', chapter.course_id)
       .eq('student_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
     if (enrollmentError || !enrollment) 
       throw new BadRequestException('Not enrolled in this course');
 

@@ -53,6 +53,7 @@ export async function markNotificationRead(id: string) {
     method: 'PATCH',
     headers: h,
     cache: 'no-store',
+    body: '{}',
   });
   return error ? { error } : { success: true };
 }
@@ -63,6 +64,7 @@ export async function markAllRead() {
     method: 'POST',
     headers: h,
     cache: 'no-store',
+    body: '{}',
   });
   return error ? { error } : { success: true };
 }

@@ -326,8 +326,14 @@ export class AnalyticsService {
       const lessonsCompleted = studentProgress.filter((p: any) => p.status === 'completed').length;
       const overallProgress = totalLessons > 0
         ? Math.round(
-            studentProgress.reduce((sum: number, p: any) => sum + (p.progress_percent ?? 0), 0) /
-              totalLessons,
+            studentProgress.reduce(
+              (sum: number, p: any) =>
+                sum +
+                (p.status === 'completed'
+                  ? 100
+                  : Math.min(100, Math.max(0, p.progress_percent ?? 0))),
+              0,
+            ) / totalLessons,
           )
         : 0;
       const lastActivity = studentProgress.length
@@ -464,8 +470,14 @@ export class AnalyticsService {
       const notStartedCount = totalStudents - tracked.size + progressForLesson.filter((p: any) => p.status === 'not_started').length;
       const avgProgress = progressForLesson.length > 0
         ? Math.round(
-            progressForLesson.reduce((sum: number, p: any) => sum + (p.progress_percent ?? 0), 0) /
-              progressForLesson.length,
+            progressForLesson.reduce(
+              (sum: number, p: any) =>
+                sum +
+                (p.status === 'completed'
+                  ? 100
+                  : Math.min(100, Math.max(0, p.progress_percent ?? 0))),
+              0,
+            ) / progressForLesson.length,
           )
         : 0;
 
@@ -576,8 +588,12 @@ export class AnalyticsService {
         for (const lid of courseLessons) {
           const p = progressMap.get(lid);
           if (p) {
-            if (p.status === 'completed') lessonsCompleted++;
-            progressSum += p.progress_percent ?? 0;
+            if (p.status === 'completed') {
+              lessonsCompleted++;
+              progressSum += 100;
+            } else {
+              progressSum += Math.min(100, Math.max(0, p.progress_percent ?? 0));
+            }
           }
         }
         const overallProgress = totalLessons > 0 ? Math.round(progressSum / totalLessons) : 0;
@@ -855,8 +871,14 @@ export class AnalyticsService {
     const lessonsCompleted = (progressRows ?? []).filter((p: any) => p.status === 'completed').length;
     const overallProgress = totalLessons > 0
       ? Math.round(
-          (progressRows ?? []).reduce((sum: number, p: any) => sum + (p.progress_percent ?? 0), 0) /
-            totalLessons,
+          (progressRows ?? []).reduce(
+            (sum: number, p: any) =>
+              sum +
+              (p.status === 'completed'
+                ? 100
+                : Math.min(100, Math.max(0, p.progress_percent ?? 0))),
+            0,
+          ) / totalLessons,
         )
       : 0;
 
@@ -947,15 +969,20 @@ export class AnalyticsService {
     const { data: progressRows } = allLessonIds.length
       ? await this.supabase
           .from('progress')
-          .select('lesson_id, student_id, progress_percent')
+          .select('lesson_id, student_id, progress_percent, status')
           .in('lesson_id', allLessonIds)
       : { data: [] };
 
-    // Progress percent by lesson, keyed by student
+    // Progress percent by lesson, keyed by student. Assignment/test lessons never carry a
+    // percentage, so a completed status is what actually marks them as 100%.
     const progressByLessonAndStudent = new Map<string, Map<string, number>>();
     for (const p of (progressRows ?? []) as any[]) {
       const byStudent = progressByLessonAndStudent.get(p.lesson_id) ?? new Map<string, number>();
-      byStudent.set(p.student_id, p.progress_percent ?? 0);
+      const percent =
+        p.status === 'completed'
+          ? 100
+          : Math.min(100, Math.max(0, p.progress_percent ?? 0));
+      byStudent.set(p.student_id, percent);
       progressByLessonAndStudent.set(p.lesson_id, byStudent);
     }
 

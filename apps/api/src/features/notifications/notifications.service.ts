@@ -68,10 +68,12 @@ export class NotificationsService {
 
   async broadcast(title: string, body: string | undefined, type: string) {
     // Get all active students
+    // Roles are stored lowercase in profiles.
     const { data: students, error: studentsErr } = await this.supabase
       .from('profiles')
       .select('id')
-      .eq('role', 'STUDENT');
+      .eq('role', 'student')
+      .eq('is_active', true);
     if (studentsErr) throw new BadRequestException(studentsErr.message);
     if (!students || students.length === 0) return { sent: 0 };
 

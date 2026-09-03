@@ -143,25 +143,27 @@ function EnrollmentChart({
       <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="enrollGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45} />
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis dataKey="month" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip
+          cursor={{ stroke: 'var(--foreground)', strokeOpacity: 0.15 }}
           contentStyle={{
             borderRadius: '8px',
             fontSize: '12px',
-            border: '1px solid hsl(var(--border))',
-            background: 'hsl(var(--card))',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'rgba(15, 23, 42, 0.18)',
+            backdropFilter: 'blur(10px)',
           }}
         />
         <Area
           type="monotone"
           dataKey="count"
-          stroke="hsl(var(--primary))"
+          stroke="#3b82f6"
           fill="url(#enrollGrad)"
           strokeWidth={2}
           name="Enrollments"
@@ -195,30 +197,32 @@ function ChapterCompletionChart({
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis dataKey="name" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip
+          cursor={{ fill: 'var(--foreground)', fillOpacity: 0.06 }}
           contentStyle={{
             borderRadius: '8px',
             fontSize: '12px',
-            border: '1px solid hsl(var(--border))',
-            background: 'hsl(var(--card))',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'rgba(15, 23, 42, 0.18)',
+            backdropFilter: 'blur(10px)',
           }}
         />
-        <Bar dataKey="enrolled" name="Enrolled" fill="hsl(var(--muted-foreground))" opacity={0.3} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="completed" name="Completed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="enrolled" name="Enrolled" fill="#64748b" opacity={0.45} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="completed" name="Completed" fill="#10b981" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
 const DISTRIBUTION_COLORS = [
-  'hsl(0, 70%, 55%)',
-  'hsl(25, 80%, 55%)',
-  'hsl(45, 85%, 50%)',
-  'hsl(140, 60%, 45%)',
-  'hsl(160, 70%, 40%)',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#10b981',
 ];
 
 function ProgressDistributionChart({ students }: { students: CourseStudent[] }) {
@@ -247,15 +251,17 @@ function ProgressDistributionChart({ students }: { students: CourseStudent[] }) 
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={buckets} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-        <XAxis dataKey="range" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-        <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="range" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip
+          cursor={{ fill: 'var(--foreground)', fillOpacity: 0.06 }}
           contentStyle={{
             borderRadius: '8px',
             fontSize: '12px',
-            border: '1px solid hsl(var(--border))',
-            background: 'hsl(var(--card))',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: 'rgba(15, 23, 42, 0.18)',
+            backdropFilter: 'blur(10px)',
           }}
         />
         <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>

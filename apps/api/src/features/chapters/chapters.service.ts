@@ -193,7 +193,7 @@ export class ChaptersService {
       .select('id')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
-      .eq('status', 'active')
+      .in('status', ['active', 'completed'])
       .maybeSingle();
     if (!data)
       throw new ForbiddenException(

@@ -225,6 +225,18 @@ export const signUpWithCredentials = safeAction
 
     if (error) throw new Error(error);
 
+    // Sign the user straight in when the project does not require e-mail confirmation.
+    // Otherwise fall through to the confirmation screen.
+    try {
+      await signIn('credentials', {
+        identifier: parsedInput.email,
+        password: parsedInput.password,
+        redirectTo: '/dashboard',
+      });
+    } catch (signInError) {
+      if (isRedirectError(signInError)) throw signInError;
+    }
+
     redirect(`/auth/confirm-email?email=${encodeURIComponent(parsedInput.email)}`);
   });
 
@@ -575,7 +587,9 @@ export const validateSessionIfExist = async (): Promise<{
   disabled: boolean;
 }> => {
   const [error, data] = await getSessionById();
-  const disabled = error?.includes('disabled') ?? false;
+  // Must match the API wording exactly — a loose "disabled" check also matched plain
+  // expired/missing sessions, so signed-out users were told their account was disabled.
+  const disabled = error?.includes('disabled by an administrator') ?? false;
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
     // Only sign out if the error indicates the session is truly invalid (404) or the

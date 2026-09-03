@@ -29,22 +29,36 @@ export function SubAdminsClient({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
   const [promoteId, setPromoteId] = useState('');
+  const [promoteRole, setPromoteRole] = useState<'sub_admin' | 'admin'>('sub_admin');
 
   const handlePromote = async () => {
     if (!promoteId) return;
     setLoading(true);
-    const result = await promoteUser(promoteId);
+    const result = await promoteUser(promoteId, promoteRole);
     setLoading(false);
     if (result.error) toast.error(result.error);
     else {
-      toast.success('User promoted to sub-admin');
+      toast.success(
+        promoteRole === 'admin' ? 'User promoted to admin' : 'User promoted to sub-admin',
+      );
       setPromoteId('');
       router.refresh();
     }
   };
 
+  const handleChangeRole = async (userId: string, role: 'sub_admin' | 'admin') => {
+    setLoading(true);
+    const result = await promoteUser(userId, role);
+    setLoading(false);
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success(`Role updated to ${role === 'admin' ? 'admin' : 'sub-admin'}`);
+      router.refresh();
+    }
+  };
+
   const handleDemote = async (userId: string) => {
-    if (!confirm('Demote this sub-admin to student? All permissions will be revoked.')) return;
+    if (!confirm('Demote this user to student? All permissions will be revoked.')) return;
     setLoading(true);
     const result = await demoteUser(userId);
     setLoading(false);
@@ -92,14 +106,14 @@ export function SubAdminsClient({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Promote Student to Sub-Admin</CardTitle>
+          <CardTitle className="text-base">Promote Student</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <select
               value={promoteId}
               onChange={(e) => setPromoteId(e.target.value)}
-              className="flex-1 border rounded px-3 py-2"
+              className="flex-1 border rounded px-3 py-2 bg-background"
             >
               <option value="">Select a student...</option>
               {students.map((s) => (
@@ -107,6 +121,14 @@ export function SubAdminsClient({
                   {s.full_name ?? s.email} ({s.email})
                 </option>
               ))}
+            </select>
+            <select
+              value={promoteRole}
+              onChange={(e) => setPromoteRole(e.target.value as 'sub_admin' | 'admin')}
+              className="border rounded px-3 py-2 bg-background sm:w-44"
+            >
+              <option value="sub_admin">Sub-admin</option>
+              <option value="admin">Admin</option>
             </select>
             <Button onClick={handlePromote} disabled={!promoteId || loading}>
               Promote
@@ -117,17 +139,34 @@ export function SubAdminsClient({
 
       {subAdmins.length === 0 && <p className="text-muted-foreground">No sub-admins yet.</p>}
 
-      {subAdmins.map((sa) => (
+      {subAdmins.map((sa) => {
+        const isFullAdmin = sa.role === 'admin';
+        return (
         <Card key={sa.id}>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle className="text-base">{sa.full_name ?? sa.email}</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  {sa.full_name ?? sa.email}
+                  <Badge variant={isFullAdmin ? 'default' : 'secondary'}>
+                    {isFullAdmin ? 'Admin' : 'Sub-admin'}
+                  </Badge>
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">{sa.email}</p>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleEditPerms(sa)}>
-                  Edit Permissions
+              <div className="flex flex-wrap gap-2">
+                {!isFullAdmin && (
+                  <Button size="sm" variant="outline" onClick={() => handleEditPerms(sa)}>
+                    Edit Permissions
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={loading}
+                  onClick={() => handleChangeRole(sa.id, isFullAdmin ? 'sub_admin' : 'admin')}
+                >
+                  {isFullAdmin ? 'Make Sub-admin' : 'Make Admin'}
                 </Button>
                 <Button size="sm" variant="destructive" disabled={loading} onClick={() => handleDemote(sa.id)}>
                   Demote
@@ -136,15 +175,21 @@ export function SubAdminsClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-1">
-              {sa.permissions?.permissions.length ? (
-                sa.permissions.permissions.map((p) => (
-                  <Badge key={p} variant="secondary">{p}</Badge>
-                ))
-              ) : (
-                <span className="text-sm text-muted-foreground">No permissions assigned</span>
-              )}
-            </div>
+            {isFullAdmin ? (
+              <span className="text-sm text-muted-foreground">
+                Full administrator — has access to every area without scoped permissions.
+              </span>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {sa.permissions?.permissions.length ? (
+                  sa.permissions.permissions.map((p) => (
+                    <Badge key={p} variant="secondary">{p}</Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">No permissions assigned</span>
+                )}
+              </div>
+            )}
           </CardContent>
 
           {editingId === sa.id && (
@@ -172,7 +217,8 @@ export function SubAdminsClient({
             </CardContent>
           )}
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

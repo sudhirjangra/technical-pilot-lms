@@ -5,6 +5,9 @@ import { PDFViewer } from '@/components/dashboard/pdf-viewer';
 import { TestViewer } from '@/components/dashboard/test-viewer';
 import { VideoPlayer } from '@/components/video-player';
 import { getCourseProgress } from '@/server/student/courses.server';
+import { Button } from '@repo/shadcn/button';
+import { Card, CardContent } from '@repo/shadcn/card';
+import { Lock } from '@repo/shadcn/lucide';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -19,19 +22,28 @@ export default async function LessonPage({
   const { courseId, lessonId } = await params;
   const progress = await getCourseProgress(courseId);
 
-  const orderedLessons = progress?.chapters
-    .flatMap((chapter) => chapter.lessons)
-    .sort((left, right) => left.sort_order - right.sort_order) ?? [];
+  // Lesson sort_order is scoped per chapter, so a global sort would interleave chapters.
+  const orderedChapters = [...(progress?.chapters ?? [])].sort(
+    (left, right) => left.sort_order - right.sort_order,
+  );
+  const orderedLessons = orderedChapters.flatMap((chapter) =>
+    [...chapter.lessons]
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .map((lesson) => ({ lesson, chapter })),
+  );
 
-  const lessonIndex = orderedLessons.findIndex((item) => item.id === lessonId);
-  const lesson = orderedLessons[lessonIndex];
-  const prevLesson = lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : null;
+  const lessonIndex = orderedLessons.findIndex((item) => item.lesson.id === lessonId);
+  const current = orderedLessons[lessonIndex];
+  const lesson = current?.lesson;
+  const chapter = current?.chapter;
+  const prevLesson = lessonIndex > 0 ? orderedLessons[lessonIndex - 1]?.lesson : null;
   const nextLesson = lessonIndex >= 0 && lessonIndex < orderedLessons.length - 1
-    ? orderedLessons[lessonIndex + 1]
+    ? orderedLessons[lessonIndex + 1]?.lesson
     : null;
 
   const lessonType = lesson?.lesson_type ?? 'video';
   const allowProgressControls = lessonType === 'video' || lessonType === 'pdf';
+  const chapterStarted = !!chapter?.started_at;
 
   return (
     <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
@@ -46,28 +58,48 @@ export default async function LessonPage({
         <h1 className="mt-3 text-lg font-semibold sm:text-xl">{lesson.title}</h1>
       )}
 
-      <div className="mt-4 sm:mt-6">
-        {lessonType === 'video' ? (
-          <VideoPlayer lessonId={lessonId} />
-        ) : lessonType === 'pdf' ? (
-          <PDFViewer lessonId={lessonId} studentEmail={session.user?.email} />
-        ) : lessonType === 'test' ? (
-          <TestViewer lessonId={lessonId} courseId={courseId} mode="test" />
-        ) : lessonType === 'assignment' ? (
-          <TestViewer lessonId={lessonId} courseId={courseId} mode="assignment" />
-        ) : (
-          <LessonPlaceholder lessonType={lessonType} title={lesson?.title} />
-        )}
-      </div>
+      {chapter && !chapterStarted ? (
+        <Card className="mt-4 sm:mt-6">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <Lock className="size-8 text-muted-foreground/60" />
+            <p className="text-sm font-medium">
+              Start &ldquo;{chapter.title}&rdquo; to unlock this lesson
+            </p>
+            <p className="max-w-sm text-xs text-muted-foreground">
+              Lessons in a chapter only become available once you start the chapter. Starting
+              also anchors the due dates for its assignments.
+            </p>
+            <Button asChild size="sm">
+              <Link href={`/dashboard/courses/${courseId}`}>Go to chapter</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <div className="mt-4 sm:mt-6">
+            {lessonType === 'video' ? (
+              <VideoPlayer lessonId={lessonId} />
+            ) : lessonType === 'pdf' ? (
+              <PDFViewer lessonId={lessonId} studentEmail={session.user?.email} />
+            ) : lessonType === 'test' ? (
+              <TestViewer lessonId={lessonId} courseId={courseId} mode="test" />
+            ) : lessonType === 'assignment' ? (
+              <TestViewer lessonId={lessonId} courseId={courseId} mode="assignment" />
+            ) : (
+              <LessonPlaceholder lessonType={lessonType} title={lesson?.title} />
+            )}
+          </div>
 
-      {allowProgressControls && (
-        <LessonProgressActions
-          courseId={courseId}
-          lessonId={lessonId}
-          prevLessonId={prevLesson?.id ?? null}
-          nextLessonId={nextLesson?.id ?? null}
-          lessonType={lessonType}
-        />
+          {allowProgressControls && (
+            <LessonProgressActions
+              courseId={courseId}
+              lessonId={lessonId}
+              prevLessonId={prevLesson?.id ?? null}
+              nextLessonId={nextLesson?.id ?? null}
+              lessonType={lessonType}
+            />
+          )}
+        </>
       )}
     </section>
   );

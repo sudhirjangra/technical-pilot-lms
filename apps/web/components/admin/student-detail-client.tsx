@@ -406,8 +406,20 @@ export function StudentDetailClient({
               </div>
 
               {attemptDetail.questionReview?.map((q) => {
-                const needsGrading =
-                  q.questionType === 'text' && q.isCorrect === null;
+                const options = ((q as any).options ?? []) as {
+                  id: string;
+                  text: string;
+                  isCorrect: boolean;
+                  isSelected: boolean;
+                }[];
+                const isText = q.questionType === 'text';
+                const selectedTexts = isText
+                  ? []
+                  : options.filter((o) => o.isSelected).map((o) => o.text);
+                const hasAnswer = isText
+                  ? !!q.textAnswer?.trim()
+                  : selectedTexts.length > 0;
+                const grade = gradingState[q.questionId];
                 return (
                   <Card key={q.questionId} className="gap-2 p-3">
                     <div className="flex flex-wrap items-start gap-2">
@@ -435,7 +447,7 @@ export function StudentDetailClient({
                           variant="outline"
                           className="border-amber-400 text-[10px] text-amber-600"
                         >
-                          Ungraded
+                          Needs grading
                         </Badge>
                       )}
                       {q.timeSpentSeconds != null && (
@@ -445,41 +457,62 @@ export function StudentDetailClient({
                       )}
                     </div>
 
-                    {q.textAnswer && (
-                      <div className="mt-1">
-                        <p className="text-muted-foreground text-xs">
-                          Student answer:
-                        </p>
-                        <p className="bg-muted/50 text-sm whitespace-pre-wrap rounded p-2">
-                          {q.textAnswer}
-                        </p>
-                      </div>
-                    )}
+                    <div className="mt-1">
+                      <p className="text-muted-foreground text-xs">
+                        Student answer:
+                      </p>
+                      <p className="bg-muted/50 text-sm whitespace-pre-wrap rounded p-2">
+                        {isText
+                          ? q.textAnswer?.trim() || 'No answer submitted'
+                          : hasAnswer
+                            ? selectedTexts.join(', ')
+                            : 'No answer submitted'}
+                      </p>
+                    </div>
 
-                    {Array.isArray((q as any).options) && (q as any).options.length > 0 && (
+                    {options.length > 0 && (
                       <ul className="mt-1 space-y-1">
-                        {(q as any).options.map(
-                          (opt: { id: string; text: string; isCorrect: boolean; isSelected: boolean }) => (
+                        {options.map((opt) => {
+                          const state = opt.isSelected && opt.isCorrect
+                            ? 'correctPicked'
+                            : opt.isSelected
+                              ? 'wrongPicked'
+                              : opt.isCorrect
+                                ? 'missedCorrect'
+                                : 'neutral';
+                          return (
                             <li
                               key={opt.id}
                               className={cn(
-                                'flex items-center gap-2 rounded px-2 py-1 text-xs',
-                                opt.isCorrect && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-                                opt.isSelected && !opt.isCorrect && 'bg-destructive/10 text-destructive',
+                                'flex items-center gap-2 rounded border px-2 py-1 text-xs',
+                                state === 'correctPicked' &&
+                                  'border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+                                state === 'wrongPicked' &&
+                                  'border-red-500 bg-red-500/15 text-red-600 dark:text-red-400',
+                                state === 'missedCorrect' &&
+                                  'border-sky-500 border-dashed bg-sky-500/10 text-sky-700 dark:text-sky-300',
+                                state === 'neutral' && 'border-border',
                               )}
                             >
                               <span className="flex-1">{opt.text}</span>
-                              {opt.isSelected && (
-                                <Badge variant="outline" className="text-[9px]">
-                                  Selected
-                                </Badge>
+                              {state === 'correctPicked' && (
+                                <span className="shrink-0 text-[9px] font-medium">
+                                  Selected · Correct
+                                </span>
                               )}
-                              {opt.isCorrect && (
-                                <Badge className="bg-emerald-600 text-[9px]">Correct</Badge>
+                              {state === 'wrongPicked' && (
+                                <span className="shrink-0 text-[9px] font-medium">
+                                  Selected · Wrong
+                                </span>
+                              )}
+                              {state === 'missedCorrect' && (
+                                <span className="shrink-0 text-[9px] font-medium">
+                                  Correct answer
+                                </span>
                               )}
                             </li>
-                          ),
-                        )}
+                          );
+                        })}
                       </ul>
                     )}
 
@@ -492,53 +525,45 @@ export function StudentDetailClient({
                       </details>
                     )}
 
-                    {needsGrading && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs font-medium">Grade:</span>
-                        <Button
-                          size="sm"
-                          variant={
-                            gradingState[q.questionId] === true
-                              ? 'default'
-                              : 'outline'
-                          }
-                          className="h-7 text-xs"
-                          onClick={() =>
-                            setGradingState((s) => ({
-                              ...s,
-                              [q.questionId]: true,
-                            }))
-                          }
-                        >
-                          Correct
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={
-                            gradingState[q.questionId] === false
-                              ? 'destructive'
-                              : 'outline'
-                          }
-                          className="h-7 text-xs"
-                          onClick={() =>
-                            setGradingState((s) => ({
-                              ...s,
-                              [q.questionId]: false,
-                            }))
-                          }
-                        >
-                          Incorrect
-                        </Button>
-                      </div>
-                    )}
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-medium">Grade:</span>
+                      <Button
+                        size="sm"
+                        variant={grade === true ? 'default' : 'outline'}
+                        className="h-7 text-xs"
+                        onClick={() =>
+                          setGradingState((s) => ({
+                            ...s,
+                            [q.questionId]: true,
+                          }))
+                        }
+                      >
+                        Correct
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={grade === false ? 'destructive' : 'outline'}
+                        className="h-7 text-xs"
+                        onClick={() =>
+                          setGradingState((s) => ({
+                            ...s,
+                            [q.questionId]: false,
+                          }))
+                        }
+                      >
+                        Incorrect
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}
 
-              {attemptDetail.questionReview?.some(
-                (q) => q.questionType === 'text' && q.isCorrect === null,
-              ) && (
-                <div className="flex justify-end">
+              {!!attemptDetail.questionReview?.length && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-muted-foreground text-xs">
+                    Saving grades recalculates the score and updates the lesson, chapter and
+                    course status for this student.
+                  </p>
                   <Button
                     size="sm"
                     onClick={handleGrade}
@@ -550,7 +575,7 @@ export function StudentDetailClient({
                         Saving...
                       </>
                     ) : (
-                      'Submit Grades'
+                      'Save Grades'
                     )}
                   </Button>
                 </div>
@@ -708,10 +733,17 @@ export function StudentDetailClient({
                             )}
                           </p>
                         </div>
-                        <span className="text-muted-foreground shrink-0 text-[11px]">
-                          {relativeTime(
-                            item.completedAt ?? item.updatedAt ?? item.createdAt,
-                          )}
+                        <span className="text-muted-foreground shrink-0 text-right text-[11px]">
+                          <span className="block">
+                            {relativeTime(
+                              item.completedAt ?? item.updatedAt ?? item.createdAt,
+                            )}
+                          </span>
+                          <span className="block">
+                            {formatDateTime(
+                              item.completedAt ?? item.updatedAt ?? item.createdAt,
+                            )}
+                          </span>
                         </span>
                       </div>
                     ))}
@@ -737,8 +769,9 @@ export function StudentDetailClient({
                     {enrollments.map((enrollment) => {
                       const cp = courseProgress.find(
                         (c) =>
+                          c.courseId === enrollment.course_id ||
                           c.course ===
-                          (enrollment.courses?.title ?? enrollment.course_id),
+                            (enrollment.courses?.title ?? enrollment.course_id),
                       );
                       const pct = cp?.progress?.overall_percent ?? 0;
                       return (
@@ -1183,7 +1216,10 @@ export function StudentDetailClient({
                         </div>
                         <span className="text-muted-foreground shrink-0 text-[11px]">
                           {formatDateTime(
-                            item.completed_at ??
+                            item.completedAt ??
+                              item.updatedAt ??
+                              item.createdAt ??
+                              item.completed_at ??
                               item.updated_at ??
                               item.created_at,
                           )}

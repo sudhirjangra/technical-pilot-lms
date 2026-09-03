@@ -63,7 +63,7 @@ export class PermissionsService {
     const { data, error } = await this.supabase
       .from('profiles')
       .select('id, email, full_name, role, is_active')
-      .eq('role', 'sub_admin');
+      .in('role', ['sub_admin', 'admin']);
     if (error) throw new BadRequestException(error.message);
 
     const userIds = (data ?? []).map((u: { id: string }) => u.id);
@@ -91,7 +91,7 @@ export class PermissionsService {
     return { success: true };
   }
 
-  async promoteToSubAdmin(userId: string) {
+  async promote(userId: string, role: 'sub_admin' | 'admin') {
     const { data: profile } = await this.supabase
       .from('profiles')
       .select('id, role')
@@ -101,13 +101,22 @@ export class PermissionsService {
 
     const { data, error } = await this.supabase
       .from('profiles')
-      .update({ role: 'sub_admin' })
+      .update({ role })
       .eq('id', userId)
       .select('id')
       .single();
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new BadRequestException('Failed to promote user');
-    return { success: true };
+
+    // A full admin has implicit access to everything, so scoped grants are redundant.
+    if (role === 'admin') {
+      await this.supabase
+        .from('sub_admin_permissions')
+        .delete()
+        .eq('user_id', userId);
+    }
+
+    return { success: true, role };
   }
 
   async demoteToStudent(userId: string) {
@@ -117,8 +126,8 @@ export class PermissionsService {
       .eq('id', userId)
       .single();
     if (!profile) throw new NotFoundException('User not found');
-    if (profile.role !== 'sub_admin') {
-      throw new BadRequestException('User is not a sub-admin');
+    if (profile.role !== 'sub_admin' && profile.role !== 'admin') {
+      throw new BadRequestException('User is not a sub-admin or admin');
     }
 
     const { error: revokeError } = await this.supabase

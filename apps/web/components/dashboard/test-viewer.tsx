@@ -46,6 +46,7 @@ import {
   type AssignmentAttemptSummary,
 } from '@/server/student/assignments.server';
 import { toast } from '@repo/shadcn/sonner';
+import { requestExtraAttempt } from '@/server/student-queries.server';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -226,6 +227,7 @@ function InstructionsScreen({
   onStart,
   starting,
   onViewAttempt,
+  mode,
 }: {
   test: UnifiedItem;
   attemptsUsed: number;
@@ -233,10 +235,32 @@ function InstructionsScreen({
   onStart: () => void;
   starting: boolean;
   onViewAttempt: (attemptId: string) => void;
+  mode: 'test' | 'assignment';
 }) {
   const maxAttempts = test.max_attempts ?? null;
   const attemptsLeft = maxAttempts !== null ? maxAttempts - attemptsUsed : null;
   const instructions = 'instructions' in test ? test.instructions : null;
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
+
+  const completedAttempts = allAttempts.filter((a) => a.completed_at);
+  const everPassed = completedAttempts.some((a) => a.passed === true);
+  const failedOut =
+    attemptsLeft !== null && attemptsLeft <= 0 && !everPassed && completedAttempts.length > 0;
+
+  const handleRequestExtraAttempt = async () => {
+    setRequesting(true);
+    const result = await requestExtraAttempt(test.id);
+    setRequesting(false);
+    if (result.error) {
+      toast.error(
+        typeof result.error === 'string' ? result.error : 'Unable to send request',
+      );
+      return;
+    }
+    setRequested(true);
+    toast.success('Request sent to the admin team.');
+  };
 
   return (
     <div className="flex flex-col items-center gap-6 py-8 text-center">
@@ -339,9 +363,34 @@ function InstructionsScreen({
       )}
 
       {attemptsLeft !== null && attemptsLeft <= 0 ? (
-        <p className="text-destructive text-sm font-medium">
-          You have used all your attempts for this test.
-        </p>
+        <div className="w-full max-w-sm space-y-3">
+          <p className="text-destructive text-sm font-medium">
+            {failedOut
+              ? 'You did not pass within your allotted attempts.'
+              : 'You have used all your attempts for this test.'}
+          </p>
+          {failedOut && mode === 'assignment' && (
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-left">
+              <p className="text-sm font-medium">Need another chance?</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Send a request to the admin team for one additional attempt. You will be
+                notified once it is reviewed.
+              </p>
+              <Button
+                size="sm"
+                className="mt-3 w-full"
+                disabled={requesting || requested}
+                onClick={handleRequestExtraAttempt}
+              >
+                {requested
+                  ? 'Request sent'
+                  : requesting
+                    ? 'Sending…'
+                    : 'Request +1 attempt'}
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
         <>
           {instructions && (
@@ -830,21 +879,44 @@ function ResultsScreen({
                     {q.question_options.map((opt) => {
                       const isSelected = review.selectedOptionIds.includes(opt.id);
                       const isCorrectOpt = review.correctOptionIds.includes(opt.id);
+                      // Four distinct states so "what I picked" is never confused with "what was right".
+                      const state = isSelected && isCorrectOpt
+                        ? 'correctPicked'
+                        : isSelected
+                          ? 'wrongPicked'
+                          : isCorrectOpt
+                            ? 'missedCorrect'
+                            : 'neutral';
                       return (
                         <div
                           key={opt.id}
                           className={cn(
-                            'rounded border px-3 py-2 text-xs',
-                            isCorrectOpt
-                              ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                              : isSelected
-                                ? 'border-destructive/50 bg-destructive/10 text-destructive'
-                                : 'border-border text-muted-foreground',
+                            'flex items-center gap-2 rounded border px-3 py-2 text-xs',
+                            state === 'correctPicked' &&
+                              'border-emerald-500 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+                            state === 'wrongPicked' &&
+                              'border-red-500 bg-red-500/15 text-red-600 dark:text-red-400',
+                            state === 'missedCorrect' &&
+                              'border-sky-500 border-dashed bg-sky-500/10 text-sky-700 dark:text-sky-300',
+                            state === 'neutral' && 'border-border text-muted-foreground',
                           )}
                         >
-                          {opt.option_text}
-                          {isCorrectOpt && <span className="ml-1 opacity-70">✓</span>}
-                          {isSelected && !isCorrectOpt && <span className="ml-1 opacity-70">✗</span>}
+                          <span className="flex-1">{opt.option_text}</span>
+                          {state === 'correctPicked' && (
+                            <span className="shrink-0 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-medium">
+                              Your answer · Correct
+                            </span>
+                          )}
+                          {state === 'wrongPicked' && (
+                            <span className="shrink-0 rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-medium">
+                              Your answer · Wrong
+                            </span>
+                          )}
+                          {state === 'missedCorrect' && (
+                            <span className="shrink-0 rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-medium">
+                              Correct answer
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -893,6 +965,7 @@ function ResultsScreen({
 // ── Main TestViewer ───────────────────────────────────────────────────────────
 
 export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [test, setTest] = useState<UnifiedItem | null>(null);
@@ -1018,6 +1091,9 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
       });
     } catch {
       // swallow: progress sync is best effort, but the view should still show result.
+    } finally {
+      // Course TOC / progress are server-rendered, so they need an explicit refresh.
+      router.refresh();
     }
   }
 
@@ -1171,6 +1247,7 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
               onStart={handleStart}
               starting={starting}
               onViewAttempt={handleViewAttempt}
+              mode={mode}
             />
           )}
         </CardContent>

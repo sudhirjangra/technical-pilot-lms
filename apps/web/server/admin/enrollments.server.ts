@@ -127,23 +127,32 @@ export async function getCourseEnrollments(courseId: string): Promise<Enrollment
   return data!.data;
 }
 
+// PostgREST returns to-one embeds as an object and to-many as an array; normalise to an array.
+const embeddedList = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (value == null ? [] : Array.isArray(value) ? value : [value]),
+    z.array(schema),
+  );
+
 const CourseProgressSchema = z
   .object({
     chapters: z.array(z.object({
       id: z.string(),
       title: z.string().nullable().optional(),
       sort_order: z.coerce.number().default(0),
+      started_at: z.string().nullable().optional(),
       lessons: z.array(z.object({
         id: z.string(),
         title: z.string().nullable().optional(),
         sort_order: z.coerce.number().default(0),
         lesson_type: z.string().nullable().optional(),
-        assignments: z.array(z.object({
+        due_at: z.string().nullable().optional(),
+        assignments: embeddedList(z.object({
           id: z.string(),
           title: z.string().nullable().optional(),
           due_days_after_start: z.coerce.number().nullable().optional(),
         }).passthrough()).default([]),
-        tests: z.array(z.object({
+        tests: embeddedList(z.object({
           id: z.string(),
           title: z.string().nullable().optional(),
           passing_score_percent: z.coerce.number().nullable().optional(),
@@ -151,10 +160,11 @@ const CourseProgressSchema = z
         progress: z.object({
           status: z.string().nullable().optional(),
           progress_percent: z.coerce.number().nullable().optional(),
-        }).nullable().optional(),
+        }).passthrough().nullable().optional(),
       }).passthrough()).default([]),
     }).passthrough()).default([]),
     overall_percent: z.coerce.number().default(0),
+    overall_status: z.string().nullable().optional(),
   })
   .passthrough();
 
@@ -166,7 +176,10 @@ export async function getStudentCourseProgress(courseId: string, studentId: stri
     `/progress/course/${courseId}/student/${studentId}`,
     { headers: await authHeaders(false), cache: 'no-store' },
   );
-  if (error) return null;
+  if (error) {
+    console.error('getStudentCourseProgress failed:', error);
+    return null;
+  }
   return data!;
 }
 

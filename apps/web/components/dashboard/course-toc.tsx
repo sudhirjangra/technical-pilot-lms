@@ -106,9 +106,12 @@ function isChapterUnlocked(
   );
 }
 
-function LessonStatusIcon({ status }: { status: string }) {
+function LessonStatusIcon({ status, failed }: { status: string; failed?: boolean }) {
   if (status === 'completed') {
     return <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />;
+  }
+  if (failed) {
+    return <AlertTriangle className="size-4 shrink-0 text-destructive" />;
   }
   if (status === 'in_progress') {
     return <PlayIcon className="size-4 shrink-0 text-amber-500" />;
@@ -204,6 +207,8 @@ function TocBody({
             ).length;
             const chapterUnlocked = isChapterUnlocked(chapters, chapterIndex);
             const isFirstLockedChapter = !chapterUnlocked && (chapterIndex === 0 || isChapterUnlocked(chapters, chapterIndex - 1));
+            // Unlocking a chapter only exposes the Start action; lessons stay locked until started.
+            const lessonsUnlocked = chapterUnlocked && !!chapter.started_at;
 
             return (
               <AccordionItem key={chapter.id} value={chapter.id} className="border-b-0">
@@ -236,19 +241,30 @@ function TocBody({
                   
                   {chapterUnlocked && <ChapterStartControls chapter={chapter} courseId={courseId} />}
 
+                  {chapterUnlocked && !chapter.started_at && (
+                    <p className="mb-2 px-2 text-[11px] text-muted-foreground">
+                      Start this chapter to unlock its lessons.
+                    </p>
+                  )}
+
                   <ul className="space-y-0.5">
                     {chapter.lessons.map((lesson, lessonIndex) => {
                       const Icon = LESSON_ICONS[lesson.lesson_type] ?? FileText;
                       const status = lessonStatus(lesson);
                       const isActive = lesson.id === activeLessonId;
+                      const isSubmitted = status === 'completed';
+                      const submittedAt =
+                        lesson.lesson_type === 'assignment' && isSubmitted
+                          ? lesson.progress?.completed_at ?? null
+                          : null;
                       const due =
-                        lesson.lesson_type === 'assignment' && lesson.due_at
+                        lesson.lesson_type === 'assignment' && lesson.due_at && !isSubmitted
                           ? dueState(lesson.due_at)
                           : null;
 
                       return (
                         <li key={lesson.id}>
-                          {chapterUnlocked ? (
+                          {lessonsUnlocked ? (
                             <Link
                               href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
                               onClick={onNavigate}
@@ -260,7 +276,10 @@ function TocBody({
                                   : 'text-foreground/80 hover:bg-muted/60',
                               )}
                             >
-                              <LessonStatusIcon status={status} />
+                              <LessonStatusIcon
+                                status={status}
+                                failed={lesson.assessment?.failed}
+                              />
                               <span className="min-w-0 flex-1">
                                 <span className="flex items-center gap-1.5">
                                   <Icon
@@ -281,6 +300,18 @@ function TocBody({
                                   {status === 'in_progress' && (
                                     <Badge variant="secondary" className="text-[10px]">
                                       {lesson.progress?.progress_percent ?? 0}%
+                                    </Badge>
+                                  )}
+                                  {lesson.assessment?.failed && status !== 'completed' && (
+                                    <Badge variant="destructive" className="gap-1 text-[10px]">
+                                      <AlertTriangle className="size-3" />
+                                      Failed
+                                    </Badge>
+                                  )}
+                                  {isSubmitted && lesson.lesson_type === 'assignment' && (
+                                    <Badge variant="secondary" className="gap-1 text-[10px]">
+                                      <CheckCircle2 className="size-3" />
+                                      Submitted{submittedAt ? ` ${formatDate(submittedAt)}` : ''}
                                     </Badge>
                                   )}
                                   {due && lesson.due_at && (
@@ -367,7 +398,7 @@ export function CourseToc({
   return (
     <>
       {/* Mobile: drawer toggle */}
-      <div className="border-b border-border/60 bg-background/80 px-4 py-2 md:hidden">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 px-4 py-2 md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="h-11 w-full justify-start gap-2">
@@ -393,8 +424,8 @@ export function CourseToc({
       </div>
 
       {/* Desktop: persistent sidebar */}
-      <aside className="hidden w-72 shrink-0 border-r border-border/60 md:block lg:w-80">
-        <div className="sticky top-14 h-[calc(100dvh-3.5rem)]">
+      <aside className="hidden h-full w-72 shrink-0 overflow-hidden border-r border-border/60 md:block lg:w-80">
+        <div className="h-full min-h-0">
           <TocBody
             courseId={courseId}
             progress={progress}

@@ -9,16 +9,16 @@ const SlotSchema = z.object({
   date: z.string(),
   start_time: z.string(),
   end_time: z.string(),
-  duration_minutes: z.number(),
-  max_bookings: z.number(),
-  current_bookings: z.number(),
+  duration_minutes: z.coerce.number(),
+  max_bookings: z.coerce.number(),
+  current_bookings: z.coerce.number(),
   status: z.string(),
-  created_by: z.string(),
+  created_by: z.string().nullable().optional(),
   created_at: z.string(),
   topic: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   meeting_link: z.string().nullable().optional(),
-});
+}).passthrough();
 
 const BookingSchema = z.object({
   id: z.string(),
@@ -26,15 +26,15 @@ const BookingSchema = z.object({
   student_id: z.string(),
   status: z.string(),
   booked_at: z.string(),
-  cancelled_at: z.string().nullable(),
-  meeting_link: z.string().nullable(),
+  cancelled_at: z.string().nullable().optional(),
+  meeting_link: z.string().nullable().optional(),
   doubt_slots: z.object({
     id: z.string(), date: z.string(), start_time: z.string(),
-    end_time: z.string(), duration_minutes: z.number(), status: z.string(),
+    end_time: z.string(), duration_minutes: z.coerce.number(), status: z.string(),
     topic: z.string().nullable().optional(),
     meeting_link: z.string().nullable().optional(),
-  }).nullable(),
-});
+  }).passthrough().nullable().optional(),
+}).passthrough();
 
 export type Slot = z.infer<typeof SlotSchema>;
 export type Booking = z.infer<typeof BookingSchema>;
@@ -136,14 +136,17 @@ export async function getMyBookings(): Promise<Booking[]> {
     headers: { Authorization: `Bearer ${session?.user?.tokens.access_token}` },
     cache: 'no-store',
   });
-  if (error) return [];
+  if (error) {
+    console.error('getMyBookings failed:', error);
+    return [];
+  }
   return data!;
 }
 
 export async function cancelBooking(bookingId: string) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), `/doubt-sessions/bookings/${bookingId}/cancel`, {
-    method: 'POST', headers: h, cache: 'no-store',
+    method: 'POST', headers: h, cache: 'no-store', body: '{}',
   });
   if (error) return { error };
   return { success: true };

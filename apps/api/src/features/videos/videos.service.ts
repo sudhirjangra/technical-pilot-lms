@@ -337,8 +337,8 @@ export class VideosService {
       .select('id')
       .eq('student_id', userId)
       .eq('course_id', courseId)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
     if (!enrollment) throw new ForbiddenException('Active enrollment required');
 
     // 3. Concurrent session guard — block account sharing

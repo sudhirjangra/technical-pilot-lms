@@ -90,8 +90,15 @@ function LessonRow({
 }) {
   const Icon = LESSON_ICONS[lesson.lesson_type] ?? FileText;
   const status = lesson.progress?.status ?? 'not_started';
+  const isSubmitted = status === 'completed';
   const due =
-    lesson.lesson_type === 'assignment' && lesson.due_at ? dueState(lesson.due_at) : null;
+    lesson.lesson_type === 'assignment' && lesson.due_at && !isSubmitted
+      ? dueState(lesson.due_at)
+      : null;
+  const submittedAt =
+    lesson.lesson_type === 'assignment' && isSubmitted
+      ? lesson.progress?.completed_at ?? null
+      : null;
 
   const content = (
     <>
@@ -106,6 +113,18 @@ function LessonRow({
       </span>
 
       <span className="flex flex-wrap items-center gap-1.5">
+        {submittedAt && (
+          <Badge variant="secondary" className="gap-1 text-[10px]">
+            <CheckCircle2 className="size-3" />
+            Submitted {formatDate(submittedAt)}
+          </Badge>
+        )}
+        {!submittedAt && isSubmitted && lesson.lesson_type === 'assignment' && (
+          <Badge variant="secondary" className="gap-1 text-[10px]">
+            <CheckCircle2 className="size-3" />
+            Submitted
+          </Badge>
+        )}
         {due && lesson.due_at && (
           <Badge variant={due.overdue ? 'destructive' : 'secondary'} className="text-[10px]">
             {due.overdue && <AlertTriangle className="size-3" />}
@@ -116,9 +135,11 @@ function LessonRow({
           variant={
             status === 'completed'
               ? 'default'
-              : status === 'in_progress'
-                ? 'secondary'
-                : 'outline'
+              : lesson.assessment?.failed
+                ? 'destructive'
+                : status === 'in_progress'
+                  ? 'secondary'
+                  : 'outline'
           }
           className="text-[10px]"
         >
@@ -126,9 +147,11 @@ function LessonRow({
             ? 'Locked'
             : status === 'completed'
               ? 'Done'
-              : status === 'in_progress'
-                ? `${lesson.progress?.progress_percent ?? 0}%`
-                : 'Not Started'}
+              : lesson.assessment?.failed
+                ? 'Failed'
+                : status === 'in_progress'
+                  ? `${lesson.progress?.progress_percent ?? 0}%`
+                  : 'Not Started'}
         </Badge>
       </span>
     </>
@@ -258,13 +281,18 @@ export function CourseProgressClient({
                     Complete the previous chapter to unlock this content.
                   </p>
                 )}
+                {unlocked && !chapter.started_at && (
+                  <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                    Press &ldquo;Start now&rdquo; to unlock the lessons in this chapter.
+                  </p>
+                )}
                 {chapter.lessons.map((lesson, lessonIndex) => (
                   <LessonRow
                     key={lesson.id}
                     courseId={courseId}
                     lesson={lesson}
                     index={`${chapterIndex + 1}.${lessonIndex + 1}`}
-                    locked={!unlocked}
+                    locked={!unlocked || !chapter.started_at}
                   />
                 ))}
                 {chapter.lessons.length === 0 && (

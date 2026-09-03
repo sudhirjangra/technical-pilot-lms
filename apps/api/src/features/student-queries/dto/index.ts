@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateQueryDto {
   @IsString()
@@ -20,4 +20,30 @@ export class QueryFilterDto {
   @IsOptional()
   @IsString()
   status?: 'open' | 'answered' | 'closed';
+}
+
+export class RequestExtraAttemptDto {
+  @IsUUID()
+  assignment_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  lesson_id?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
+export class GrantExtraAttemptDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  extra_attempts?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  admin_reply?: string;
 }

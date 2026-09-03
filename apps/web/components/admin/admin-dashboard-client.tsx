@@ -184,11 +184,14 @@ export function AdminDashboardClient({ overview }: Props) {
                     allowDecimals={false}
                   />
                   <Tooltip
+                    cursor={{ fill: 'var(--foreground)', fillOpacity: 0.06 }}
                     contentStyle={{
-                      backgroundColor: 'var(--popover)',
-                      border: '1px solid var(--border)',
+                      backgroundColor: 'rgba(15, 23, 42, 0.18)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
                       borderRadius: '8px',
                       fontSize: 13,
+                      backdropFilter: 'blur(10px)',
+                      opacity: 0.45,
                     }}
                   />
                   <Bar

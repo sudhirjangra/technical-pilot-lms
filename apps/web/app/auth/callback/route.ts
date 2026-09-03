@@ -31,7 +31,10 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      if (response.status === 401) return redirect('/auth/sign-in?disabled=1');
+      const body = await response.text();
+      if (response.status === 401 && body.includes('disabled by an administrator')) {
+        return redirect('/auth/sign-in?disabled=1');
+      }
       return redirect('/auth/sign-in?error=sync_failed');
     }
 

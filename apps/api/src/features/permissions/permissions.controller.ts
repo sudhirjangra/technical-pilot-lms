@@ -11,7 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { ALL_PERMISSIONS, SetPermissionsDto } from './dto';
+import { ALL_PERMISSIONS, PromoteUserDto, SetPermissionsDto } from './dto';
 import { PermissionsService } from './permissions.service';
 
 @ApiTags('Permissions')
@@ -43,8 +43,11 @@ export class PermissionsController {
 
   @Post(':userId/promote')
   @HttpCode(HttpStatus.OK)
-  promote(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.permissionsService.promoteToSubAdmin(userId);
+  promote(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: PromoteUserDto,
+  ) {
+    return this.permissionsService.promote(userId, dto.role ?? 'sub_admin');
   }
 
   @Post(':userId/demote')

@@ -843,11 +843,17 @@ export class TestsService {
 
     const { data: attempt } = await this.supabase
       .from('test_attempts')
-      .select('test_id')
+      .select('test_id, student_id')
       .eq('id', attemptId)
       .single();
 
     if (!attempt) throw new NotFoundException('Attempt not found');
+
+    const { data: test } = await this.supabase
+      .from('tests')
+      .select('id, lesson_id, passing_score_percent')
+      .eq('id', attempt.test_id)
+      .single();
 
     const { data: questions } = await this.supabase
       .from('questions')
@@ -872,7 +878,100 @@ export class TestsService {
       .select()
       .single();
 
-    return updatedAttempt;
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const passingPercent = test?.passing_score_percent ?? 60;
+
+    if (test?.lesson_id) {
+      await this.syncLessonCompletion(
+        test.lesson_id,
+        attempt.student_id,
+        test.id,
+        passingPercent,
+      );
+    }
+
+    return { ...updatedAttempt, percentage, passed: percentage >= passingPercent };
+  }
+
+  /**
+   * Manual grading can flip an attempt between pass and fail, so lesson progress and
+   * course enrollment status must be recomputed from the student's best attempt.
+   */
+  private async syncLessonCompletion(
+    lessonId: string,
+    studentId: string,
+    testId: string,
+    passingPercent: number,
+  ) {
+    const { data: attempts } = await this.supabase
+      .from('test_attempts')
+      .select('score, max_score, completed_at')
+      .eq('test_id', testId)
+      .eq('student_id', studentId);
+
+    const passedAny = (attempts ?? []).some((a) => {
+      if (!a.completed_at) return false;
+      const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
+      return pct >= passingPercent;
+    });
+
+    await this.supabase.from('progress').upsert(
+      {
+        student_id: studentId,
+        lesson_id: lessonId,
+        status: passedAny ? 'completed' : 'in_progress',
+        progress_percent: passedAny ? 100 : 0,
+        completed_at: passedAny ? new Date().toISOString() : null,
+      },
+      { onConflict: 'student_id,lesson_id' },
+    );
+
+    await this.recomputeEnrollmentStatus(lessonId, studentId);
+  }
+
+  private async recomputeEnrollmentStatus(lessonId: string, studentId: string) {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, chapters(course_id)')
+      .eq('id', lessonId)
+      .single();
+    const courseId = (lesson?.chapters as unknown as { course_id: string })?.course_id;
+    if (!courseId) return;
+
+    const { data: chapters } = await this.supabase
+      .from('chapters')
+      .select('id, lessons(id, is_published)')
+      .eq('course_id', courseId)
+      .eq('is_published', true);
+
+    const publishedLessonIds = (chapters ?? []).flatMap((ch: any) =>
+      ((ch.lessons ?? []) as any[])
+        .filter((l: any) => l.is_published !== false)
+        .map((l: any) => l.id),
+    );
+    if (publishedLessonIds.length === 0) return;
+
+    const { data: progressRows } = await this.supabase
+      .from('progress')
+      .select('lesson_id, status')
+      .eq('student_id', studentId)
+      .in('lesson_id', publishedLessonIds);
+
+    const completedCount = (progressRows ?? []).filter(
+      (p: { status: string }) => p.status === 'completed',
+    ).length;
+    const courseComplete = completedCount >= publishedLessonIds.length;
+
+    await this.supabase
+      .from('enrollments')
+      .update(
+        courseComplete
+          ? { status: 'completed', completed_at: new Date().toISOString() }
+          : { status: 'active', completed_at: null },
+      )
+      .eq('student_id', studentId)
+      .eq('course_id', courseId)
+      .in('status', ['active', 'completed']);
   }
 
   async findAttemptForStudent(attemptId: string, studentId: string, role?: string) {
@@ -880,7 +979,18 @@ export class TestsService {
     if (isAdmin) {
       return this.getAttemptDetail(attemptId);
     }
-    return this.getAttemptDetail(attemptId, studentId);
+
+    const { data: attempt, error } = await this.supabase
+      .from('test_attempts')
+      .select('id, student_id')
+      .eq('id', attemptId)
+      .single();
+
+    if (error || !attempt || attempt.student_id !== studentId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.getAttemptDetail(attemptId);
   }
 
   // ── End admin analytics endpoints ──────────────────────────────────────────
@@ -901,8 +1011,8 @@ export class TestsService {
       .select('id')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
 
     if (!enrollment) {
       throw new ForbiddenException(

@@ -4,6 +4,9 @@ import { getCourseProgress } from '@/server/student/courses.server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
+// Progress must always reflect the latest lesson/assessment state in the sidebar.
+export const dynamic = 'force-dynamic';
+
 export default async function CourseLayout({
   children,
   params,
@@ -18,9 +21,9 @@ export default async function CourseLayout({
   const progress = await getCourseProgress(courseId);
 
   return (
-    <div className="flex min-h-dvh flex-col md:flex-row">
+    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
       <CourseToc courseId={courseId} progress={progress} />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }

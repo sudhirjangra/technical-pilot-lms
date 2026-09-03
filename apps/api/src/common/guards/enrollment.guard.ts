@@ -60,8 +60,8 @@ export class EnrollmentGuard implements CanActivate {
       .select('id')
       .eq('student_id', user.id)
       .eq('course_id', courseId)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
 
     if (!enrollment)
       throw new ForbiddenException(

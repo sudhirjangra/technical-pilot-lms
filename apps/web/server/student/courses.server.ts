@@ -20,6 +20,31 @@ const PublicCoursesSchema = z.object({ data: z.array(CourseSchema) });
 
 export type PublicCourse = z.infer<typeof CourseSchema>;
 
+const PublicCategorySchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    description: z.string().nullable().optional(),
+    thumbnail_url: z.string().nullable().optional(),
+    sort_order: z.coerce.number().nullable().optional(),
+  })
+  .passthrough();
+
+export type PublicCategory = z.infer<typeof PublicCategorySchema>;
+
+export async function getPublicCategories(): Promise<PublicCategory[]> {
+  const [error, data] = await safeFetch(
+    z.object({ data: z.array(PublicCategorySchema) }).passthrough(),
+    '/categories',
+    { cache: 'no-store' },
+  );
+  if (error) return [];
+  return [...data!.data].sort(
+    (left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0),
+  );
+}
+
 export async function getPublishedCourses(): Promise<PublicCourse[]> {
   const [error, data] = await safeFetch(PublicCoursesSchema, '/courses', { cache: 'no-store' });
   if (error) return [];
@@ -78,6 +103,19 @@ const LessonProgressRecordSchema = z
     status: z.string().nullable().optional(),
     progress_percent: z.coerce.number().nullable().optional(),
     last_position_seconds: z.coerce.number().nullable().optional(),
+    completed_at: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+const AssessmentStateSchema = z
+  .object({
+    kind: z.string().nullable().optional(),
+    assessment_id: z.string().nullable().optional(),
+    attempts_used: z.coerce.number().nullable().optional(),
+    max_attempts: z.coerce.number().nullable().optional(),
+    passed: z.boolean().nullable().optional(),
+    exhausted: z.boolean().nullable().optional(),
+    failed: z.boolean().nullable().optional(),
   })
   .passthrough();
 
@@ -88,6 +126,7 @@ const ProgressLessonSchema = z
     sort_order: z.coerce.number().nullable().optional(),
     lesson_type: z.string().nullable().optional(),
     due_at: z.string().nullable().optional(),
+    assessment: AssessmentStateSchema.nullable().optional(),
     progress: LessonProgressRecordSchema.nullable().optional(),
   })
   .passthrough();
@@ -110,16 +149,27 @@ const ProgressSchema = z
   })
   .passthrough();
 
+export type StudentAssessmentState = {
+  assessment_id: string | null;
+  attempts_used: number;
+  max_attempts: number | null;
+  passed: boolean;
+  exhausted: boolean;
+  failed: boolean;
+};
+
 export type StudentLessonProgress = {
   id: string;
   title: string;
   sort_order: number;
   lesson_type: string;
   due_at: string | null;
+  assessment: StudentAssessmentState | null;
   progress: {
     status: string;
     progress_percent: number;
     last_position_seconds: number;
+    completed_at: string | null;
   } | null;
 };
 
@@ -245,11 +295,22 @@ export async function getCourseProgress(
           sort_order: lesson.sort_order ?? 0,
           lesson_type: lesson.lesson_type ?? 'video',
           due_at: lesson.due_at ?? null,
+          assessment: lesson.assessment
+            ? {
+                assessment_id: lesson.assessment.assessment_id ?? null,
+                attempts_used: lesson.assessment.attempts_used ?? 0,
+                max_attempts: lesson.assessment.max_attempts ?? null,
+                passed: lesson.assessment.passed ?? false,
+                exhausted: lesson.assessment.exhausted ?? false,
+                failed: lesson.assessment.failed ?? false,
+              }
+            : null,
           progress: lesson.progress
             ? {
                 status: lesson.progress.status ?? 'not_started',
                 progress_percent: lesson.progress.progress_percent ?? 0,
                 last_position_seconds: lesson.progress.last_position_seconds ?? 0,
+                completed_at: lesson.progress.completed_at ?? null,
               }
             : null,
         }))

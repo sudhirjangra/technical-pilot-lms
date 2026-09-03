@@ -1,10 +1,11 @@
 'use client';
 
-import { PublicCourse } from '@/server/student/courses.server';
+import { PublicCategory, PublicCourse } from '@/server/student/courses.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Input } from '@repo/shadcn/input';
+import { cn } from '@repo/shadcn/lib/utils';
 import {
   GraduationCap,
   Search,
@@ -15,7 +16,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-export function CourseBrowseClient({ courses }: { courses: PublicCourse[] }) {
+export function CourseBrowseClient({
+  courses,
+  categories: allCategories = [],
+}: {
+  courses: PublicCourse[];
+  categories?: PublicCategory[];
+}) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -26,6 +33,19 @@ export function CourseBrowseClient({ courses }: { courses: PublicCourse[] }) {
     });
     return Array.from(cats.entries()).map(([id, name]) => ({ id, name }));
   }, [courses]);
+
+  const courseCountByCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    courses.forEach((c) => {
+      if (c.categories) counts.set(c.categories.id, (counts.get(c.categories.id) ?? 0) + 1);
+    });
+    return counts;
+  }, [courses]);
+
+  const visibleCategories = useMemo(
+    () => allCategories.filter((cat) => (courseCountByCategory.get(cat.id) ?? 0) > 0),
+    [allCategories, courseCountByCategory],
+  );
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -42,6 +62,62 @@ export function CourseBrowseClient({ courses }: { courses: PublicCourse[] }) {
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Browse Courses</h1>
         <p className="text-muted-foreground mt-1">Discover courses to build your skills.</p>
       </div>
+
+      {/* Categories */}
+      {visibleCategories.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Categories
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleCategories.map((cat) => {
+              const isSelected = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
+                  aria-pressed={isSelected}
+                  className={cn(
+                    'flex min-h-11 items-center gap-3 rounded-lg border bg-card p-3 text-left transition-all',
+                    isSelected
+                      ? 'border-primary ring-2 ring-primary/30'
+                      : 'hover:border-primary/40 hover:bg-muted/40',
+                  )}
+                >
+                  <div className="size-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                    {cat.thumbnail_url ? (
+                      <Image
+                        src={cat.thumbnail_url}
+                        alt={cat.name}
+                        width={112}
+                        height={112}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+                        <Tag className="size-5" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{cat.name}</p>
+                    {cat.description && (
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                        {cat.description}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {courseCountByCategory.get(cat.id) ?? 0} course
+                      {(courseCountByCategory.get(cat.id) ?? 0) === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center">

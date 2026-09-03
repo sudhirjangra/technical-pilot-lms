@@ -244,7 +244,7 @@ export function CourseDetailClient({
   const [loading, setLoading] = useState(false);
   const [showChapterForm, setShowChapterForm] = useState(false);
   const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
-  const [chapterDraft, setChapterDraft] = useState({ title: '', description: '' });
+  const [chapterDraft, setChapterDraft] = useState({ title: '', description: '', is_published: false });
   const [lessonFormChapterId, setLessonFormChapterId] = useState<string | null>(null);
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
   const [pdfFormLessonId, setPdfFormLessonId] = useState<string | null>(null);
@@ -548,6 +548,7 @@ export function CourseDetailClient({
     setChapterDraft({
       title: chapter.title,
       description: chapter.description ?? '',
+      is_published: !!chapter.is_published,
     });
   };
 
@@ -556,8 +557,9 @@ export function CourseDetailClient({
     if (!editingChapterId) return;
     setLoading(true);
     const result = await updateChapter(editingChapterId, {
-      title: chapterDraft.title,
-      description: chapterDraft.description || null,
+      title: chapterDraft.title.trim(),
+      description: chapterDraft.description.trim() || null,
+      is_published: chapterDraft.is_published,
     });
     setLoading(false);
     if (result.error) {
@@ -1381,33 +1383,64 @@ export function CourseDetailClient({
           {chapters.map((chapter, chapterIndex) => (
             <Card key={chapter.id}>
               <CardHeader className="pb-3">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     {editingChapterId === chapter.id ? (
-                      <form onSubmit={handleUpdateChapter} className="flex flex-wrap items-center gap-2">
-                        <Input
-                          value={chapterDraft.title}
-                          onChange={(event) => setChapterDraft((draft) => ({ ...draft, title: event.target.value }))}
-                          className="h-8 w-48"
-                          aria-label="Chapter title"
-                          required
-                        />
-                        <Input
-                          value={chapterDraft.description}
-                          onChange={(event) => setChapterDraft((draft) => ({ ...draft, description: event.target.value }))}
-                          className="h-8 w-56"
-                          placeholder="Description"
-                          aria-label="Chapter description"
-                        />
-                        <Button type="submit" size="sm" disabled={loading}>Update</Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingChapterId(null)}>
-                          Cancel
-                        </Button>
+                      <form onSubmit={handleUpdateChapter} className="w-full space-y-3 rounded-lg border p-3">
+                        <p className="text-sm font-medium">Edit chapter details</p>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs text-muted-foreground" htmlFor={`chapter-title-${chapter.id}`}>
+                            Title
+                          </label>
+                          <Input
+                            id={`chapter-title-${chapter.id}`}
+                            value={chapterDraft.title}
+                            onChange={(event) => setChapterDraft((draft) => ({ ...draft, title: event.target.value }))}
+                            className="h-9"
+                            required
+                          />
+                        </div>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs text-muted-foreground" htmlFor={`chapter-description-${chapter.id}`}>
+                            Description
+                          </label>
+                          <Textarea
+                            id={`chapter-description-${chapter.id}`}
+                            value={chapterDraft.description}
+                            onChange={(event) => setChapterDraft((draft) => ({ ...draft, description: event.target.value }))}
+                            rows={3}
+                            placeholder="What this chapter covers"
+                          />
+                        </div>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            className="size-4"
+                            checked={chapterDraft.is_published}
+                            onChange={(event) =>
+                              setChapterDraft((draft) => ({ ...draft, is_published: event.target.checked }))
+                            }
+                          />
+                          Published
+                        </label>
+                        <div className="flex gap-2">
+                          <Button type="submit" size="sm" disabled={loading}>Save changes</Button>
+                          <Button type="button" size="sm" variant="ghost" onClick={() => setEditingChapterId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
                       </form>
                     ) : (
-                      <CardTitle className="text-base">
-                        {chapterIndex + 1}. {chapter.title}
-                      </CardTitle>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base">
+                          {chapterIndex + 1}. {chapter.title}
+                        </CardTitle>
+                        {chapter.description && (
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {chapter.description}
+                          </p>
+                        )}
+                      </div>
                     )}
                     <span
                       className={`inline-block size-2.5 rounded-full ${
@@ -1420,7 +1453,7 @@ export function CourseDetailClient({
                   <div className="flex flex-wrap gap-2">
                     {editingChapterId !== chapter.id && (
                       <Button size="sm" variant="outline" onClick={() => startChapterEdit(chapter)}>
-                        Edit
+                        Edit details
                       </Button>
                     )}
                     <Button

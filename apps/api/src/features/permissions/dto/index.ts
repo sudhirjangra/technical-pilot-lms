@@ -1,4 +1,4 @@
-import { ArrayNotEmpty, IsArray, IsString, IsUUID } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export const ALL_PERMISSIONS = [
   'courses:read',
@@ -17,6 +17,8 @@ export const ALL_PERMISSIONS = [
   'payments:read',
   'payments:refund',
   'doubt_sessions:manage',
+  'queries:read',
+  'queries:reply',
   'reports:read',
   'reports:export',
 ] as const;
@@ -31,4 +33,10 @@ export class SetPermissionsDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   permissions: string[];
+}
+
+export class PromoteUserDto {
+  @IsOptional()
+  @IsIn(['sub_admin', 'admin'])
+  role?: 'sub_admin' | 'admin';
 }

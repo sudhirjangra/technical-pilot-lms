@@ -1,4 +1,5 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { uploadPublicImage } from '@/common/utils/storage';
 import {
   BadRequestException,
   Inject,
@@ -100,24 +101,19 @@ export class CategoriesService {
     if (!category) throw new NotFoundException('Category not found');
 
     const part = await (request as MultipartRequest).file();
-    if (!part || !['image/png', 'image/jpeg', 'image/webp'].includes(part.mimetype))
-      throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
+    if (!part) throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
 
     const ext = part.mimetype.split('/')[1];
-    const filePath = `categories/${id}/thumbnail.${ext}`;
-    const buffer = await part.toBuffer();
-    const { error: uploadError } = await this.supabase.storage
-      .from('course-media')
-      .upload(filePath, buffer, { contentType: part.mimetype, upsert: true });
-    if (uploadError) throw new BadRequestException(uploadError.message);
-
-    const { data: publicUrlData } = this.supabase.storage
-      .from('course-media')
-      .getPublicUrl(filePath);
+    const publicUrl = await uploadPublicImage(
+      this.supabase,
+      `categories/${id}/thumbnail.${ext}`,
+      await part.toBuffer(),
+      part.mimetype,
+    );
 
     const { data, error: updateError } = await this.supabase
       .from('categories')
-      .update({ thumbnail_url: publicUrlData.publicUrl })
+      .update({ thumbnail_url: publicUrl })
       .eq('id', id)
       .select()
       .single();

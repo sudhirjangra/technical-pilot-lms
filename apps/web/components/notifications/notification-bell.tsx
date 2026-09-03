@@ -51,12 +51,14 @@ export function NotificationBell() {
   useEffect(() => {
     if (open) {
       getMyNotifications().then(setNotifications);
+      getUnreadCount().then(setUnread);
     }
   }, [open]);
 
   const handleMarkRead = (id: string) => {
     startTransition(async () => {
-      await markNotificationRead(id);
+      const result = await markNotificationRead(id);
+      if (result.error) return;
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
       setUnread((prev) => Math.max(0, prev - 1));
     });
@@ -64,7 +66,8 @@ export function NotificationBell() {
 
   const handleMarkAllRead = () => {
     startTransition(async () => {
-      await markAllRead();
+      const result = await markAllRead();
+      if (result.error) return;
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnread(0);
     });

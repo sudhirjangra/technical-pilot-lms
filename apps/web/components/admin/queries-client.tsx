@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { replyToQuery, type StudentQuery } from '@/server/student-queries.server';
+import { grantExtraAttempt, replyToQuery, type StudentQuery } from '@/server/student-queries.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@repo/shadcn/dialog';
 import { toast } from '@repo/shadcn/sonner';
-import { CheckCircle2, Clock, MessageSquare, Send, XCircle } from '@repo/shadcn/lucide';
+import { CheckCircle2, Clock, MessageSquare, Send, TicketPlus, XCircle } from '@repo/shadcn/lucide';
 
 const statusColors: Record<string, 'outline' | 'default' | 'secondary' | 'destructive'> = {
   open: 'outline',
@@ -22,12 +22,16 @@ const statusColors: Record<string, 'outline' | 'default' | 'secondary' | 'destru
   closed: 'secondary',
 };
 
+const isAttemptRequest = (query: StudentQuery) =>
+  (query as { type?: string }).type === 'extra_attempt_request';
+
 export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>('all');
   const [selected, setSelected] = useState<StudentQuery | null>(null);
   const [reply, setReply] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [granting, setGranting] = useState(false);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return queries;
@@ -54,6 +58,21 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
       setReply('');
       router.refresh();
     }
+  };
+
+  const handleGrantAttempt = async () => {
+    if (!selected) return;
+    setGranting(true);
+    const result = await grantExtraAttempt(selected.id, reply.trim() || undefined);
+    setGranting(false);
+    if (result.error) {
+      toast.error(typeof result.error === 'string' ? result.error : 'Failed to grant attempt');
+      return;
+    }
+    toast.success('Extra attempt granted');
+    setSelected(null);
+    setReply('');
+    router.refresh();
   };
 
   return (
@@ -95,6 +114,12 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium text-sm truncate">{q.subject}</p>
+                      {isAttemptRequest(q) && (
+                        <Badge variant="secondary" className="shrink-0 text-[10px] gap-0.5">
+                          <TicketPlus className="size-2.5" />
+                          Attempt request
+                        </Badge>
+                      )}
                       <Badge variant={statusColors[q.status] ?? 'outline'} className="shrink-0 text-[10px] gap-0.5">
                         {q.status === 'open' && <Clock className="size-2.5" />}
                         {q.status === 'answered' && <CheckCircle2 className="size-2.5" />}
@@ -142,8 +167,19 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}
                   />
-                  <div className="flex justify-end">
-                    <Button onClick={handleReply} disabled={submitting || !reply.trim()} className="gap-1.5">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {isAttemptRequest(selected) && selected.status === 'open' && (
+                      <Button
+                        variant="secondary"
+                        onClick={handleGrantAttempt}
+                        disabled={granting || submitting}
+                        className="gap-1.5"
+                      >
+                        <TicketPlus className="size-4" />
+                        {granting ? 'Granting...' : 'Approve +1 attempt'}
+                      </Button>
+                    )}
+                    <Button onClick={handleReply} disabled={submitting || granting || !reply.trim()} className="gap-1.5">
                       <Send className="size-4" />
                       {submitting ? 'Sending...' : selected.status === 'answered' ? 'Update Reply' : 'Send Reply'}
                     </Button>
