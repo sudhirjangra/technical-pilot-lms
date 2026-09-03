@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { uploadFileDirect } from '@/lib/uploadDirect';
+import { getCurrentAccessToken } from '@/server/auth.server';
 import {
   createAssignment,
   createAssignmentQuestion,
@@ -242,6 +243,8 @@ export function CourseDetailClient({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showChapterForm, setShowChapterForm] = useState(false);
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [chapterDraft, setChapterDraft] = useState({ title: '', description: '' });
   const [lessonFormChapterId, setLessonFormChapterId] = useState<string | null>(null);
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
   const [pdfFormLessonId, setPdfFormLessonId] = useState<string | null>(null);
@@ -296,10 +299,11 @@ export function CourseDetailClient({
     setLoading(true);
     setVideoUploadProgress(0);
     // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
+    const accessToken = await getCurrentAccessToken();
     const result = await uploadFileDirect<{ data: VideoLesson }>(
       `/videos/lesson/${lessonId}/upload`,
       file,
-      session?.user?.tokens.access_token,
+      accessToken,
       'file',
       setVideoUploadProgress,
     );
@@ -437,12 +441,15 @@ export function CourseDetailClient({
     const createdLesson = result.data;
 
     const file = formData.get('asset');
+    const accessToken = file instanceof File && file.size > 0 && lessonType === 'video'
+      ? await getCurrentAccessToken()
+      : undefined;
     const uploadResult: { error?: string } = file instanceof File && file.size > 0
       ? lessonType === 'video'
         ? await uploadFileDirect(
           `/videos/lesson/${createdLesson.id}/upload`,
           file,
-          session?.user?.tokens.access_token,
+          accessToken,
           'file',
         )
         : lessonType === 'pdf'
@@ -533,6 +540,32 @@ export function CourseDetailClient({
       return;
     }
     toast.success(`Chapter ${chapter.is_published ? 'unpublished' : 'published'}`);
+    router.refresh();
+  };
+
+  const startChapterEdit = (chapter: Chapter) => {
+    setEditingChapterId(chapter.id);
+    setChapterDraft({
+      title: chapter.title,
+      description: chapter.description ?? '',
+    });
+  };
+
+  const handleUpdateChapter = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingChapterId) return;
+    setLoading(true);
+    const result = await updateChapter(editingChapterId, {
+      title: chapterDraft.title,
+      description: chapterDraft.description || null,
+    });
+    setLoading(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Chapter details updated');
+    setEditingChapterId(null);
     router.refresh();
   };
 
@@ -1350,9 +1383,32 @@ export function CourseDetailClient({
               <CardHeader className="pb-3">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle className="text-base">
-                      {chapterIndex + 1}. {chapter.title}
-                    </CardTitle>
+                    {editingChapterId === chapter.id ? (
+                      <form onSubmit={handleUpdateChapter} className="flex flex-wrap items-center gap-2">
+                        <Input
+                          value={chapterDraft.title}
+                          onChange={(event) => setChapterDraft((draft) => ({ ...draft, title: event.target.value }))}
+                          className="h-8 w-48"
+                          aria-label="Chapter title"
+                          required
+                        />
+                        <Input
+                          value={chapterDraft.description}
+                          onChange={(event) => setChapterDraft((draft) => ({ ...draft, description: event.target.value }))}
+                          className="h-8 w-56"
+                          placeholder="Description"
+                          aria-label="Chapter description"
+                        />
+                        <Button type="submit" size="sm" disabled={loading}>Update</Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingChapterId(null)}>
+                          Cancel
+                        </Button>
+                      </form>
+                    ) : (
+                      <CardTitle className="text-base">
+                        {chapterIndex + 1}. {chapter.title}
+                      </CardTitle>
+                    )}
                     <span
                       className={`inline-block size-2.5 rounded-full ${
                         chapter.is_published ? 'bg-emerald-500' : 'bg-amber-500'
@@ -1362,6 +1418,11 @@ export function CourseDetailClient({
                     />
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {editingChapterId !== chapter.id && (
+                      <Button size="sm" variant="outline" onClick={() => startChapterEdit(chapter)}>
+                        Edit
+                      </Button>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"

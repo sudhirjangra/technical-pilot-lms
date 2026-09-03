@@ -124,6 +124,9 @@
 - [x] Razorpay `payment.failed` webhook events now mark pending payment rows as failed instead of leaving stale pending orders.
 - [x] Added the existing favicon asset at the web public root so browser requests to `/favicon.ico` no longer return 404.
 - [x] Diagnosed production Auth.js invalid JSON: web API URL template incorrectly used `/api`, while NestJS auth routes are rooted at `/auth`; corrected both web API URL examples and added upstream status/content-type/path details to non-JSON errors.
+- [x] Fixed admin video upload UnauthorizedException after 15-minute access-token expiry: direct uploads now obtain a server-refreshed token, and middleware checks the JWT `exp` claim instead of the unrelated three-day session refresh timestamp.
+- [x] Added inline admin chapter title/description editing with update action; softened the admin course-completion tooltip to low-opacity translucent styling; invalid/stale sessions now redirect to normal sign-in instead of falsely showing the disabled-account message.
+- [x] Signup auto-login reviewed: blocked safely because new accounts are created with email confirmation required and the password is not retained; confirmation continues to lead to sign-in.
 - [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.
 
 ### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)

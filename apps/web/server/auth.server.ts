@@ -27,6 +27,7 @@ import {
 } from '@/types/auth.type';
 import { DefaultReturnSchema } from '@/types/default.type';
 import { AuthError, User } from 'next-auth';
+import { decodeJwt } from 'jose';
 import { revalidateTag } from 'next/cache';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { redirect } from 'next/navigation';
@@ -519,7 +520,7 @@ const updateTokens = async (data: RefreshToken) => {
  * Refresh access token with refresh token
  * @param user
  */
-export const refreshAccessToken = async (user: User): Promise<unknown> => {
+export const refreshAccessToken = async (user: User): Promise<string | undefined> => {
   const [error, data] = await safeFetch(
     RefreshTokenSchema,
     '/auth/refresh-token',
@@ -542,6 +543,26 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
     return;
   }
   await updateTokens(data!);
+  return data!.access_token;
+};
+
+/**
+ * Returns an access token suitable for a direct browser upload.
+ * The browser can retain an expired token while the server session has been refreshed.
+ */
+export const getCurrentAccessToken = async (): Promise<string | undefined> => {
+  const session = await auth();
+  if (!session?.user) return undefined;
+
+  try {
+    const expiresAt = decodeJwt(session.user.tokens.access_token).exp;
+    if (typeof expiresAt === 'number' && expiresAt * 1000 > Date.now() + 30_000) {
+      return session.user.tokens.access_token;
+    }
+  } catch {
+  }
+
+  return refreshAccessToken(session.user);
 };
 
 /**
@@ -551,24 +572,22 @@ export const refreshAccessToken = async (user: User): Promise<unknown> => {
 export const validateSessionIfExist = async (): Promise<{
   data: GetSession | null;
   signedOut: boolean;
+  disabled: boolean;
 }> => {
   const [error, data] = await getSessionById();
+  const disabled = error?.includes('disabled') ?? false;
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
     // Only sign out if the error indicates the session is truly invalid (404) or the
     // account has been disabled by an admin, not when the API is just unreachable.
-    if (
-      error.includes('Session not found') ||
-      error.includes('Invalid Access Token') ||
-      error.includes('disabled')
-    ) {
+    if (error.includes('Session not found') || error.includes('Invalid Access Token') || disabled) {
       await signOut({
         redirect: false,
       });
-      return { data: null, signedOut: true };
+      return { data: null, signedOut: true, disabled };
     }
   }
-  return { data: data ?? null, signedOut: false };
+  return { data: data ?? null, signedOut: false, disabled: false };
 };
 
 /**

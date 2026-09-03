@@ -2,24 +2,22 @@ import {
   refreshAccessToken,
   validateSessionIfExist,
 } from '@/server/auth.server';
+import { decodeJwt } from 'jose';
 import { auth } from './auth';
 
 export default auth(async (req) => {
   try {
     if (req.auth && req.auth.user) {
       const user = req.auth.user;
-      const session_refresh_time = new Date(
-        user.tokens.session_refresh_time,
-      ).getTime();
-      const now = Date.now();
-      if (session_refresh_time <= now) {
+      const expiresAt = decodeJwt(user.tokens.access_token).exp;
+      if (typeof expiresAt === 'number' && expiresAt * 1000 <= Date.now() + 30_000) {
         await refreshAccessToken(user);
       }
     }
     if (req.auth && req.auth.user) {
-      const { signedOut } = await validateSessionIfExist();
+      const { signedOut, disabled } = await validateSessionIfExist();
       if (signedOut) {
-        return Response.redirect(new URL('/auth/sign-in?disabled=1', req.url));
+        return Response.redirect(new URL(disabled ? '/auth/sign-in?disabled=1' : '/auth/sign-in', req.url));
       }
     }
 
