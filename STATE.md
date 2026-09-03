@@ -123,6 +123,7 @@
 - [x] Razorpay payment verification is idempotent when `payment.captured` reaches the webhook before the browser callback; Checkout now prefills the signed-in email.
 - [x] Razorpay `payment.failed` webhook events now mark pending payment rows as failed instead of leaving stale pending orders.
 - [x] Added the existing favicon asset at the web public root so browser requests to `/favicon.ico` no longer return 404.
+- [x] Diagnosed production Auth.js invalid JSON: web API URL template incorrectly used `/api`, while NestJS auth routes are rooted at `/auth`; corrected both web API URL examples and added upstream status/content-type/path details to non-JSON errors.
 - [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.
 
 ### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)

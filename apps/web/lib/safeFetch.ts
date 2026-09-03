@@ -88,7 +88,12 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
       res = JSON.parse(text);
     }
   } catch {
-    return ['Invalid JSON response', null];
+    const contentType = response.headers.get('content-type') ?? 'unknown content type';
+    const responsePath = new URL(response.url).pathname;
+    return [
+      `API returned invalid JSON (${response.status}, ${contentType}) at ${responsePath}`,
+      null,
+    ];
   }
 
   if (!response.ok) {
