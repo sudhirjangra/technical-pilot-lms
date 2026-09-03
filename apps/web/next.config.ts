@@ -1,5 +1,7 @@
 import { NextConfig } from 'next';
 
+const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
+
 const nextConfig = {
   reactStrictMode: false,
   images: {
@@ -43,7 +45,7 @@ const nextConfig = {
               "worker-src 'self' blob:",
               "img-src 'self' data: blob: https:",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://api.razorpay.com https://*.vdocipher.com https://*.supabase.co",
+              `connect-src 'self' https://api.razorpay.com https://*.vdocipher.com https://*.supabase.co${publicApiUrl ? ` ${new URL(publicApiUrl).origin}` : ''}`,
               "frame-src 'self' https://api.razorpay.com https://player.vimeo.com https://player.vdocipher.com https://*.supabase.co",
             ].join('; '),
           },
