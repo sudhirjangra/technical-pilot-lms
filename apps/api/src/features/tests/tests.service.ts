@@ -311,14 +311,23 @@ export class TestsService {
       };
     });
 
+    const { data: grant } = await this.supabase
+      .from('assessment_attempt_grants')
+      .select('extra_attempts')
+      .eq('test_id', test.id)
+      .eq('student_id', studentId)
+      .maybeSingle();
+    const extraAttempts = grant?.extra_attempts ?? 0;
+    const effectiveMaxAttempts = test.max_attempts == null ? null : test.max_attempts + extraAttempts;
     const attemptCount = attempts.length;
     const latestAttempt = attempts[0] ?? null;
 
     return {
-      test: { ...test, questions },
+      test: { ...test, max_attempts: effectiveMaxAttempts, questions },
       attempt: latestAttempt,
       attempts_used: attemptCount,
       attempts,
+      extra_attempts_granted: extraAttempts,
     };
   }
 
@@ -347,7 +356,13 @@ export class TestsService {
         .eq('test_id', testId)
         .eq('student_id', studentId);
 
-      if ((count ?? 0) >= testDetails.max_attempts) {
+      const { data: grant } = await this.supabase
+        .from('assessment_attempt_grants')
+        .select('extra_attempts')
+        .eq('test_id', testId)
+        .eq('student_id', studentId)
+        .maybeSingle();
+      if ((count ?? 0) >= testDetails.max_attempts + (grant?.extra_attempts ?? 0)) {
         throw new ForbiddenException('Maximum attempts reached for this test');
       }
     }

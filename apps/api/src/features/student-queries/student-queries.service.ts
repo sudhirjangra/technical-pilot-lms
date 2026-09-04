@@ -68,33 +68,37 @@ export class StudentQueriesService {
    */
   async requestExtraAttempt(
     studentId: string,
-    assignmentId: string,
+    assessmentType: 'assignment' | 'test',
+    assessmentId: string,
     reason?: string,
   ) {
-    const { data: assignment } = await this.supabase
-      .from('assignments')
+    const table = assessmentType === 'assignment' ? 'assignments' : 'tests';
+    const attemptsTable = assessmentType === 'assignment' ? 'assignment_attempts' : 'test_attempts';
+    const targetColumn = assessmentType === 'assignment' ? 'assignment_id' : 'test_id';
+    const { data: assessment } = await this.supabase
+      .from(table)
       .select('id, title, lesson_id, max_attempts, passing_score_percent')
-      .eq('id', assignmentId)
+      .eq('id', assessmentId)
       .single();
-    if (!assignment) throw new NotFoundException('Assignment not found');
+    if (!assessment) throw new NotFoundException(`${assessmentType === 'assignment' ? 'Assignment' : 'Test'} not found`);
 
     const { data: attempts } = await this.supabase
-      .from('assignment_attempts')
+      .from(attemptsTable)
       .select('id, score, max_score, completed_at')
-      .eq('assignment_id', assignmentId)
+      .eq(targetColumn, assessmentId)
       .eq('student_id', studentId);
 
     const { data: grant } = await this.supabase
       .from('assessment_attempt_grants')
       .select('extra_attempts')
       .eq('student_id', studentId)
-      .eq('assignment_id', assignmentId)
+      .eq(targetColumn, assessmentId)
       .maybeSingle();
 
     const allowed =
-      assignment.max_attempts === null || assignment.max_attempts === undefined
+      assessment.max_attempts === null || assessment.max_attempts === undefined
         ? null
-        : assignment.max_attempts + (grant?.extra_attempts ?? 0);
+        : assessment.max_attempts + (grant?.extra_attempts ?? 0);
 
     if (allowed === null) {
       throw new BadRequestException('This assignment has unlimited attempts');
@@ -103,7 +107,7 @@ export class StudentQueriesService {
       throw new BadRequestException('You still have attempts remaining');
     }
 
-    const passingPct = assignment.passing_score_percent ?? 60;
+    const passingPct = assessment.passing_score_percent ?? 60;
     const passed = (attempts ?? []).some((a) => {
       const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
       return a.completed_at && pct >= passingPct;
@@ -118,7 +122,7 @@ export class StudentQueriesService {
       .eq('student_id', studentId)
       .eq('type', 'extra_attempt_request')
       .eq('status', 'open')
-      .contains('metadata', { assignment_id: assignmentId })
+      .contains('metadata', { [targetColumn]: assessmentId })
       .maybeSingle();
     if (existing) {
       throw new BadRequestException(
@@ -130,14 +134,15 @@ export class StudentQueriesService {
       .from('student_queries')
       .insert({
         student_id: studentId,
-        subject: `Extra attempt request: ${assignment.title}`,
+        subject: `Extra attempt request: ${assessment.title}`,
         body:
           reason?.trim() ||
           'All attempts have been used without a passing score. Requesting one additional attempt.',
         type: 'extra_attempt_request',
         metadata: {
-          assignment_id: assignmentId,
-          lesson_id: assignment.lesson_id,
+          [targetColumn]: assessmentId,
+          assessment_type: assessmentType,
+          lesson_id: assessment.lesson_id,
           attempts_used: (attempts ?? []).length,
         },
       })
@@ -164,17 +169,23 @@ export class StudentQueriesService {
       throw new BadRequestException('This query is not an extra-attempt request');
     }
 
-    const assignmentId = (query.metadata as { assignment_id?: string } | null)
-      ?.assignment_id;
-    if (!assignmentId) {
+    const metadata = query.metadata as {
+      assignment_id?: string;
+      test_id?: string;
+      assessment_type?: 'assignment' | 'test';
+    } | null;
+    const assessmentType = metadata?.assessment_type ?? (metadata?.test_id ? 'test' : 'assignment');
+    const assessmentId = assessmentType === 'test' ? metadata?.test_id : metadata?.assignment_id;
+    if (!assessmentId) {
       throw new BadRequestException('Request is missing its assignment reference');
     }
+    const targetColumn = assessmentType === 'test' ? 'test_id' : 'assignment_id';
 
     const { data: existing } = await this.supabase
       .from('assessment_attempt_grants')
       .select('id, extra_attempts')
       .eq('student_id', query.student_id)
-      .eq('assignment_id', assignmentId)
+      .eq(targetColumn, assessmentId)
       .maybeSingle();
 
     if (existing) {
@@ -192,7 +203,7 @@ export class StudentQueriesService {
         .from('assessment_attempt_grants')
         .insert({
           student_id: query.student_id,
-          assignment_id: assignmentId,
+          [targetColumn]: assessmentId,
           extra_attempts: extraAttempts,
           granted_by: grantedBy,
         });

@@ -250,7 +250,7 @@ function InstructionsScreen({
 
   const handleRequestExtraAttempt = async () => {
     setRequesting(true);
-    const result = await requestExtraAttempt(test.id);
+    const result = await requestExtraAttempt(mode, test.id);
     setRequesting(false);
     if (result.error) {
       toast.error(
@@ -369,7 +369,7 @@ function InstructionsScreen({
               ? 'You did not pass within your allotted attempts.'
               : 'You have used all your attempts for this test.'}
           </p>
-          {failedOut && mode === 'assignment' && (
+          {failedOut && (
             <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-left">
               <p className="text-sm font-medium">Need another chance?</p>
               <p className="mt-1 text-xs text-muted-foreground">

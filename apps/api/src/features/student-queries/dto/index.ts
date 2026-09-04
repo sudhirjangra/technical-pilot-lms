@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateQueryDto {
   @IsString()
@@ -23,8 +23,11 @@ export class QueryFilterDto {
 }
 
 export class RequestExtraAttemptDto {
+  @IsIn(['assignment', 'test'])
+  assessment_type: 'assignment' | 'test';
+
   @IsUUID()
-  assignment_id: string;
+  assessment_id: string;
 
   @IsOptional()
   @IsUUID()
