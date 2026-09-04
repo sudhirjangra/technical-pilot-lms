@@ -127,6 +127,7 @@
 - [x] Fixed admin video upload UnauthorizedException after 15-minute access-token expiry: direct uploads now obtain a server-refreshed token, and middleware checks the JWT `exp` claim instead of the unrelated three-day session refresh timestamp.
 - [x] Fixed student past-attempt detail 403s by separating the ownership lookup from nested attempt details, explicitly verifying `student_id`, and then loading the detail record without the fragile ownership-filtered join.
 - [x] Fixed extra-attempt requests for assignments and tests: students now submit a typed assessment reference, admins grant against the correct assessment, and approved test grants increase the student's available attempts.
+- [x] Fixed student Test opening validation error: the latest test attempt response now includes `test_id` and `student_id`, matching the frontend attempt schema.
 - [x] Replaced the student `/dashboard/attempts` redirect placeholder with a combined assignment/test attempt history page and added it to the student navigation.
 - [x] Added inline admin chapter title/description editing with update action; softened the admin course-completion tooltip to low-opacity translucent styling; invalid/stale sessions now redirect to normal sign-in instead of falsely showing the disabled-account message.
 - [x] Signup auto-login reviewed: blocked safely because new accounts are created with email confirmation required and the password is not retained; confirmation continues to lead to sign-in.

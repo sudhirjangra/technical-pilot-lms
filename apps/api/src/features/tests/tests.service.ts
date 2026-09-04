@@ -293,7 +293,7 @@ export class TestsService {
     // Fetch attempt count + latest attempt for this student
     const { data: rawAttempts } = await this.supabase
       .from('test_attempts')
-      .select('id, started_at, completed_at, score, max_score, time_spent_seconds')
+      .select('id, test_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds')
       .eq('test_id', test.id)
       .eq('student_id', studentId)
       .order('started_at', { ascending: false });
