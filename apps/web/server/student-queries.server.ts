@@ -66,13 +66,17 @@ export async function getAllQueries(status?: string): Promise<StudentQuery[]> {
   return data!;
 }
 
-export async function requestExtraAttempt(assignmentId: string, reason?: string) {
+export async function requestExtraAttempt(
+  assessmentType: 'assignment' | 'test',
+  assessmentId: string,
+  reason?: string,
+) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), '/student-queries/extra-attempt', {
     method: 'POST',
     headers: h,
     cache: 'no-store',
-    body: JSON.stringify({ assignment_id: assignmentId, reason }),
+    body: JSON.stringify({ assessment_type: assessmentType, assessment_id: assessmentId, reason }),
   });
   return error ? { error } : { success: true };
 }

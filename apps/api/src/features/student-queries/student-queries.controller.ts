@@ -41,7 +41,8 @@ export class StudentQueriesController {
   ) {
     return this.service.requestExtraAttempt(
       req.user.id,
-      dto.assignment_id,
+      dto.assessment_type,
+      dto.assessment_id,
       dto.reason,
     );
   }
