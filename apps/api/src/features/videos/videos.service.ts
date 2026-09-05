@@ -341,24 +341,31 @@ export class VideosService {
       .maybeSingle();
     if (!enrollment) throw new ForbiddenException('Active enrollment required');
 
-    // 3. Concurrent session guard — block account sharing
+    // 3. Concurrent session management — rotate stale sessions for smooth device switching
     const now = new Date().toISOString();
-    const { count: activeSessions } = await this.supabase
+    await this.supabase
       .from('video_sessions')
-      .select('*', { count: 'exact', head: true })
+      .delete()
+      .lt('expires_at', now)
+      .eq('user_id', userId);
+
+    const { data: activeSessions } = await this.supabase
+      .from('video_sessions')
+      .select('id, created_at')
       .eq('user_id', userId)
       .eq('lesson_id', lessonId)
       .gt('expires_at', now)
-      .neq('ip_address', ip);
+      .neq('ip_address', ip)
+      .order('created_at', { ascending: true });
 
-    if ((activeSessions ?? 0) >= MAX_CONCURRENT_SESSIONS) {
-      throw new ForbiddenException(
-        'Too many concurrent sessions — possible account sharing',
-      );
+    if (activeSessions && activeSessions.length >= MAX_CONCURRENT_SESSIONS) {
+      const excessCount = activeSessions.length - MAX_CONCURRENT_SESSIONS + 1;
+      const idsToRemove = activeSessions.slice(0, excessCount).map((s) => s.id);
+      await this.supabase.from('video_sessions').delete().in('id', idsToRemove);
     }
 
     // 4. Record this session (fire-and-forget — don't block OTP on DB write)
-    const sessionExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const sessionExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.supabase
       .from('video_sessions')
       .insert({

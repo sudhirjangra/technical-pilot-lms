@@ -73,29 +73,29 @@ export function StudentDoubtClient({
   };
 
   return (
-    <section className="min-h-dvh container py-6 sm:py-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Doubt Sessions & Queries</h1>
+    <section className="min-h-dvh container px-3 sm:px-6 py-4 sm:py-8 max-w-4xl mx-auto">
+      <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Doubt Sessions & Queries</h1>
 
       <Tabs defaultValue="available">
-        <TabsList className="flex w-full flex-wrap justify-start gap-2">
-          <TabsTrigger value="available">Available Slots ({slots.length})</TabsTrigger>
-          <TabsTrigger value="bookings">My Bookings ({bookings.length})</TabsTrigger>
-          <TabsTrigger value="queries" className="gap-1">
-            <MessageSquare className="size-3.5" />
-            My Queries ({queries.length})
+        <TabsList className="grid grid-cols-3 w-full h-auto p-1 text-xs sm:text-sm">
+          <TabsTrigger value="available" className="text-xs sm:text-sm py-1.5 px-1 sm:px-3">Slots ({slots.length})</TabsTrigger>
+          <TabsTrigger value="bookings" className="text-xs sm:text-sm py-1.5 px-1 sm:px-3">Bookings ({bookings.length})</TabsTrigger>
+          <TabsTrigger value="queries" className="gap-1 text-xs sm:text-sm py-1.5 px-1 sm:px-3">
+            <MessageSquare className="size-3 sm:size-3.5 hidden xs:inline-block" />
+            Queries ({queries.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="available" className="mt-4 space-y-3">
-          {slots.length === 0 && <p className="text-muted-foreground">No upcoming slots available.</p>}
+          {slots.length === 0 && <p className="text-muted-foreground text-sm">No upcoming slots available.</p>}
           {slots.map((slot) => (
-            <Card key={slot.id} className="p-4 flex items-start justify-between gap-3">
+            <Card key={slot.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 {slot.topic && <p className="font-medium text-sm">{slot.topic}</p>}
-                <p className={slot.topic ? 'text-sm text-muted-foreground' : 'font-medium'}>
+                <p className={slot.topic ? 'text-xs sm:text-sm text-muted-foreground' : 'font-medium text-sm'}>
                   {new Date(slot.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)} • {slot.duration_minutes}m
                   • {slot.current_bookings}/{slot.max_bookings} booked
                 </p>
@@ -103,11 +103,11 @@ export function StudentDoubtClient({
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{slot.description}</p>
                 )}
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 self-end sm:self-start">
                 {bookedSlotIds.has(slot.id) ? (
                   <Badge>Booked</Badge>
                 ) : (
-                  <Button size="sm" onClick={() => handleBook(slot.id)} disabled={loading === slot.id}>
+                  <Button size="sm" className="h-8 text-xs px-3" onClick={() => handleBook(slot.id)} disabled={loading === slot.id}>
                     {loading === slot.id ? 'Booking...' : 'Book'}
                   </Button>
                 )}
@@ -117,62 +117,67 @@ export function StudentDoubtClient({
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-4 space-y-3">
-          {bookings.length === 0 && <p className="text-muted-foreground">No bookings yet.</p>}
-          {bookings.map((b) => (
-            <Card key={b.id} className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  {b.doubt_slots?.topic && <p className="font-medium text-sm">{b.doubt_slots.topic}</p>}
-                  {b.doubt_slots && (
-                    <>
-                      <p className={b.doubt_slots.topic ? 'text-sm text-muted-foreground' : 'font-medium'}>
-                        {new Date(b.doubt_slots.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {b.doubt_slots.start_time.slice(0, 5)} – {b.doubt_slots.end_time.slice(0, 5)}
-                      </p>
-                      {b.doubt_slots.meeting_link && (
-                        <a href={b.doubt_slots.meeting_link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline mt-1 inline-block">
-                          Join Meeting &rarr;
-                        </a>
-                      )}
-                    </>
-                  )}
+          {bookings.length === 0 && <p className="text-muted-foreground text-sm">No bookings yet.</p>}
+          {bookings.map((b) => {
+            const meetingLink = b.meeting_link || b.doubt_slots?.meeting_link;
+            return (
+              <Card key={b.id} className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {b.doubt_slots?.topic && <p className="font-medium text-sm">{b.doubt_slots.topic}</p>}
+                    {b.doubt_slots && (
+                      <>
+                        <p className={b.doubt_slots.topic ? 'text-xs sm:text-sm text-muted-foreground' : 'font-medium text-sm'}>
+                          {new Date(b.doubt_slots.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">
+                          {b.doubt_slots.start_time.slice(0, 5)} – {b.doubt_slots.end_time.slice(0, 5)}
+                        </p>
+                        {meetingLink && (
+                          <a href={meetingLink} target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm text-primary hover:underline mt-1 inline-block">
+                            Join Meeting &rarr;
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-start">
+                    <Badge variant={b.status === 'confirmed' ? 'default' : b.status === 'completed' ? 'secondary' : 'destructive'} className="text-xs">
+                      {b.status}
+                    </Badge>
+                    {b.status === 'confirmed' && (
+                      <Button size="sm" variant="outline" className="h-8 text-xs px-2.5" onClick={() => handleCancel(b.id)} disabled={loading === b.id}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant={b.status === 'confirmed' ? 'default' : b.status === 'completed' ? 'secondary' : 'destructive'}>
-                    {b.status}
-                  </Badge>
-                  {b.status === 'confirmed' && (
-                    <Button size="sm" variant="outline" onClick={() => handleCancel(b.id)} disabled={loading === b.id}>
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </TabsContent>
 
-        <TabsContent value="queries" className="mt-4 space-y-6">
+        <TabsContent value="queries" className="mt-4 space-y-4 sm:space-y-6">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Ask a Question</CardTitle>
+            <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base">Ask a Question</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-3 sm:p-6 pt-0 space-y-3">
               <Input
                 placeholder="Subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
+                className="h-9 text-xs sm:text-sm"
               />
               <Textarea
                 placeholder="Describe your question in detail..."
-                rows={4}
+                rows={3}
                 value={queryBody}
                 onChange={(e) => setQueryBody(e.target.value)}
+                className="text-xs sm:text-sm"
               />
-              <Button onClick={handleSubmitQuery} disabled={submitting} className="gap-1.5">
-                <Send className="size-4" />
+              <Button onClick={handleSubmitQuery} disabled={submitting} className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5 w-full sm:w-auto">
+                <Send className="size-3.5 sm:size-4" />
                 {submitting ? 'Submitting...' : 'Submit Query'}
               </Button>
             </CardContent>
@@ -184,8 +189,15 @@ export function StudentDoubtClient({
             <div className="space-y-3">
               {queries.map((q) => (
                 <Card key={q.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="font-medium text-sm">{q.subject}</h3>
+                  <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {q.query_number && (
+                        <span className="font-mono text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          #{q.query_number}
+                        </span>
+                      )}
+                      <h3 className="font-medium text-sm">{q.subject}</h3>
+                    </div>
                     <Badge variant={q.status === 'answered' ? 'default' : q.status === 'closed' ? 'secondary' : 'outline'} className="shrink-0 gap-1">
                       {q.status === 'answered' && <CheckCircle2 className="size-3" />}
                       {q.status === 'open' && <Clock className="size-3" />}
@@ -197,8 +209,8 @@ export function StudentDoubtClient({
                     {new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                   {q.admin_reply && (
-                    <div className="mt-3 rounded-md border bg-muted/50 p-3">
-                      <p className="text-xs font-medium text-primary mb-1">Admin Reply</p>
+                    <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-3">
+                      <p className="text-xs font-semibold text-primary mb-1">Technical Pilot Reply</p>
                       <p className="text-sm">{q.admin_reply}</p>
                       {q.replied_at && (
                         <p className="text-[10px] text-muted-foreground mt-1">

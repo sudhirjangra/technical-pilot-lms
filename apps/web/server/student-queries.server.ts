@@ -15,6 +15,7 @@ const QuerySchema = z.object({
   replied_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
+  query_number: z.string().nullable().optional(),
   profiles: z.object({
     id: z.string(),
     full_name: z.string().nullable().optional(),

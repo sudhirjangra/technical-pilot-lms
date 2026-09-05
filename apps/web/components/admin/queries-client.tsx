@@ -76,22 +76,22 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Student Queries</h1>
-        <Badge variant="outline" className="text-sm">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Student Queries</h1>
+        <Badge variant="outline" className="text-xs w-fit">
           {counts.open} open
         </Badge>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
         {(['all', 'open', 'answered', 'closed'] as const).map((s) => (
           <Button
             key={s}
             variant={filter === s ? 'secondary' : 'ghost'}
             size="sm"
             onClick={() => setFilter(s)}
-            className="shrink-0 capitalize"
+            className="h-8 px-2.5 text-xs shrink-0 capitalize"
           >
             {s} ({counts[s]})
           </Button>
@@ -112,7 +112,12 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      {q.query_number && (
+                        <span className="font-mono text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          #{q.query_number}
+                        </span>
+                      )}
                       <p className="font-medium text-sm truncate">{q.subject}</p>
                       {isAttemptRequest(q) && (
                         <Badge variant="secondary" className="shrink-0 text-[10px] gap-0.5">
@@ -145,7 +150,14 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
           {selected && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-base">{selected.subject}</DialogTitle>
+                <div className="flex items-center gap-2">
+                  {selected.query_number && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      #{selected.query_number}
+                    </Badge>
+                  )}
+                  <DialogTitle className="text-base">{selected.subject}</DialogTitle>
+                </div>
               </DialogHeader>
               <div className="space-y-4">
                 <div>

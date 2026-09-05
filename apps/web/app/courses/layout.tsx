@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { DashboardSidebar } from '@/components/dashboard/sidebar';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { AviationRadarBackground } from '@/components/dashboard/radar-background';
 import { APP_NAME } from '@repo/constants/app';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@repo/shadcn/sidebar';
@@ -11,16 +12,22 @@ import type { ReactNode } from 'react';
 export default async function CoursesLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user) {
-    return <>{children}</>;
+    return (
+      <div className="relative min-h-dvh">
+        <AviationRadarBackground />
+        <div className="relative z-10">{children}</div>
+      </div>
+    );
   }
 
   const sidebarState = (await cookies()).get('sidebar_state')?.value;
 
   return (
-    <SidebarProvider defaultOpen={sidebarState !== 'false'}>
+    <SidebarProvider defaultOpen={sidebarState !== 'false'} className="relative">
+      <AviationRadarBackground />
       <DashboardSidebar />
 
-      <SidebarInset className="flex min-h-dvh flex-col overflow-x-hidden">
+      <SidebarInset className="flex min-h-dvh flex-col overflow-x-hidden relative z-10 bg-transparent">
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur-md">
           <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
           <div className="min-w-0 flex-1">

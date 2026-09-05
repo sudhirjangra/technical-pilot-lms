@@ -38,13 +38,14 @@ export class PaymentsService {
     if (course.status !== 'published')
       throw new BadRequestException('Course is not available for purchase');
 
-    // Check not already enrolled
+    // Check not already actively enrolled
     const { data: existing } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, status')
       .eq('student_id', studentId)
       .eq('course_id', dto.course_id)
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
     if (existing)
       throw new BadRequestException('Already enrolled in this course');
 
@@ -138,7 +139,12 @@ export class PaymentsService {
       await this.supabase
         .from('enrollments')
         .upsert(
-          { student_id: studentId, course_id: existingPayment.course_id },
+          {
+            student_id: studentId,
+            course_id: existingPayment.course_id,
+            status: 'active',
+            enrolled_at: new Date().toISOString(),
+          },
           { onConflict: 'student_id,course_id' },
         );
       return { message: 'Payment already verified, enrollment activated', payment: existingPayment };
@@ -154,6 +160,7 @@ export class PaymentsService {
         razorpay_payment_id: dto.razorpay_payment_id,
         razorpay_signature: dto.razorpay_signature,
         status: 'completed',
+        updated_at: new Date().toISOString(),
       })
       .eq('razorpay_order_id', dto.razorpay_order_id)
       .eq('student_id', studentId)
@@ -169,7 +176,12 @@ export class PaymentsService {
     await this.supabase
       .from('enrollments')
       .upsert(
-        { student_id: studentId, course_id: payment.course_id },
+        {
+          student_id: studentId,
+          course_id: payment.course_id,
+          status: 'active',
+          enrolled_at: new Date().toISOString(),
+        },
         { onConflict: 'student_id,course_id' },
       );
 
@@ -202,7 +214,11 @@ export class PaymentsService {
       // Mark payment completed if still pending
       const { data: payment } = await this.supabase
         .from('payments')
-        .update({ razorpay_payment_id: paymentId, status: 'completed' })
+        .update({
+          razorpay_payment_id: paymentId,
+          status: 'completed',
+          updated_at: new Date().toISOString(),
+        })
         .eq('razorpay_order_id', orderId)
         .eq('status', 'pending')
         .select('student_id, course_id')
@@ -213,7 +229,12 @@ export class PaymentsService {
         await this.supabase
           .from('enrollments')
           .upsert(
-            { student_id: payment.student_id, course_id: payment.course_id },
+            {
+              student_id: payment.student_id,
+              course_id: payment.course_id,
+              status: 'active',
+              enrolled_at: new Date().toISOString(),
+            },
             { onConflict: 'student_id,course_id' },
           );
       }

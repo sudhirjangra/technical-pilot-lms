@@ -30,7 +30,6 @@ export class SetPermissionsDto {
   user_id: string;
 
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   permissions: string[];
 }

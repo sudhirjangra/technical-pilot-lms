@@ -410,7 +410,7 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
           {courses.length > 0 && (
             <FilterField label="Course" className="w-full sm:w-48">
               <Select value={courseFilter} onValueChange={setCourseFilter}>
-                <SelectTrigger className="h-11 w-full sm:h-9 text-xs">
+                <SelectTrigger className="h-9 w-full text-xs">
                   <SelectValue placeholder="All Courses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -427,7 +427,7 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
 
           <FilterField label="Status" className="w-full sm:w-36">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-11 w-full sm:h-9 text-xs">
+              <SelectTrigger className="h-9 w-full text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -444,7 +444,7 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
             <Input
               type="date"
               value={fromDate}
-              className="h-11 sm:h-9 text-xs"
+              className="h-9 text-xs"
               onChange={(event) => setFromDate(event.target.value)}
             />
           </FilterField>
@@ -453,7 +453,7 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
             <Input
               type="date"
               value={toDate}
-              className="h-11 sm:h-9 text-xs"
+              className="h-9 text-xs"
               onChange={(event) => setToDate(event.target.value)}
             />
           </FilterField>

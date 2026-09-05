@@ -1000,21 +1000,21 @@ export function CourseAnalyticsClient({
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="flex w-full flex-wrap justify-start gap-2">
-          <TabsTrigger value="overview" className="gap-1">
-            <BarChart3 className="size-3.5" />
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto p-1 text-xs sm:text-sm">
+          <TabsTrigger value="overview" className="gap-1 py-1.5 px-2 text-xs sm:text-sm">
+            <BarChart3 className="size-3 sm:size-3.5" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="students" className="gap-1">
-            <Users className="size-3.5" />
+          <TabsTrigger value="students" className="gap-1 py-1.5 px-2 text-xs sm:text-sm">
+            <Users className="size-3 sm:size-3.5" />
             Students
           </TabsTrigger>
-          <TabsTrigger value="rankings" className="gap-1">
-            <Trophy className="size-3.5" />
+          <TabsTrigger value="rankings" className="gap-1 py-1.5 px-2 text-xs sm:text-sm">
+            <Trophy className="size-3 sm:size-3.5" />
             Rankings
           </TabsTrigger>
-          <TabsTrigger value="chapters" className="gap-1">
-            <BookOpen className="size-3.5" />
+          <TabsTrigger value="chapters" className="gap-1 py-1.5 px-2 text-xs sm:text-sm">
+            <BookOpen className="size-3 sm:size-3.5" />
             Chapters
           </TabsTrigger>
         </TabsList>

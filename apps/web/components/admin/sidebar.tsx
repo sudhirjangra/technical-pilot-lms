@@ -16,6 +16,7 @@ import {
 import { cn } from '@repo/shadcn/lib/utils';
 import {
   BadgeCheck,
+  Bell,
   BookOpen,
   CalendarDays,
   ChevronsUpDown,
@@ -71,11 +72,17 @@ const navGroups = [
     ],
   },
   {
-    group: 'Finance & Support',
+    group: 'Communications',
     items: [
-      { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false },
+      { label: 'Notifications', href: '/admin/notifications', icon: Bell, exact: false },
       { label: 'Doubt Sessions', href: '/admin/doubt-sessions', icon: CalendarDays, exact: false },
       { label: 'Student Queries', href: '/admin/queries', icon: MessageSquare, exact: false },
+    ],
+  },
+  {
+    group: 'Finance',
+    items: [
+      { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false },
     ],
   },
 ];

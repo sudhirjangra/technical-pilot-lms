@@ -78,7 +78,20 @@ export default async function LessonPage({
         <>
           <div className="mt-4 sm:mt-6">
             {lessonType === 'video' ? (
-              <VideoPlayer lessonId={lessonId} />
+              <div className="space-y-4">
+                <VideoPlayer lessonId={lessonId} />
+                {lesson?.description && (
+                  <Card className="border border-border/60 bg-card/60 backdrop-blur-sm">
+                    <CardContent className="p-4 sm:p-6">
+                      <h3 className="text-sm font-semibold text-foreground/90 mb-2">Lesson Overview</h3>
+                      <div
+                        className="prose-article prose dark:prose-invert max-w-none text-sm leading-relaxed text-muted-foreground"
+                        dangerouslySetInnerHTML={{ __html: lesson.description }}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             ) : lessonType === 'pdf' ? (
               <PDFViewer lessonId={lessonId} studentEmail={session.user?.email} />
             ) : lessonType === 'test' ? (

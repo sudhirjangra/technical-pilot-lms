@@ -8,6 +8,21 @@ import {
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NotificationsService } from '../notifications/notifications.service';
 
+function formatQueryRecord(row: any) {
+  if (!row) return row;
+  const meta = (row.metadata as Record<string, any>) || {};
+  const queryNumber = meta.query_number || `Q-${row.id.slice(0, 6).toUpperCase()}`;
+  return {
+    ...row,
+    query_number: queryNumber,
+  };
+}
+
+function generateQueryNumber(): string {
+  const num = Math.floor(10000 + Math.random() * 90000);
+  return `Q-${num}`;
+}
+
 @Injectable()
 export class StudentQueriesService {
   constructor(
@@ -16,13 +31,37 @@ export class StudentQueriesService {
   ) {}
 
   async create(studentId: string, subject: string, body: string) {
+    const queryNumber = generateQueryNumber();
     const { data, error } = await this.supabase
       .from('student_queries')
-      .insert({ student_id: studentId, subject, body })
+      .insert({
+        student_id: studentId,
+        subject,
+        body,
+        metadata: { query_number: queryNumber },
+      })
       .select('*')
       .single();
     if (error) throw new BadRequestException(error.message);
-    return data;
+
+    try {
+      const { data: student } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', studentId)
+        .maybeSingle();
+      const studentName = student?.full_name || student?.email || 'A student';
+      await this.notificationsService.notifyAdmins(
+        `New Student Query #${queryNumber}`,
+        `${studentName}: ${subject}`,
+        'student_query',
+        { query_id: data.id, query_number: queryNumber, student_id: studentId },
+      );
+    } catch {
+      // Notification is non-blocking
+    }
+
+    return formatQueryRecord(data);
   }
 
   async getMyQueries(studentId: string) {
@@ -32,7 +71,7 @@ export class StudentQueriesService {
       .eq('student_id', studentId)
       .order('created_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
-    return data;
+    return (data ?? []).map(formatQueryRecord);
   }
 
   async findAll(status?: string) {
@@ -47,7 +86,7 @@ export class StudentQueriesService {
 
     const { data, error } = await query;
     if (error) throw new BadRequestException(error.message);
-    return data;
+    return (data ?? []).map(formatQueryRecord);
   }
 
   async findOne(id: string) {
@@ -59,7 +98,7 @@ export class StudentQueriesService {
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException('Query not found');
-    return data;
+    return formatQueryRecord(data);
   }
 
   /**
@@ -130,6 +169,7 @@ export class StudentQueriesService {
       );
     }
 
+    const queryNumber = generateQueryNumber();
     const { data, error } = await this.supabase
       .from('student_queries')
       .insert({
@@ -140,6 +180,7 @@ export class StudentQueriesService {
           'All attempts have been used without a passing score. Requesting one additional attempt.',
         type: 'extra_attempt_request',
         metadata: {
+          query_number: queryNumber,
           [targetColumn]: assessmentId,
           assessment_type: assessmentType,
           lesson_id: assessment.lesson_id,
@@ -149,7 +190,25 @@ export class StudentQueriesService {
       .select('*')
       .single();
     if (error) throw new BadRequestException(error.message);
-    return data;
+
+    try {
+      const { data: student } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', studentId)
+        .maybeSingle();
+      const studentName = student?.full_name || student?.email || 'A student';
+      await this.notificationsService.notifyAdmins(
+        `Extra Attempt Request #${queryNumber}`,
+        `${studentName} requested an extra attempt for ${assessment.title}.`,
+        'extra_attempt_request',
+        { query_id: data.id, query_number: queryNumber, student_id: studentId },
+      );
+    } catch {
+      // Non-blocking
+    }
+
+    return formatQueryRecord(data);
   }
 
   /** Admin approves an extra-attempt request and increments the student's allowance. */

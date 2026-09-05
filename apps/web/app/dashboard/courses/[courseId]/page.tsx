@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getCourseProgress } from '@/server/student/courses.server';
+import { getCourseProgress, getCourseLeaderboard } from '@/server/student/courses.server';
 import { CourseProgressClient } from '@/components/dashboard/course-progress-client';
 import { redirect } from 'next/navigation';
 
@@ -8,7 +8,16 @@ export default async function CourseProgressPage({ params }: { params: Promise<{
   const session = await auth();
   if (!session?.user) redirect('/auth/sign-in');
 
-  const progress = await getCourseProgress(courseId);
+  const [progress, leaderboardData] = await Promise.all([
+    getCourseProgress(courseId),
+    getCourseLeaderboard(courseId),
+  ]);
 
-  return <CourseProgressClient courseId={courseId} progress={progress} />;
+  return (
+    <CourseProgressClient
+      courseId={courseId}
+      progress={progress}
+      initialLeaderboard={leaderboardData}
+    />
+  );
 }

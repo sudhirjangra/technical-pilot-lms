@@ -181,101 +181,101 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Doubt Sessions</h1>
-        <Button onClick={() => { setShowForm(!showForm); setForm(emptyForm()); }}>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Doubt Sessions</h1>
+        <Button className="h-9 w-full sm:w-auto" onClick={() => { setShowForm(!showForm); setForm(emptyForm()); }}>
           {showForm ? 'Cancel' : '+ Create Slot'}
         </Button>
       </div>
 
       {showForm && (
-        <Card className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Card className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div>
-              <Label>Date</Label>
+              <Label className="text-xs sm:text-sm">Date</Label>
               <Input
                 type="date"
                 value={form.date}
                 onChange={e => setForm(prev => ({ ...prev, date: e.target.value }))}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label>Start Time</Label>
+              <Label className="text-xs sm:text-sm">Start Time</Label>
               <Input
                 type="time"
                 value={form.start_time}
                 onChange={e => handleStartTimeChange(e.target.value)}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label>End Time</Label>
+              <Label className="text-xs sm:text-sm">End Time</Label>
               <Input
                 type="time"
                 value={form.end_time}
                 onChange={e => handleEndTimeChange(e.target.value)}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label>Duration (min)</Label>
+              <Label className="text-xs sm:text-sm">Duration (min)</Label>
               <Input
                 type="number"
                 value={form.duration_minutes}
                 onChange={e => handleDurationChange(Number(e.target.value))}
                 min={5}
                 max={180}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label>Max Bookings</Label>
+              <Label className="text-xs sm:text-sm">Max Bookings</Label>
               <Input
                 type="number"
                 value={form.max_bookings}
                 onChange={e => setForm(prev => ({ ...prev, max_bookings: Number(e.target.value) }))}
                 min={1}
                 max={50}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label>Topic</Label>
+              <Label className="text-xs sm:text-sm">Topic</Label>
               <Input
                 type="text"
                 placeholder="e.g. Chapter 3 Doubts"
                 value={form.topic}
                 onChange={e => setForm(prev => ({ ...prev, topic: e.target.value }))}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
-            <div className="col-span-2 md:col-span-3">
-              <Label>Meeting Link</Label>
+            <div className="sm:col-span-2 md:col-span-3">
+              <Label className="text-xs sm:text-sm">Meeting Link</Label>
               <Input
                 type="url"
                 placeholder="https://meet.google.com/..."
                 value={form.meeting_link}
                 onChange={e => setForm(prev => ({ ...prev, meeting_link: e.target.value }))}
-                className="mt-1"
+                className="mt-1 h-9 text-sm"
               />
             </div>
-            <div className="col-span-2 md:col-span-3">
-              <Label>Description</Label>
+            <div className="sm:col-span-2 md:col-span-3">
+              <Label className="text-xs sm:text-sm">Description</Label>
               <Textarea
                 placeholder="Optional details about this session..."
                 value={form.description}
                 onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="mt-1"
+                className="mt-1 text-sm"
               />
             </div>
-            <div className="col-span-2 md:col-span-3 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setShowForm(false); setForm(emptyForm()); }}>
+            <div className="sm:col-span-2 md:col-span-3 flex justify-end gap-2">
+              <Button size="sm" variant="outline" className="h-9 px-3" onClick={() => { setShowForm(false); setForm(emptyForm()); }}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={loading || !form.date || !form.start_time || !form.end_time}>
+              <Button size="sm" className="h-9 px-3" onClick={handleCreate} disabled={loading || !form.date || !form.start_time || !form.end_time}>
                 {loading ? 'Creating...' : 'Create Slot'}
               </Button>
             </div>
@@ -284,25 +284,25 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
       )}
 
       {Object.keys(grouped).length === 0 && (
-        <p className="text-muted-foreground">No slots created yet.</p>
+        <p className="text-muted-foreground text-sm">No slots created yet.</p>
       )}
 
       {Object.entries(grouped).sort().map(([date, dateSlots]) => (
-        <div key={date}>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-2">
+        <div key={date} className="space-y-2">
+          <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground">
             {new Date(date + 'T00:00').toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </h3>
-          <div className="grid gap-3">
+          <div className="grid gap-2.5 sm:gap-3">
             {dateSlots.map((slot) => (
-              <Card key={slot.id} className="p-4">
-                <div className="flex items-start justify-between gap-3">
+              <Card key={slot.id} className="p-3 sm:p-4">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="font-mono text-sm">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <span className="font-mono text-xs sm:text-sm font-medium">
                         {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
                       </span>
                       <span className="text-xs text-muted-foreground">({slot.duration_minutes}m)</span>
-                      <Badge variant={slot.status === 'available' ? 'default' : slot.status === 'full' ? 'secondary' : 'destructive'}>
+                      <Badge variant={slot.status === 'available' ? 'default' : slot.status === 'full' ? 'secondary' : 'destructive'} className="text-[10px]">
                         {slot.status}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
@@ -310,7 +310,7 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
                       </span>
                     </div>
                     {slot.topic && (
-                      <p className="text-sm font-medium mt-1">{slot.topic}</p>
+                      <p className="text-xs sm:text-sm font-medium mt-1">{slot.topic}</p>
                     )}
                     {slot.description && (
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{slot.description}</p>
@@ -326,16 +326,16 @@ export function DoubtSlotsClient({ slots }: { slots: Slot[] }) {
                       </a>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="outline" onClick={() => editingSlotId === slot.id ? setEditingSlotId(null) : openEdit(slot)}>
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => editingSlotId === slot.id ? setEditingSlotId(null) : openEdit(slot)}>
                       {editingSlotId === slot.id ? 'Close' : 'Edit'}
                     </Button>
                     {slot.status === 'available' && (
-                      <Button size="sm" variant="outline" onClick={() => handleCancel(slot.id)}>
+                      <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => handleCancel(slot.id)}>
                         Cancel
                       </Button>
                     )}
-                    <Button size="sm" variant="destructive" onClick={() => handleDelete(slot.id)}>
+                    <Button size="sm" variant="destructive" className="h-8 px-2 text-xs" onClick={() => handleDelete(slot.id)}>
                       Delete
                     </Button>
                   </div>

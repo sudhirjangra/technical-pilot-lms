@@ -122,7 +122,28 @@ export class AuthService {
     return { access_token, refresh_token };
   }
 
+  private validateDateOfBirth(dobString?: string) {
+    if (!dobString) return;
+    const birthDate = new Date(dobString);
+    if (isNaN(birthDate.getTime())) {
+      throw new BadRequestException('Invalid date of birth format');
+    }
+    const today = new Date();
+    if (birthDate >= today) {
+      throw new BadRequestException('Date of birth cannot be in the future or today');
+    }
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age < 15) {
+      throw new BadRequestException('You must be at least 15 years old to register');
+    }
+  }
+
   async register(dto: CreateUserDto): Promise<RegisterUserInterface> {
+    this.validateDateOfBirth(dto.date_of_birth);
     let authUser = await this.getUserByEmail(dto.email);
 
     if (authUser) {
@@ -448,6 +469,7 @@ export class AuthService {
   }
 
   async completeProfile(userId: string, dto: CompleteProfileDto): Promise<void> {
+    this.validateDateOfBirth(dto.date_of_birth);
     const { error } = await this.supabase
       .from('profiles')
       .update({
@@ -493,15 +515,25 @@ export class AuthService {
   }
 
   async confirmEmail(dto: ConfirmEmailDto): Promise<LoginUserInterface> {
-    const { error } = await this.supabaseAnon.auth.verifyOtp({
+    let verifyError: any = null;
+    const { error: signupError } = await this.supabaseAnon.auth.verifyOtp({
       email: dto.email,
       token: dto.token,
       type: 'signup',
     });
 
-    if (error) {
+    if (signupError) {
+      const { error: emailError } = await this.supabaseAnon.auth.verifyOtp({
+        email: dto.email,
+        token: dto.token,
+        type: 'email',
+      });
+      verifyError = emailError;
+    }
+
+    if (signupError && verifyError) {
       this.logger.error(
-        { error: error.message, email: dto.email },
+        { signupError: signupError.message, verifyError: verifyError?.message, email: dto.email },
         'OTP verification failed',
       );
       throw new BadRequestException(
@@ -511,6 +543,15 @@ export class AuthService {
 
     const authUser = await this.getUserByEmail(dto.email);
     if (!authUser) throw new NotFoundException('User not found');
+
+    // Guarantee email is marked confirmed in auth schema
+    try {
+      await this.supabase.auth.admin.updateUserById(authUser.id, {
+        email_confirm: true,
+      });
+    } catch (e) {
+      this.logger.warn({ error: e }, 'Failed to set email_confirm in admin auth');
+    }
 
     const { data: profile, error: profileError } = await this.supabase
       .from('profiles')

@@ -25,6 +25,16 @@ export class NotificationsService {
     return data;
   }
 
+  async getAdminNotificationLogs() {
+    const { data, error } = await this.supabase
+      .from('notifications')
+      .select('*, profiles:recipient_id(id, full_name, email)')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
   async getUnreadCount(userId: string) {
     const { count, error } = await this.supabase
       .from('notifications')
@@ -148,5 +158,32 @@ export class NotificationsService {
   /** Helper: send a congratulation notification to a specific student */
   async notifyCongratulation(studentId: string, title: string, body: string) {
     return this.send(studentId, title, body, 'congratulation');
+  }
+
+  /** Helper: notify all active admins and sub-admins */
+  async notifyAdmins(
+    title: string,
+    body: string | undefined,
+    type: string,
+    metadata?: Record<string, unknown>,
+  ) {
+    const { data: admins, error } = await this.supabase
+      .from('profiles')
+      .select('id')
+      .in('role', ['admin', 'sub_admin'])
+      .eq('is_active', true);
+
+    if (error || !admins || admins.length === 0) return { sent: 0 };
+
+    const rows = admins.map((admin) => ({
+      recipient_id: admin.id,
+      title,
+      body: body ?? null,
+      type,
+      metadata: metadata ?? {},
+    }));
+
+    await this.supabase.from('notifications').insert(rows);
+    return { sent: admins.length };
   }
 }

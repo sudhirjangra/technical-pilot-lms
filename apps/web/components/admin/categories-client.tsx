@@ -274,14 +274,14 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">Categories</h1>
           <p className="text-muted-foreground text-xs">
             {categories.length} total
           </p>
         </div>
-        <Button size="sm" className="h-11 sm:h-9" onClick={openCreate}>
+        <Button size="sm" className="h-9 w-full sm:w-auto" onClick={openCreate}>
           + New Category
         </Button>
       </div>
@@ -306,7 +306,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                 setStatusFilter(value as 'all' | 'active' | 'inactive')
               }
             >
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -331,12 +331,12 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
       ) : (
         <Card className="gap-0 py-0">
           {!canDragReorder && (
-            <p className="px-6 pt-3 text-xs text-muted-foreground sm:px-8">
+            <p className="px-3 pt-3 text-xs text-muted-foreground sm:px-6">
               Sort by &quot;Order&quot; ascending with no search/status filter to drag and reorder categories.
             </p>
           )}
-          <div className="w-full overflow-x-auto px-6 sm:px-8">
-            <Table className="text-sm">
+          <div className="w-full overflow-x-auto px-2 sm:px-6">
+            <Table className="text-xs sm:text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8 px-2 py-1.5" />
@@ -395,7 +395,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                                 </SortableItemHandle>
                               )}
                             </TableCell>
-                            <TableCell className="max-w-[220px] py-2">
+                            <TableCell className="max-w-[160px] sm:max-w-[220px] py-2">
                               <div className="flex flex-col">
                                 <span className="truncate font-medium">{category.name}</span>
                                 <span className="text-muted-foreground truncate text-xs md:hidden">
@@ -410,7 +410,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                               {category.sort_order ?? 0}
                             </TableCell>
                             <TableCell className="py-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <Switch
                                   id={`category-active-${category.id}`}
                                   checked={active}
@@ -421,20 +421,20 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                                 />
                                 <Label
                                   htmlFor={`category-active-${category.id}`}
-                                  className="text-xs"
+                                  className="text-[10px] sm:text-xs"
                                 >
-                                  <Badge variant={active ? 'default' : 'secondary'}>
+                                  <Badge variant={active ? 'default' : 'secondary'} className="px-1.5 py-0 text-[10px]">
                                     {active ? 'Active' : 'Inactive'}
                                   </Badge>
                                 </Label>
                               </div>
                             </TableCell>
                             <TableCell className="py-2 text-right">
-                              <div className="flex justify-end gap-1">
+                              <div className="flex items-center justify-end gap-1">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-11 sm:h-8"
+                                  className="h-8 px-2 text-xs"
                                   onClick={() => openEdit(category)}
                                 >
                                   Edit
@@ -442,7 +442,7 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  className="h-11 sm:h-8"
+                                  className="h-8 px-2 text-xs"
                                   disabled={loading}
                                   onClick={() => handleDelete(category.id)}
                                 >

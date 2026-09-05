@@ -80,7 +80,7 @@ export function SearchInput({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-11 pl-8 sm:h-9"
+        className="h-9 pl-8 text-xs sm:text-sm"
       />
     </div>
   );
@@ -220,13 +220,13 @@ export function TablePagination({
         Showing {from}-{to} of {total} {label}
       </p>
       <Pagination className="mx-0 w-auto justify-start sm:justify-end">
-        <PaginationContent>
+        <PaginationContent className="gap-1">
           <PaginationItem>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-11 sm:h-8"
+              className="h-8 px-2 text-xs"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
             >
@@ -239,7 +239,7 @@ export function TablePagination({
                 type="button"
                 variant={pageNumber === page ? 'outline' : 'ghost'}
                 size="sm"
-                className="h-11 w-11 sm:h-8 sm:w-8"
+                className="h-8 min-w-8 px-2 text-xs"
                 onClick={() => onPageChange(pageNumber)}
                 aria-current={pageNumber === page ? 'page' : undefined}
               >
@@ -252,7 +252,7 @@ export function TablePagination({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-11 sm:h-8"
+              className="h-8 px-2 text-xs"
               disabled={page >= pageCount}
               onClick={() => onPageChange(page + 1)}
             >

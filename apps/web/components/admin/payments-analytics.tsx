@@ -220,22 +220,22 @@ export function PaymentsAnalytics({
   return (
     <div className="space-y-4">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
         {/* Gross Revenue */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Gross Revenue</span>
-              <div className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-500">
-                <IndianRupee className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Gross Revenue</span>
+              <div className="rounded-full bg-emerald-500/10 p-1 sm:p-1.5 text-emerald-500 shrink-0">
+                <IndianRupee className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 ₹{metrics.completedRevenue.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
               {metrics.completedCount} completed
             </p>
           </CardContent>
@@ -243,19 +243,19 @@ export function PaymentsAnalytics({
 
         {/* Net Revenue */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Net Revenue</span>
-              <div className="rounded-full bg-sky-500/10 p-1.5 text-sky-500">
-                <Wallet className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Net Revenue</span>
+              <div className="rounded-full bg-sky-500/10 p-1 sm:p-1.5 text-sky-500 shrink-0">
+                <Wallet className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 ₹{metrics.netRevenue.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
               After ₹{metrics.refundedRevenue.toLocaleString('en-IN')} refunds
             </p>
           </CardContent>
@@ -263,19 +263,19 @@ export function PaymentsAnalytics({
 
         {/* Success Rate */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Success Rate</span>
-              <div className="rounded-full bg-indigo-500/10 p-1.5 text-indigo-500">
-                <TrendingUp className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Success Rate</span>
+              <div className="rounded-full bg-indigo-500/10 p-1 sm:p-1.5 text-indigo-500 shrink-0">
+                <TrendingUp className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 {metrics.successRate.toFixed(1)}%
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
               {metrics.completedCount} of {metrics.completedCount + metrics.failedCount + metrics.refundedCount}
             </p>
           </CardContent>
@@ -283,57 +283,57 @@ export function PaymentsAnalytics({
 
         {/* Average Order Value */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Avg. Order Value</span>
-              <div className="rounded-full bg-purple-500/10 p-1.5 text-purple-500">
-                <CircleDollarSign className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Avg. Order Value</span>
+              <div className="rounded-full bg-purple-500/10 p-1 sm:p-1.5 text-purple-500 shrink-0">
+                <CircleDollarSign className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 ₹{metrics.averageOrderValue.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">Per order average</p>
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">Per order</p>
           </CardContent>
         </Card>
 
         {/* Pending Volume */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Pending Orders</span>
-              <div className="rounded-full bg-amber-500/10 p-1.5 text-amber-500">
-                <Clock className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Pending Orders</span>
+              <div className="rounded-full bg-amber-500/10 p-1 sm:p-1.5 text-amber-500 shrink-0">
+                <Clock className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 ₹{metrics.pendingRevenue.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">
-              {metrics.pendingCount} awaiting payment
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
+              {metrics.pendingCount} awaiting
             </p>
           </CardContent>
         </Card>
 
         {/* Refunds */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3.5 sm:p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-xs font-medium">Refunds</span>
-              <div className="rounded-full bg-rose-500/10 p-1.5 text-rose-500">
-                <RotateCcw className="size-3.5" />
+              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Refunds</span>
+              <div className="rounded-full bg-rose-500/10 p-1 sm:p-1.5 text-rose-500 shrink-0">
+                <RotateCcw className="size-3 sm:size-3.5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-lg font-bold sm:text-xl">
+            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-xl">
                 ₹{metrics.refundedRevenue.toLocaleString('en-IN')}
               </span>
             </div>
-            <p className="text-muted-foreground mt-1 text-[11px]">
+            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
               {metrics.refundedCount} transactions
             </p>
           </CardContent>

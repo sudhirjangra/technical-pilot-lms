@@ -20,6 +20,23 @@ import { Progress } from '@repo/shadcn/progress';
 import { Separator } from '@repo/shadcn/separator';
 import { Textarea } from '@repo/shadcn/textarea';
 import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Compass,
+  FileCheck,
+  FileText,
+  HelpCircle,
+  Info,
+  LogOut,
+  RotateCcw,
+  ShieldAlert,
+  Sparkles,
+  Timer,
+  Trophy,
+} from '@repo/shadcn/lucide';
+import {
   getTestForLesson,
   startTestAttempt,
   submitTestAttempt,
@@ -83,69 +100,6 @@ function formatTimeLimit(seconds: number | null | undefined): string {
   const h = Math.floor(m / 60);
   const rem = m % 60;
   return rem > 0 ? `${h}h ${rem}m` : `${h} hour${h !== 1 ? 's' : ''}`;
-}
-
-// ── Animated clock SVG for instructions screen ────────────────────────────────
-
-function AnimatedClock() {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      className="w-24 h-24 mx-auto mb-2"
-      aria-hidden="true"
-    >
-      <circle
-        cx="50"
-        cy="50"
-        r="44"
-        fill="none"
-        stroke="hsl(var(--primary))"
-        strokeWidth="5"
-        opacity="0.2"
-      />
-      <circle
-        cx="50"
-        cy="50"
-        r="44"
-        fill="none"
-        stroke="hsl(var(--primary))"
-        strokeWidth="5"
-        strokeDasharray="276"
-        strokeDashoffset="0"
-        strokeLinecap="round"
-        className="origin-center"
-        style={{ animation: 'clock-spin 8s linear infinite', transformOrigin: '50px 50px' }}
-      />
-      {/* Hour hand */}
-      <line
-        x1="50"
-        y1="50"
-        x2="50"
-        y2="24"
-        stroke="hsl(var(--foreground))"
-        strokeWidth="4"
-        strokeLinecap="round"
-        style={{ animation: 'hour-hand 28800s linear infinite', transformOrigin: '50px 50px' }}
-      />
-      {/* Minute hand */}
-      <line
-        x1="50"
-        y1="50"
-        x2="50"
-        y2="18"
-        stroke="hsl(var(--foreground))"
-        strokeWidth="3"
-        strokeLinecap="round"
-        style={{ animation: 'minute-hand 60s linear infinite', transformOrigin: '50px 50px' }}
-      />
-      <circle cx="50" cy="50" r="4" fill="hsl(var(--primary))" />
-      <style>{`
-        @keyframes clock-spin { to { stroke-dashoffset: -276; } }
-        @keyframes minute-hand { to { transform: rotate(360deg); } }
-        @keyframes hour-hand { to { transform: rotate(360deg); } }
-      `}</style>
-    </svg>
-  );
 }
 
 // ── Timer component ───────────────────────────────────────────────────────────
@@ -238,15 +192,16 @@ function InstructionsScreen({
   mode: 'test' | 'assignment';
 }) {
   const maxAttempts = test.max_attempts ?? null;
-  const attemptsLeft = maxAttempts !== null ? maxAttempts - attemptsUsed : null;
+  const attemptsLeft = maxAttempts !== null && maxAttempts > 0 ? Math.max(0, maxAttempts - attemptsUsed) : null;
   const instructions = 'instructions' in test ? test.instructions : null;
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
 
   const completedAttempts = allAttempts.filter((a) => a.completed_at);
   const everPassed = completedAttempts.some((a) => a.passed === true);
+  const isInfiniteAttempts = maxAttempts === null || maxAttempts === 0;
   const failedOut =
-    attemptsLeft !== null && attemptsLeft <= 0 && !everPassed && completedAttempts.length > 0;
+    !isInfiniteAttempts && attemptsLeft !== null && attemptsLeft <= 0 && !everPassed && completedAttempts.length > 0;
 
   const handleRequestExtraAttempt = async () => {
     setRequesting(true);
@@ -263,95 +218,177 @@ function InstructionsScreen({
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 py-8 text-center">
-      <AnimatedClock />
-      <div className="space-y-1">
-        <h2 className="text-2xl font-bold">{test.title}</h2>
-        <p className="text-muted-foreground text-sm">
-          Read the instructions before starting
-        </p>
+    <div className="flex flex-col items-center gap-6 py-4 sm:py-6 max-w-2xl mx-auto w-full">
+      {/* Header Badge & Title */}
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="relative flex size-14 items-center justify-center rounded-2xl bg-gradient-to-b from-primary/20 to-primary/5 border border-primary/30 shadow-inner">
+          {mode === 'test' ? (
+            <Timer className="size-7 text-primary" />
+          ) : (
+            <FileText className="size-7 text-primary" />
+          )}
+          <span className="absolute -top-1 -right-1 flex size-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full size-3 bg-primary"></span>
+          </span>
+        </div>
+        <div className="space-y-1">
+          <Badge variant="outline" className="text-[11px] font-mono tracking-wide uppercase px-2.5 py-0.5 border-primary/30 bg-primary/5">
+            {mode === 'test' ? 'Timed Flight Assessment' : 'Practical Flight Assignment'}
+          </Badge>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            {test.title}
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Read the instructions carefully before starting your attempt
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 w-full max-w-sm text-sm">
-        <Card className="col-span-1">
-          <CardContent className="p-3 flex flex-col items-center gap-1">
-            <span className="text-xs text-muted-foreground">Questions</span>
-            <span className="text-xl font-bold">{test.questions.length}</span>
+      {/* 4 Metric Stats Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+        <Card className="border-border/60 bg-muted/20">
+          <CardContent className="p-3.5 flex flex-col items-center text-center gap-1">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary mb-0.5">
+              <HelpCircle className="size-4" />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">Questions</span>
+            <span className="text-lg font-bold tabular-nums text-foreground">{test.questions.length}</span>
           </CardContent>
         </Card>
-        <Card className="col-span-1">
-          <CardContent className="p-3 flex flex-col items-center gap-1">
-            <span className="text-xs text-muted-foreground">Time Limit</span>
-            <span className="text-xl font-bold">
+
+        <Card className="border-border/60 bg-muted/20">
+          <CardContent className="p-3.5 flex flex-col items-center text-center gap-1">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-sky-500/10 text-sky-500 mb-0.5">
+              <Clock className="size-4" />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">Time Limit</span>
+            <span className="text-lg font-bold tabular-nums text-foreground">
               {formatTimeLimit(test.time_limit_seconds)}
             </span>
           </CardContent>
         </Card>
-        <Card className="col-span-1">
-          <CardContent className="p-3 flex flex-col items-center gap-1">
-            <span className="text-xs text-muted-foreground">Passing Score</span>
-            <span className="text-xl font-bold">
+
+        <Card className="border-border/60 bg-muted/20">
+          <CardContent className="p-3.5 flex flex-col items-center text-center gap-1">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 mb-0.5">
+              <Trophy className="size-4" />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">Passing Score</span>
+            <span className="text-lg font-bold tabular-nums text-foreground">
               {test.passing_score_percent ?? 60}%
             </span>
           </CardContent>
         </Card>
-        <Card className="col-span-1">
-          <CardContent className="p-3 flex flex-col items-center gap-1">
-            <span className="text-xs text-muted-foreground">Attempts</span>
-            <span className="text-xl font-bold">
-              {maxAttempts !== null
-                ? `${attemptsUsed} / ${maxAttempts}`
-                : `${attemptsUsed} used`}
+
+        <Card className="border-border/60 bg-muted/20">
+          <CardContent className="p-3.5 flex flex-col items-center text-center gap-1">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 mb-0.5">
+              <Compass className="size-4" />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">Attempts</span>
+            <span className="text-lg font-bold tabular-nums text-foreground">
+              {isInfiniteAttempts
+                ? `${attemptsUsed} (Unlimited)`
+                : `${attemptsUsed} / ${maxAttempts}`}
             </span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Previous attempts mini table */}
+      {/* Instructions & Guidelines Box */}
+      <div className="w-full space-y-3">
+        {instructions && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-left">
+            <div className="flex items-center gap-2 mb-1.5 font-medium text-sm text-foreground">
+              <Info className="size-4 text-primary" />
+              <span>Assessment Briefing</span>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+              {instructions}
+            </p>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-left space-y-2">
+          <p className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-2">
+            <FileCheck className="size-4 text-primary" />
+            Operating Guidelines & Rules
+          </p>
+          <ul className="text-xs text-muted-foreground space-y-1.5">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span>Your responses are automatically saved every 30 seconds and upon question navigation.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span>{test.time_limit_seconds ? 'The timer continues once started and will auto-submit when expired.' : 'No timer is imposed. You may take your time to review every question.'}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+              <span>
+                {isInfiniteAttempts
+                  ? 'Unlimited attempts are permitted for this assessment.'
+                  : `You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Past Attempts Table */}
       {allAttempts.length > 0 && (
-        <div className="w-full max-w-sm text-left">
-          <p className="text-sm font-medium mb-2">Previous attempts</p>
-          <div className="rounded-lg border border-border/60 overflow-hidden">
-            <table className="w-full text-xs">
+        <div className="w-full text-left space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs sm:text-sm font-semibold text-foreground">Previous Attempt History</p>
+            <span className="text-[11px] text-muted-foreground">{allAttempts.length} attempt{allAttempts.length !== 1 ? 's' : ''} recorded</span>
+          </div>
+          <div className="rounded-xl border border-border/60 overflow-x-auto bg-card">
+            <table className="w-full min-w-[340px] text-xs">
               <thead>
                 <tr className="bg-muted/40 border-b border-border/40">
-                  <th className="px-3 py-2 text-left text-muted-foreground font-medium">Submitted</th>
-                  <th className="px-3 py-2 text-center text-muted-foreground font-medium">Score</th>
-                  <th className="px-3 py-2 text-center text-muted-foreground font-medium">Result</th>
-                  <th className="px-3 py-2 text-center text-muted-foreground font-medium">View</th>
+                  <th className="px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-left text-muted-foreground font-medium">Date</th>
+                  <th className="px-2 sm:px-3.5 py-2 sm:py-2.5 text-center text-muted-foreground font-medium">Score</th>
+                  <th className="px-2 sm:px-3.5 py-2 sm:py-2.5 text-center text-muted-foreground font-medium">Status</th>
+                  <th className="px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-right text-muted-foreground font-medium">Review</th>
                 </tr>
               </thead>
               <tbody>
                 {allAttempts.map((a, i) => (
-                  <tr key={a.id} className={cn('border-b border-border/20 last:border-0', i === 0 ? 'bg-muted/20' : '')}>
-                    <td className="px-3 py-2 text-muted-foreground">
+                  <tr key={a.id} className={cn('border-b border-border/20 last:border-0 hover:bg-muted/30 transition-colors', i === 0 ? 'bg-muted/10' : '')}>
+                    <td className="px-3.5 py-2.5 text-foreground font-medium">
                       {a.completed_at
-                        ? new Date(a.completed_at).toLocaleDateString()
+                        ? new Date(a.completed_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
                         : a.started_at
                           ? `Started ${new Date(a.started_at).toLocaleDateString()}`
                           : '—'}
                     </td>
-                    <td className="px-3 py-2 text-center font-mono font-medium">
+                    <td className="px-3.5 py-2.5 text-center font-mono font-semibold">
                       {a.percentage !== null && a.percentage !== undefined ? `${a.percentage}%` : '—'}
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3.5 py-2.5 text-center">
                       {a.passed === true ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">Pass</span>
+                        <Badge variant="outline" className="text-[10px] border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          Passed
+                        </Badge>
                       ) : a.passed === false ? (
-                        <span className="text-destructive font-medium">Fail</span>
+                        <Badge variant="outline" className="text-[10px] border-destructive/40 bg-destructive/10 text-destructive">
+                          Failed
+                        </Badge>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground text-[10px]">In Progress</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center">
+                    <td className="px-3.5 py-2.5 text-right">
                       {a.completed_at && (
-                        <button
-                          type="button"
-                          className="text-xs text-primary underline-offset-2 hover:underline"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-primary hover:text-primary"
                           onClick={() => onViewAttempt(a.id)}
                         >
-                          View
-                        </button>
+                          View Results →
+                        </Button>
                       )}
                     </td>
                   </tr>
@@ -362,69 +399,54 @@ function InstructionsScreen({
         </div>
       )}
 
-      {attemptsLeft !== null && attemptsLeft <= 0 ? (
-        <div className="w-full max-w-sm space-y-3">
-          <p className="text-destructive text-sm font-medium">
-            {failedOut
-              ? 'You did not pass within your allotted attempts.'
-              : 'You have used all your attempts for this test.'}
-          </p>
-          {failedOut && (
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-left">
-              <p className="text-sm font-medium">Need another chance?</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Send a request to the admin team for one additional attempt. You will be
-                notified once it is reviewed.
-              </p>
-              <Button
-                size="sm"
-                className="mt-3 w-full"
-                disabled={requesting || requested}
-                onClick={handleRequestExtraAttempt}
-              >
-                {requested
-                  ? 'Request sent'
-                  : requesting
-                    ? 'Sending…'
-                    : 'Request +1 attempt'}
-              </Button>
+      {/* Action Area */}
+      {failedOut ? (
+        <div className="w-full space-y-3">
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-left">
+            <div className="flex items-center gap-2 text-destructive font-medium text-sm mb-1">
+              <ShieldAlert className="size-4" />
+              <span>All Attempts Utilized</span>
             </div>
-          )}
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              You have exhausted all attempts for this assessment without achieving a passing score.
+              You may submit a request to the flight instructor team for an additional attempt allowance.
+            </p>
+            <Button
+              size="sm"
+              className="mt-3 w-full gap-2"
+              disabled={requesting || requested}
+              onClick={handleRequestExtraAttempt}
+            >
+              <RotateCcw className="size-3.5" />
+              {requested
+                ? 'Request Submitted (Under Review)'
+                : requesting
+                  ? 'Submitting Request…'
+                  : 'Request Additional Attempt'}
+            </Button>
+          </div>
         </div>
       ) : (
-        <>
-          {instructions && (
-            <div className="text-left w-full max-w-sm rounded-lg border border-border/60 bg-muted/30 p-4">
-              <p className="text-sm font-medium mb-1">Instructions</p>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">{instructions}</p>
-            </div>
-          )}
-          <div className="text-left w-full max-w-sm space-y-2 rounded-lg border border-border/60 bg-muted/30 p-4">
-            <p className="text-sm font-medium">Rules</p>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Once started, the timer will not stop.</li>
-              <li>Answers are auto-saved as you go.</li>
-              <li>You must confirm before submitting.</li>
-              <li>Time-expired tests are submitted automatically.</li>
-              {attemptsLeft !== null && (
-                <li>
-                  You have{' '}
-                  <strong>{attemptsLeft}</strong>{' '}
-                  attempt{attemptsLeft !== 1 ? 's' : ''} remaining.
-                </li>
-              )}
-            </ul>
-          </div>
-
+        <div className="w-full pt-2">
           <Button
             size="lg"
             onClick={onStart}
             disabled={starting}
-            className="w-full max-w-sm"
+            className="w-full h-12 text-base font-semibold shadow-md gap-2"
           >
-            {starting ? 'Starting…' : 'Start Now'}
+            {starting ? (
+              <>
+                <span className="size-4 border-2 border-primary-foreground border-t-transparent animate-spin rounded-full" />
+                Initializing Assessment…
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-4" />
+                Start Assessment Now
+              </>
+            )}
           </Button>
-        </>
+        </div>
       )}
     </div>
   );
@@ -754,8 +776,8 @@ function ResultsScreen({
       {allAttempts.length > 1 && (
         <div className="space-y-3">
           <h3 className="font-semibold text-sm">Attempt History</h3>
-          <div className="rounded-lg border border-border/60 overflow-hidden">
-            <table className="w-full text-xs">
+          <div className="rounded-lg border border-border/60 overflow-x-auto">
+            <table className="w-full min-w-[320px] text-xs">
               <thead>
                 <tr className="bg-muted/40 border-b border-border/40">
                   <th className="px-3 py-2 text-left text-muted-foreground font-medium">#</th>
@@ -979,6 +1001,7 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
   const questionEnterTime = useRef<number>(Date.now());
 
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [result, setResult] = useState<SubmitResult | AssignmentSubmitResult | null>(null);
@@ -989,6 +1012,12 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
   const [loadingView, setLoadingView] = useState(false);
 
   const autoSaveTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleConfirmExit = async () => {
+    await doAutoSave();
+    setExitDialogOpen(false);
+    setPhase('instructions');
+  };
 
   // ── Load data ───────────────────────────────────────────────────────────────
 
@@ -1305,6 +1334,33 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
 
   return (
     <>
+      {/* Exit confirmation dialog */}
+      <AlertDialog
+        open={exitDialogOpen}
+        onOpenChange={setExitDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Exit {mode === 'assignment' ? 'Assignment' : 'Test'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to exit? Your answered questions will be saved, but the timer (if active) may continue and this attempt will remain in-progress until submitted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Resume Assessment</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmExit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Exit to Overview
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Submit confirmation dialog */}
       <AlertDialog
         open={submitDialogOpen}
@@ -1340,6 +1396,22 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Top action header */}
+      <div className="flex items-center justify-between pb-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setExitDialogOpen(true)}
+          className="gap-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Exit {mode === 'assignment' ? 'Assignment' : 'Test'}
+        </Button>
+        <span className="text-xs text-muted-foreground font-mono">
+          Question {currentIndex + 1} of {totalQuestions}
+        </span>
+      </div>
+
       {/* Main test layout */}
       <div className="flex flex-col lg:flex-row gap-4 w-full">
         {/* Left: question area */}
@@ -1364,14 +1436,14 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
               variant="outline"
               onClick={() => navigateTo(currentIndex - 1)}
               disabled={currentIndex === 0}
-              className="flex-1"
+              className="flex-1 h-9 text-xs sm:text-sm"
             >
               Previous
             </Button>
             {currentIndex < totalQuestions - 1 ? (
               <Button
                 onClick={() => navigateTo(currentIndex + 1)}
-                className="flex-1"
+                className="flex-1 h-9 text-xs sm:text-sm"
               >
                 Next
               </Button>
@@ -1380,7 +1452,7 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
                 onClick={() => setSubmitDialogOpen(true)}
                 disabled={submitting}
                 variant="default"
-                className="flex-1"
+                className="flex-1 h-9 text-xs sm:text-sm"
               >
                 Submit Test
               </Button>

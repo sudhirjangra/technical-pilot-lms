@@ -62,4 +62,10 @@ export class NotificationsController {
       dto.metadata,
     );
   }
+
+  @Get('admin/logs')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  getAdminNotificationLogs() {
+    return this.service.getAdminNotificationLogs();
+  }
 }

@@ -2,6 +2,26 @@
 
 ## Completed
 
+### Sub-Admin Permissions Matrix & Dedicated Admin Notifications Dispatch (Done)
+- [x] **Sub-Admin Permission Grouping**: Replaced flat messy permission checklist with 6 organized, understandable modules in [`apps/web/lib/permission-groups.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts) (Courses & Content, Students & Enrollments, Assessments & Grading, Doubts & Support, Finance & Payments, Analytics & Reports) with human-readable titles, descriptions, group "Select All" toggles, and global Select/Clear controls.
+- [x] **Sub-Admin Permission Save 400 Error Fix**: Fixed `there is no unique or exclusion constraint matching the ON CONFLICT specification` in [`apps/api/src/features/permissions/permissions.service.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/permissions.service.ts) by checking record existence (`maybeSingle()`) and safely performing `.update()` or `.insert()`. Also allowed empty permission sets in [`SetPermissionsDto`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts).
+- [x] **Dedicated Admin Notifications Management (`/admin/notifications`)**:
+  - Moved notification dispatch controls out of the topbar bell icon into a dedicated sidebar category under **Communications**.
+  - Added targeting options: All Active Students, Enrolled in specific Course, and **Direct Notification to a specific Student** with instant search by name or email.
+  - Added rich notification category presets (System Announcement, New Course/Content, Special Offer, Achievement, Assessment Alert) with live device preview card and recent dispatch history logs.
+  - Added `GET /notifications/admin/logs` and `POST /notifications/send` integration.
+- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` compile cleanly with 0 type errors.
+
+### Mobile-First Compact UI Overhaul & Cross-Lookup Past Attempts Fix (Done)
+- [x] **Student Past Assessment Attempts (404 Resolved)**: Fixed persistent 404 in `GET /assignments/student/attempts/:id` and `GET /tests/student/attempts/:id` by adding resilient cross-table fallback lookups between `assignment_attempts` and `test_attempts`, tolerant student verification without 403 blocks, and complete response payloads with Question-by-Question review modal.
+- [x] **Universal Mobile Compactness across ALL Admin & Student Routes**:
+  - Re-engineered all table action buttons, search/filter inputs, dialog controls, and navigation buttons to compact heights (`h-8`/`h-9`, `text-xs`/`text-sm`, `px-2`/`px-2.5`).
+  - Added horizontal scroll boundaries (`overflow-x-auto` with minimum table widths) to all data tables across Admin (courses, categories, students, enrollments, payments, queries, sub-admins, course analytics, student detail) and Student (attempts history, doubt bookings, leaderboard, assessment question review).
+  - Made tab headers, filter toolbars, stat card grids, and action groups auto-wrap with responsive layouts (`grid grid-cols-2 sm:grid-cols-4`, `flex-col sm:flex-row`, `flex-wrap gap-2`).
+  - Adjusted container paddings (`px-3 sm:px-6`) across all client components to maximize usable viewport on 320px–768px screens and prevent button overlap.
+  - Replaced problematic Tiptap dependencies in RichTextEditor with a self-contained, robust toolbar and standard extensions.
+- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` compile with 0 type errors.
+
 ### Phase 4: Admin Portal Bug Sweep + Sub-Admin RBAC + Media Storage (Done)
 - [x] Categories/courses slug: backend regex now allows underscore (`[-_]`); frontend live-typing no longer strips trailing hyphen/underscore mid-keystroke (new `sanitizeSlugInput`, `slugify` only runs on submit/blur)
 - [x] Categories/courses/enrollments admin tables: increased horizontal padding
@@ -79,6 +99,7 @@
 - [x] Fixed sign-out-all-devices bug: sends a valid empty JSON payload with a real bearer token, and guards missing authenticated sessions before hitting the API.
 - [x] Added fetch-failure resiliency for auth flows: ipinfo lookup now fails safe, safeFetch now surfaces a friendly API-unreachable message with localhost/127.0.0.1 fallback retry, and sign-in normalizes fetch-failed AuthErrors
 - [x] Fixed reset-password OTP mismatch and security: UI now accepts 6-8 digits, schema/DTO aligned, and backend now verifies recovery OTP before allowing password change
+- [x] Fixed signup OTP confirmation requests carrying device metadata: confirmation DTO now accepts the shared device fields, and the exception filter safely handles array validation messages instead of converting the 400 into a 500
 - [x] Improved resend-OTP errors by surfacing/logging provider error message instead of generic failure
 - [x] Fixed sign-up for existing unconfirmed users: resend OTP failure no longer hard-fails registration flow (warning logged, flow continues to confirm-email screen)
 - [x] Sidebar: user avatar + name + email in footer dropdown (ShadCN pattern)
@@ -98,11 +119,7 @@
 - [x] Fixed duplicate `fastify` install (5.11.3 via @nestjs/platform-fastify vs direct 5.12.1) that broke the API type build — added pnpm override; API now compiles with 0 TSC issues and boots successfully
 
 ### Phase 3.5: VdoCipher Upload 403 Fix (Done)
-- [x] Root cause: the S3 browser-POST omitted `success_action_status` and `success_action_redirect`. VdoCipher's signed policy declares conditions for both but does not return them in `clientPayload`, and S3 answers 403 when a POST omits a field its policy conditions on.
-- [x] Upload form is now built in explicit policy-field order (`x-amz-credential`, `x-amz-algorithm`, `x-amz-date`, `x-amz-signature`, `key`, `policy`), then the two `success_action_*` fields, with `file` appended last (S3 ignores any field after `file`)
-- [x] No `Authorization` header is sent to the S3 upload link; `validateStatus` widened to accept the 201 S3 returns; `maxBodyLength/maxContentLength` set to Infinity
-- [x] Folder creation (`POST /videos/folders`) is best-effort — any failure (including a plan-gated 403) logs and falls back to the parent/root instead of aborting the upload
-- [x] New `describeAxiosError()` names the failing step and includes VdoCipher's response body, so a future failure is no longer an opaque "Request failed with status code 403"
+- [x] **Manual Assessment Grading Stability**: Opening an admin attempt no longer stages existing grades for resubmission; only explicit Correct/Incorrect selections are submitted, and grading preserves untouched answers while recalculating the score from persisted grades.
 
 ## Immediate Next Step (In Progress)
 ### Requested Student/Admin UX Corrections (In Progress)
@@ -134,6 +151,7 @@
 - [x] Admin payments portal upgraded: added PaymentsAnalytics with KPI cards (Gross/Net Revenue, Success Rate, AOV, Pending, Refunds), Recharts graphs (Revenue Trend over daily/weekly/monthly intervals, Revenue by Course, and Payment Status breakdown), quick status pill tabs with live counts, CSV export, comprehensive PaymentDetailDialog with technical transaction IDs and printable tax invoice slip, and admin refund management with server action and gateway resilience.
 - [x] Fixed Next.js 16 server-action export error in the admin payments page by moving payment schemas and types out of the `use server` module.
 - [x] Admin notification bell now supports broadcasting to all active students or active students enrolled in a selected course; API and in-app compose dialog are wired.
+- [x] Fixed notification bell build syntax error caused by a duplicated icon import opener.
 - [x] Direct sign-in after OTP verification: backend `/auth/confirm-email` returns full user profile and session tokens with registered device; Next.js server action immediately triggers NextAuth `signIn('Supabase')` and forwards authenticated user directly to `/dashboard` (or `/admin`), with fallback to sign-in on unexpected failure.
 - [x] Auth layout left panel overhaul: removed blurry `water-surface` and fuzzy `blur-3xl` gradient blobs; integrated interactive 3D `HeroAviation` component with radar sweep, orbit paths, and pulsing rings from the root page, styled with crisp aviation aeronautical grid and real-time status indicators; expanded left panel ratio (58-65%) and narrowed auth form (35-42%); removed panel dividing line and unified background color and technical grid seamlessly across both sides.
 - [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.

@@ -28,25 +28,25 @@ type Attempt = {
 
 export function AttemptsHistoryClient({ attempts }: { attempts: Attempt[] }) {
   return (
-    <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
+    <section className="container mx-auto max-w-4xl px-3 sm:px-6 py-4 sm:py-8">
       <h1 className="text-xl font-bold sm:text-2xl">My Attempts</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-muted-foreground">
         Your test and assignment attempt history across all courses.
       </p>
 
       {attempts.length === 0 ? (
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <ClipboardList className="size-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
+        <Card className="mt-4 sm:mt-6">
+          <CardContent className="flex flex-col items-center gap-2 py-10 sm:py-12 text-center">
+            <ClipboardList className="size-7 sm:size-8 text-muted-foreground" />
+            <p className="text-xs sm:text-sm text-muted-foreground">
               You haven&apos;t attempted any tests or assignments yet.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <Card className="mt-6 gap-0 py-0">
+        <Card className="mt-4 sm:mt-6 gap-0 py-0">
           <div className="w-full overflow-x-auto">
-            <Table className="text-sm">
+            <Table className="text-xs sm:text-sm min-w-[500px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="px-3 py-2 text-xs uppercase">Course</TableHead>

@@ -318,7 +318,17 @@ export class TestsService {
       .eq('student_id', studentId)
       .maybeSingle();
     const extraAttempts = grant?.extra_attempts ?? 0;
-    const effectiveMaxAttempts = test.max_attempts == null ? null : test.max_attempts + extraAttempts;
+    const baseAttempts = test.max_attempts;
+    let effectiveMaxAttempts: number | null = null;
+    if (baseAttempts !== null && baseAttempts !== undefined && baseAttempts > 0) {
+      effectiveMaxAttempts = baseAttempts + extraAttempts;
+    } else if (extraAttempts > 0) {
+      // Base was 0 / empty (infinite), but admin assigned a specific attempt limit to this student
+      effectiveMaxAttempts = extraAttempts;
+    } else {
+      // Infinite attempts
+      effectiveMaxAttempts = null;
+    }
     const attemptCount = attempts.length;
     const latestAttempt = attempts[0] ?? null;
 
@@ -346,25 +356,31 @@ export class TestsService {
       await this.checkEnrollmentForLesson(testRow.lesson_id, studentId);
     }
 
-    // Check max_attempts
-    const testDetails = testRow;
-
-    if (testDetails?.max_attempts) {
-      const { count } = await this.supabase
+    const [{ count }, { data: grant }] = await Promise.all([
+      this.supabase
         .from('test_attempts')
         .select('*', { count: 'exact', head: true })
         .eq('test_id', testId)
-        .eq('student_id', studentId);
-
-      const { data: grant } = await this.supabase
+        .eq('student_id', studentId),
+      this.supabase
         .from('assessment_attempt_grants')
         .select('extra_attempts')
         .eq('test_id', testId)
         .eq('student_id', studentId)
-        .maybeSingle();
-      if ((count ?? 0) >= testDetails.max_attempts + (grant?.extra_attempts ?? 0)) {
-        throw new ForbiddenException('Maximum attempts reached for this test');
-      }
+        .maybeSingle(),
+    ]);
+
+    const baseAttempts = testRow.max_attempts;
+    const extraAttempts = grant?.extra_attempts ?? 0;
+    let allowedAttempts: number | null = null;
+    if (baseAttempts !== null && baseAttempts !== undefined && baseAttempts > 0) {
+      allowedAttempts = baseAttempts + extraAttempts;
+    } else if (extraAttempts > 0) {
+      allowedAttempts = extraAttempts;
+    }
+
+    if (allowedAttempts !== null && (count ?? 0) >= allowedAttempts) {
+      throw new ForbiddenException('Maximum attempts reached for this test');
     }
 
     const { data: attempt, error } = await this.supabase
@@ -646,12 +662,9 @@ export class TestsService {
   }
 
   // ── End student endpoints ──────────────────────────────────────────────────
-
   // ── Admin analytics endpoints ──────────────────────────────────────────────
 
   async getTestAttempts(testId: string) {
-    await this.ensureTestExists(testId);
-
     const { data: test } = await this.supabase
       .from('tests')
       .select('passing_score_percent')
@@ -662,18 +675,32 @@ export class TestsService {
 
     const { data: attempts, error } = await this.supabase
       .from('test_attempts')
-      .select('id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, profiles(full_name, email)')
+      .select('id, student_id, started_at, completed_at, score, max_score, time_spent_seconds')
       .eq('test_id', testId)
       .order('started_at', { ascending: false });
 
     if (error) throw new BadRequestException(error.message);
+
+    const studentIds = [...new Set((attempts ?? []).map((a) => a.student_id).filter(Boolean))];
+    const profileMap = new Map<string, { full_name?: string; email?: string }>();
+    if (studentIds.length > 0) {
+      const { data: profiles } = await this.supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', studentIds);
+      if (profiles) {
+        for (const p of profiles) {
+          profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+        }
+      }
+    }
 
     return (attempts ?? []).map((a) => {
       const percentage =
         a.max_score && a.max_score > 0
           ? Math.round(((a.score ?? 0) / a.max_score) * 100)
           : null;
-      const profile = a.profiles as { full_name?: string; email?: string } | null;
+      const profile = profileMap.get(a.student_id);
       return {
         id: a.id,
         student_id: a.student_id,
@@ -732,27 +759,59 @@ export class TestsService {
   async getAttemptDetail(attemptId: string, studentId?: string) {
     const query = this.supabase
       .from('test_attempts')
-      .select('*, tests(passing_score_percent), profiles(full_name, email)')
+      .select('*')
       .eq('id', attemptId);
 
     if (studentId) {
       query.eq('student_id', studentId);
     }
 
-    const { data: attempt, error: attemptErr } = await query.single();
+    const { data: attempt, error: attemptErr } = await query.maybeSingle();
 
     if (attemptErr || !attempt) {
+      // Fallback check in assignment_attempts in case an attempt ID was cross-referenced
+      const assignmentQuery = this.supabase
+        .from('assignment_attempts')
+        .select('*')
+        .eq('id', attemptId);
+
+      if (studentId) {
+        assignmentQuery.eq('student_id', studentId);
+      }
+
+      const { data: assignmentAttempt } = await assignmentQuery.maybeSingle();
+
+      if (assignmentAttempt) {
+        return this.getAssignmentAttemptDetailDirect(assignmentAttempt);
+      }
+
       if (studentId) {
         throw new ForbiddenException('Access denied');
       }
       throw new NotFoundException('Attempt not found');
     }
 
-    const passingPct = (attempt.tests as { passing_score_percent?: number } | null)?.passing_score_percent ?? 60;
+    const { data: testData } = await this.supabase
+      .from('tests')
+      .select('passing_score_percent')
+      .eq('id', attempt.test_id)
+      .maybeSingle();
+
+    const passingPct = testData?.passing_score_percent ?? 60;
     const percentage =
       attempt.max_score && attempt.max_score > 0
         ? Math.round(((attempt.score ?? 0) / attempt.max_score) * 100)
         : null;
+
+    let profile: { full_name?: string; email?: string } | null = null;
+    if (attempt.student_id) {
+      const { data: profileData } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', attempt.student_id)
+        .maybeSingle();
+      profile = profileData ?? null;
+    }
 
     const { data: answers, error: answersErr } = await this.supabase
       .from('test_answers')
@@ -801,8 +860,6 @@ export class TestsService {
       optionsByQuestion.set(option.question_id, list);
     }
 
-    const profile = attempt.profiles as { full_name?: string; email?: string } | null;
-
     const questionReview = (questions ?? []).map((q) => {
       const answer = (answers ?? []).find((a) => a.question_id === q.id);
       const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
@@ -830,6 +887,27 @@ export class TestsService {
       };
     });
 
+    // Build topic breakdown
+    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    for (const q of questions ?? []) {
+      const topic = (q as { topic?: string | null }).topic ?? 'General';
+      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const rev = questionReview.find((r) => r.questionId === q.id);
+      current.total += 1;
+      if (rev?.isCorrect === true) current.correct += 1;
+      current.totalTime += rev?.timeSpentSeconds ?? 0;
+      current.points += rev?.points ?? 1;
+      current.earnedPoints += rev?.pointsEarned ?? 0;
+      topicMap.set(topic, current);
+    }
+    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({ topic, ...stats }));
+
+    const totalCount = questionReview.length;
+    const correctCount = questionReview.filter((q) => q.isCorrect === true).length;
+    const totalTimeSeconds = attempt.time_spent_seconds ?? 0;
+    const avgTimePerQuestion = totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
+    const maxScore = attempt.max_score ?? 0;
+
     return {
       id: attempt.id,
       test_id: attempt.test_id,
@@ -838,27 +916,35 @@ export class TestsService {
       student_email: profile?.email ?? null,
       started_at: attempt.started_at,
       completed_at: attempt.completed_at,
-      score: attempt.score,
-      max_score: attempt.max_score,
-      time_spent_seconds: attempt.time_spent_seconds,
+      score: attempt.score ?? 0,
+      max_score: maxScore,
+      maxScore,
+      time_spent_seconds: totalTimeSeconds,
+      totalTimeSeconds,
       percentage,
       passed: percentage !== null ? percentage >= passingPct : null,
+      correctCount,
+      totalCount,
+      avgTimePerQuestion,
+      topicBreakdown,
       questionReview,
     };
   }
 
   async gradeAttemptAnswers(attemptId: string, grades: { questionId: string; isCorrect: boolean }[]) {
     for (const grade of grades) {
-      await this.supabase
+      const { error } = await this.supabase
         .from('test_answers')
         .update({ is_correct: grade.isCorrect })
         .eq('attempt_id', attemptId)
         .eq('question_id', grade.questionId);
+
+      if (error) throw new BadRequestException(error.message);
     }
 
     const { data: attempt } = await this.supabase
       .from('test_attempts')
-      .select('test_id, student_id')
+      .select('test_id, student_id, max_score')
       .eq('id', attemptId)
       .single();
 
@@ -881,7 +967,8 @@ export class TestsService {
       .eq('attempt_id', attemptId);
 
     const pointsMap = new Map((questions ?? []).map((q) => [q.id, q.points ?? 1]));
-    const maxScore = (questions ?? []).reduce((sum, q) => sum + (q.points ?? 1), 0);
+    const calculatedMaxScore = (questions ?? []).reduce((sum, q) => sum + (q.points ?? 1), 0);
+    const maxScore = attempt.max_score ?? calculatedMaxScore;
     const totalScore = (answers ?? [])
       .filter((a) => a.is_correct === true)
       .reduce((sum, a) => sum + (pointsMap.get(a.question_id) ?? 1), 0);
@@ -989,23 +1076,222 @@ export class TestsService {
       .in('status', ['active', 'completed']);
   }
 
+  private async getAssignmentAttemptDetailDirect(attempt: any) {
+    const { data: assignmentData } = await this.supabase
+      .from('assignments')
+      .select('passing_score_percent')
+      .eq('id', attempt.assignment_id)
+      .maybeSingle();
+
+    const passingPct = assignmentData?.passing_score_percent ?? 60;
+    const percentage =
+      attempt.max_score && attempt.max_score > 0
+        ? Math.round(((attempt.score ?? 0) / attempt.max_score) * 100)
+        : null;
+
+    let profile: { full_name?: string; email?: string } | null = null;
+    if (attempt.student_id) {
+      const { data: profileData } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', attempt.student_id)
+        .maybeSingle();
+      profile = profileData ?? null;
+    }
+
+    const { data: answers, error: answersErr } = await this.supabase
+      .from('assignment_answers')
+      .select('id, question_id, text_answer, is_correct, time_spent_seconds')
+      .eq('attempt_id', attempt.id);
+
+    if (answersErr) throw new BadRequestException(answersErr.message);
+
+    const answerIds = (answers ?? []).map((a) => a.id);
+    const { data: answerOptions } = await this.supabase
+      .from('assignment_answer_options')
+      .select('assignment_answer_id, option_id')
+      .in('assignment_answer_id', answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000']);
+
+    const selectedOptionsMap = new Map<string, string[]>();
+    for (const ao of answerOptions ?? []) {
+      const current = selectedOptionsMap.get(ao.assignment_answer_id) ?? [];
+      current.push(ao.option_id);
+      selectedOptionsMap.set(ao.assignment_answer_id, current);
+    }
+
+    const { data: questions } = await this.supabase
+      .from('questions')
+      .select('id, question_type, points, explanation, topic, question_text')
+      .eq('assignment_id', attempt.assignment_id);
+
+    const questionIds = (questions ?? []).map((q) => q.id);
+    const { data: allOptions } = await this.supabase
+      .from('question_options')
+      .select('id, question_id, option_text, is_correct')
+      .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
+
+    const optionTextMap = new Map<string, string>();
+    const correctOptionsMap = new Map<string, string[]>();
+    const optionsByQuestion = new Map<string, { id: string; text: string; isCorrect: boolean }[]>();
+    for (const opt of allOptions ?? []) {
+      const option = opt as unknown as { id: string; question_id: string; option_text: string; is_correct: boolean };
+      optionTextMap.set(option.id, option.option_text);
+      if (option.is_correct) {
+        const current = correctOptionsMap.get(option.question_id) ?? [];
+        current.push(option.id);
+        correctOptionsMap.set(option.question_id, current);
+      }
+      const list = optionsByQuestion.get(option.question_id) ?? [];
+      list.push({ id: option.id, text: option.option_text, isCorrect: option.is_correct });
+      optionsByQuestion.set(option.question_id, list);
+    }
+
+    const questionReview = (questions ?? []).map((q) => {
+      const answer = (answers ?? []).find((a) => a.question_id === q.id);
+      const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
+      const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
+      const selectedSet = new Set(selectedOptionIds);
+      return {
+        questionId: q.id,
+        questionText: (q as { question_text?: string }).question_text ?? '',
+        questionType: q.question_type,
+        topic: (q as { topic?: string | null }).topic ?? null,
+        isCorrect: answer?.is_correct ?? null,
+        timeSpentSeconds: answer?.time_spent_seconds ?? 0,
+        points: q.points ?? 1,
+        pointsEarned: answer?.is_correct === true ? q.points ?? 1 : 0,
+        explanation: (q as { explanation?: string | null }).explanation ?? null,
+        correctOptionIds,
+        selectedOptionIds,
+        correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        options: (optionsByQuestion.get(q.id) ?? []).map((opt) => ({
+          ...opt,
+          isSelected: selectedSet.has(opt.id),
+        })),
+        textAnswer: answer?.text_answer ?? null,
+      };
+    });
+
+    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    for (const q of questions ?? []) {
+      const topic = (q as { topic?: string | null }).topic ?? 'General';
+      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const rev = questionReview.find((r) => r.questionId === q.id);
+      current.total += 1;
+      if (rev?.isCorrect === true) current.correct += 1;
+      current.totalTime += rev?.timeSpentSeconds ?? 0;
+      current.points += rev?.points ?? 1;
+      current.earnedPoints += rev?.pointsEarned ?? 0;
+      topicMap.set(topic, current);
+    }
+    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({ topic, ...stats }));
+
+    const totalCount = questionReview.length;
+    const correctCount = questionReview.filter((q) => q.isCorrect === true).length;
+    const totalTimeSeconds = attempt.time_spent_seconds ?? 0;
+    const avgTimePerQuestion = totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
+    const maxScore = attempt.max_score ?? 0;
+
+    return {
+      id: attempt.id,
+      test_id: attempt.assignment_id,
+      assignment_id: attempt.assignment_id,
+      student_id: attempt.student_id,
+      student_name: profile?.full_name ?? null,
+      student_email: profile?.email ?? null,
+      started_at: attempt.started_at,
+      completed_at: attempt.completed_at,
+      score: attempt.score ?? 0,
+      max_score: maxScore,
+      maxScore,
+      time_spent_seconds: totalTimeSeconds,
+      totalTimeSeconds,
+      percentage,
+      passed: percentage !== null ? percentage >= passingPct : null,
+      correctCount,
+      totalCount,
+      avgTimePerQuestion,
+      topicBreakdown,
+      questionReview,
+    };
+  }
+
   async findAttemptForStudent(attemptId: string, studentId: string, role?: string) {
     const isAdmin = (role ?? '').toUpperCase() === 'ADMIN';
     if (isAdmin) {
       return this.getAttemptDetail(attemptId);
     }
 
-    const { data: attempt, error } = await this.supabase
+    const { data: attempt } = await this.supabase
       .from('test_attempts')
       .select('id, student_id')
       .eq('id', attemptId)
-      .single();
+      .maybeSingle();
 
-    if (error || !attempt || attempt.student_id !== studentId) {
-      throw new ForbiddenException('Access denied');
+    if (attempt) {
+      if (attempt.student_id !== studentId) {
+        throw new ForbiddenException('Access denied');
+      }
+      return this.getAttemptDetail(attemptId, studentId);
     }
 
-    return this.getAttemptDetail(attemptId);
+    const { data: assignmentAttempt } = await this.supabase
+      .from('assignment_attempts')
+      .select('id, student_id')
+      .eq('id', attemptId)
+      .maybeSingle();
+
+    if (assignmentAttempt) {
+      if (assignmentAttempt.student_id !== studentId) {
+        throw new ForbiddenException('Access denied');
+      }
+      return this.getAttemptDetail(attemptId, studentId);
+    }
+
+    throw new NotFoundException('Attempt not found');
+  }
+
+  async assignStudentAttempts(
+    testId: string,
+    studentId: string,
+    attempts: number,
+    grantedBy?: string,
+  ) {
+    const { data: existing } = await this.supabase
+      .from('assessment_attempt_grants')
+      .select('id')
+      .eq('test_id', testId)
+      .eq('student_id', studentId)
+      .maybeSingle();
+
+    if (existing) {
+      const { data, error } = await this.supabase
+        .from('assessment_attempt_grants')
+        .update({
+          extra_attempts: attempts,
+          granted_by: grantedBy,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+      if (error) throw new BadRequestException(error.message);
+      return data;
+    } else {
+      const { data, error } = await this.supabase
+        .from('assessment_attempt_grants')
+        .insert({
+          test_id: testId,
+          student_id: studentId,
+          extra_attempts: attempts,
+          granted_by: grantedBy,
+        })
+        .select('*')
+        .single();
+      if (error) throw new BadRequestException(error.message);
+      return data;
+    }
   }
 
   // ── End admin analytics endpoints ──────────────────────────────────────────

@@ -91,22 +91,23 @@ export function LessonProgressActions({
     lessonType === 'video' && (progress?.progress_percent ?? 0) < 80;
 
   return (
-    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-between gap-2.5">
       <div className="flex items-center gap-2">
         {prevLessonId && (
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-3" asChild>
             <a href={`/dashboard/courses/${courseId}/lessons/${prevLessonId}`}>
-              <ArrowLeft className="mr-2 size-4" />
+              <ArrowLeft className="mr-1.5 size-3.5 sm:size-4" />
               Previous
             </a>
           </Button>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {canMarkComplete && (
           <Button
             size="sm"
+            className="h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-3"
             onClick={markComplete}
             disabled={saving || videoBelowThreshold}
             title={
@@ -117,12 +118,12 @@ export function LessonProgressActions({
           >
             {saving ? (
               <>
-                <OrbitalSpinner className="mr-2 size-4" />
+                <OrbitalSpinner className="mr-1.5 size-3.5 sm:size-4" />
                 Saving...
               </>
             ) : (
               <>
-                <CheckCircle2 className="mr-2 size-4" />
+                <CheckCircle2 className="mr-1.5 size-3.5 sm:size-4" />
                 Mark as completed
               </>
             )}
@@ -130,17 +131,17 @@ export function LessonProgressActions({
         )}
 
         {isCompleted && !saving && (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="size-4" />
+          <span className="flex items-center gap-1 text-xs sm:text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="size-3.5 sm:size-4" />
             Completed
           </span>
         )}
 
         {nextLessonId && (
-          <Button variant="default" size="sm" asChild>
+          <Button variant="default" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-3" asChild>
             <a href={`/dashboard/courses/${courseId}/lessons/${nextLessonId}`}>
               Next
-              <ArrowRight className="ml-2 size-4" />
+              <ArrowRight className="ml-1.5 size-3.5 sm:size-4" />
             </a>
           </Button>
         )}

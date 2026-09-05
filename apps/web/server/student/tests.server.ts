@@ -73,6 +73,13 @@ const StartAttemptResponseSchema = z.object({
   data: AttemptSchema,
 });
 
+const QuestionReviewOptionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  isCorrect: z.boolean(),
+  isSelected: z.boolean().optional(),
+});
+
 const QuestionReviewSchema = z.object({
   questionId: z.string(),
   isCorrect: z.boolean().nullable(),
@@ -81,6 +88,9 @@ const QuestionReviewSchema = z.object({
   explanation: z.string().nullable().optional(),
   correctOptionIds: z.array(z.string()).default([]),
   selectedOptionIds: z.array(z.string()).default([]),
+  correctOptionTexts: z.array(z.string()).optional().default([]),
+  selectedOptionTexts: z.array(z.string()).optional().default([]),
+  options: z.array(QuestionReviewOptionSchema).optional().default([]),
   textAnswer: z.string().nullable().optional(),
   topic: z.string().nullable().optional(),
   timeSpentSeconds: z.coerce.number().default(0),
@@ -224,9 +234,10 @@ const AttemptDetailResponseSchema = z.object({
   message: z.string().optional(),
   data: z.object({
     id: z.string(),
-    test_id: z.string(),
-    student_id: z.string(),
-    started_at: z.string(),
+    test_id: z.string().nullable().optional(),
+    assignment_id: z.string().nullable().optional(),
+    student_id: z.string().nullable().optional(),
+    started_at: z.string().nullable().optional(),
     completed_at: z.string().nullable().optional(),
     score: z.coerce.number().nullable().optional(),
     max_score: z.coerce.number().nullable().optional(),
@@ -239,7 +250,7 @@ const AttemptDetailResponseSchema = z.object({
     totalTimeSeconds: z.coerce.number().default(0),
     totalCount: z.coerce.number().default(0),
     correctCount: z.coerce.number().default(0),
-  }),
+  }).passthrough(),
 }).passthrough();
 
 export async function getStudentAttemptDetail(

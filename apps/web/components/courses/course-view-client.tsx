@@ -131,13 +131,13 @@ export function CourseViewClient({
 
   return (
     <section className="min-h-dvh">
-      <div className="container max-w-6xl py-6 sm:py-8">
-        <Link href="/courses" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
-          <ArrowLeft className="size-4" />
+      <div className="container max-w-6xl px-3 sm:px-6 py-4 sm:py-8">
+        <Link href="/courses" className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 sm:mb-6">
+          <ArrowLeft className="size-3.5 sm:size-4" />
           All Courses
         </Link>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
           {/* Main content */}
           <div className="space-y-6 lg:col-span-2">
             {/* Thumbnail */}

@@ -60,43 +60,48 @@ export function MyCoursesClient({ enrollments }: { enrollments: StudentEnrollmen
   ];
 
   return (
-    <section className="container space-y-7 py-8">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <section className="container px-3 sm:px-6 space-y-5 sm:space-y-7 py-4 sm:py-8">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm font-medium text-primary">Your learning library</p>
-          <h1 className="text-3xl font-bold tracking-tight">My courses</h1>
-          <p className="mt-1 text-muted-foreground">Pick up where you left off or revisit a completed course.</p>
+          <p className="mb-1 text-xs sm:text-sm font-medium text-primary">Your learning library</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My courses</h1>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">Pick up where you left off or revisit a completed course.</p>
         </div>
-        <Button asChild><Link href="/courses">Explore courses</Link></Button>
+        <Button size="sm" className="h-9 w-full sm:w-auto" asChild><Link href="/courses">Explore courses</Link></Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         {stats.map(({ label, count, icon: Icon }) => (
           <Card key={label}>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Icon className="size-5 text-primary" />
-              <div><p className="text-2xl font-bold leading-none">{count}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></div>
+            <CardContent className="flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4">
+              <div className="rounded-lg bg-primary/10 p-1.5 sm:p-2 shrink-0">
+                <Icon className="size-4 sm:size-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold leading-none">{count}</p>
+                <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2.5 rounded-lg border bg-card p-2.5 sm:p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your courses" className="pl-9" />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your courses" className="h-9 pl-9 text-xs sm:text-sm" />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          <SlidersHorizontal className="my-2.5 size-4 shrink-0 text-muted-foreground" />
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <SlidersHorizontal className="my-2 size-3.5 shrink-0 text-muted-foreground" />
           {(['all', 'active', 'completed', 'expired'] as const).map((value) => (
-            <Button key={value} variant={filter === value ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter(value)} className="shrink-0">
+            <Button key={value} variant={filter === value ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilter(value)} className="h-8 px-2 text-xs shrink-0">
               {value === 'all' ? 'All' : statusLabels[value]}
             </Button>
           ))}
-          <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-md border bg-background px-2 text-sm">
+          <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-8 rounded-md border bg-background px-2 text-xs">
             <option value="recent">Recently added</option><option value="oldest">Oldest first</option><option value="name">Name</option>
           </select>
-          <Button variant="ghost" size="icon" onClick={() => setGrid(!grid)} aria-label={grid ? 'Show list view' : 'Show grid view'}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setGrid(!grid)} aria-label={grid ? 'Show list view' : 'Show grid view'}>
             {grid ? <List className="size-4" /> : <LayoutGrid className="size-4" />}
           </Button>
         </div>

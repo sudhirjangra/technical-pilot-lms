@@ -53,9 +53,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@repo/shadcn/dialog';
+import { RichTextEditor } from '@repo/shadcn/rich-text-editor';
 import { Input } from '@repo/shadcn/input';
 import { GripVertical } from '@repo/shadcn/lucide';
 import {
@@ -249,6 +251,13 @@ export function CourseDetailClient({
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
   const [pdfFormLessonId, setPdfFormLessonId] = useState<string | null>(null);
   const [newLessonType, setNewLessonType] = useState<LessonKind>('video');
+  const [editingLesson, setEditingLesson] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    lesson_type: string;
+  } | null>(null);
+  const [editingLessonSaving, setEditingLessonSaving] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderLoading, setBuilderLoading] = useState(false);
   const [builderSaving, setBuilderSaving] = useState(false);
@@ -584,6 +593,23 @@ export function CourseDetailClient({
       return;
     }
     toast.success(`Lesson ${lesson.is_published ? 'unpublished' : 'published'}`);
+    router.refresh();
+  };
+
+  const handleSaveLessonDetails = async () => {
+    if (!editingLesson) return;
+    setEditingLessonSaving(true);
+    const result = await updateLesson(editingLesson.id, {
+      title: editingLesson.title,
+      description: editingLesson.description,
+    });
+    setEditingLessonSaving(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Lesson details updated');
+    setEditingLesson(null);
     router.refresh();
   };
 
@@ -1450,9 +1476,9 @@ export function CourseDetailClient({
                       aria-label={chapter.is_published ? 'Published' : 'Draft'}
                     />
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                     {editingChapterId !== chapter.id && (
-                      <Button size="sm" variant="outline" onClick={() => startChapterEdit(chapter)}>
+                      <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => startChapterEdit(chapter)}>
                         Edit details
                       </Button>
                     )}
@@ -1477,6 +1503,7 @@ export function CourseDetailClient({
                     <Button
                       size="sm"
                       variant={chapter.is_published ? 'outline' : 'default'}
+                      className="h-8 px-2 text-xs"
                       onClick={() => handleToggleChapterPublished(chapter)}
                       disabled={loading}
                     >
@@ -1485,13 +1512,14 @@ export function CourseDetailClient({
                     <Button
                       size="sm"
                       variant="outline"
+                      className="h-8 px-2 text-xs"
                       onClick={() => setLessonFormChapterId(
                         lessonFormChapterId === chapter.id ? null : chapter.id,
                       )}
                     >
                       + Lesson
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleDeleteChapter(chapter.id)}>
+                    <Button size="sm" variant="destructive" className="h-8 px-2 text-xs" onClick={() => handleDeleteChapter(chapter.id)}>
                       Delete
                     </Button>
                   </div>
@@ -1551,15 +1579,15 @@ export function CourseDetailClient({
                       {chapter.lessons.map((lesson, lessonIndex) => {
                         const videoLesson = videoLessonMap.get(lesson.id);
                         return (
-                          <SortableItem key={lesson.id} value={lesson.id} className="rounded border border-transparent p-3 hover:border-muted">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                              <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <SortableItem key={lesson.id} value={lesson.id} className="rounded border border-transparent p-2.5 sm:p-3 hover:border-muted">
+                            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
                                 <SortableItemHandle className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground" title="Drag to reorder">
                                   <GripVertical className="size-3.5" />
                                   {lessonIndex + 1}.
                                 </SortableItemHandle>
-                                <span>{lesson.title}</span>
-                            <Badge variant="outline" className="text-xs">{lesson.lesson_type}</Badge>
+                                <span className="font-medium">{lesson.title}</span>
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">{lesson.lesson_type}</Badge>
                             <span
                               className={`inline-block size-2.5 rounded-full ${
                                 lesson.is_published ? 'bg-emerald-500' : 'bg-amber-500'
@@ -1574,21 +1602,21 @@ export function CourseDetailClient({
                             ) : null}
                             {lesson.lesson_type === 'video' && (
                               videoLesson ? (
-                                <Badge variant="secondary" className="text-xs font-mono">
+                                <Badge variant="secondary" className="text-[10px] font-mono">
                                   {videoLesson.vdocipher_video_id.slice(0, 12)}…
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="border-yellow-400 text-xs text-yellow-600">
-                                  No video linked
+                                <Badge variant="outline" className="border-yellow-400 text-[10px] text-yellow-600">
+                                  No video
                                 </Badge>
                               )
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
                               disabled={lessonIndex === 0 || loading}
                               onClick={() => handleLessonReorder(chapter, lessonIndex, -1)}
                             >
@@ -1597,7 +1625,7 @@ export function CourseDetailClient({
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
                               disabled={lessonIndex === (chapter.lessons?.length ?? 0) - 1 || loading}
                               onClick={() => handleLessonReorder(chapter, lessonIndex, 1)}
                             >
@@ -1606,25 +1634,43 @@ export function CourseDetailClient({
                             <Button
                               size="sm"
                               variant={lesson.is_published ? 'outline' : 'default'}
+                              className="h-7 sm:h-8 px-2 text-xs"
                               onClick={() => handleToggleLessonPublished(lesson)}
                               disabled={loading}
                             >
                               {lesson.is_published ? 'Unpublish' : 'Publish'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 sm:h-8 px-2 text-xs"
+                              onClick={() =>
+                                setEditingLesson({
+                                  id: lesson.id,
+                                  title: lesson.title,
+                                  description: lesson.description ?? '',
+                                  lesson_type: lesson.lesson_type,
+                                })
+                              }
+                            >
+                              Edit
                             </Button>
                             {lesson.lesson_type === 'video' && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 sm:h-8 px-2 text-xs"
                                   onClick={() => setVideoFormLessonId(
                                     videoFormLessonId === lesson.id ? null : lesson.id,
                                   )}
                                 >
-                                  {videoLesson ? 'Replace Video' : 'Upload Video'}
+                                  {videoLesson ? 'Replace' : 'Upload'}
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="destructive"
+                                  className="h-7 sm:h-8 px-2 text-xs"
                                   onClick={() => handleDeleteVideo(lesson.id)}
                                 >
                                   Delete Video
@@ -1636,6 +1682,7 @@ export function CourseDetailClient({
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="h-7 sm:h-8 px-2 text-xs"
                                   onClick={() => setPdfFormLessonId(
                                     pdfFormLessonId === lesson.id ? null : lesson.id,
                                   )}
@@ -1645,6 +1692,7 @@ export function CourseDetailClient({
                                 <Button
                                   size="sm"
                                   variant="destructive"
+                                  className="h-7 sm:h-8 px-2 text-xs"
                                   onClick={() => handleDeletePdf(lesson.id)}
                                 >
                                   Delete PDF
@@ -1655,17 +1703,18 @@ export function CourseDetailClient({
                               <Button
                                 size="sm"
                                 variant="outline"
+                                className="h-7 sm:h-8 px-2 text-xs"
                                 onClick={() => openQuestionManager({
                                   id: lesson.id,
                                   title: lesson.title,
                                   lesson_type: lesson.lesson_type as BuilderKind,
                                 })}
                               >
-                                Manage Questions
+                                Questions
                               </Button>
                             )}
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteLesson(lesson.id)}>
-                              Delete Lesson
+                            <Button size="sm" variant="ghost" className="h-7 sm:h-8 px-2 text-xs text-destructive" onClick={() => handleDeleteLesson(lesson.id)}>
+                              Delete
                             </Button>
                           </div>
                         </div>
@@ -1766,37 +1815,37 @@ export function CourseDetailClient({
                 </Button>
               </div>
 
-              <div className="rounded-lg border">
-                <table className="w-full text-sm">
+              <div className="w-full overflow-x-auto rounded-lg border">
+                <table className="w-full text-xs sm:text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Student</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Enrolled</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Status</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Actions</th>
+                      <th className="px-3 py-2 sm:px-4 text-left font-medium text-muted-foreground">Student</th>
+                      <th className="px-3 py-2 sm:px-4 text-left font-medium text-muted-foreground">Enrolled</th>
+                      <th className="px-3 py-2 sm:px-4 text-left font-medium text-muted-foreground">Status</th>
+                      <th className="px-3 py-2 sm:px-4 text-right font-medium text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {enrollments.map((enrollment) => (
                       <tr key={enrollment.id} className="border-b last:border-0">
-                        <td className="px-4 py-2.5">
+                        <td className="px-3 py-2 sm:px-4">
                           <Link href={`/admin/students/${enrollment.student_id}`} className="hover:underline">
-                            <p className="font-medium text-sm">{enrollment.profiles?.full_name ?? enrollment.profiles?.email ?? 'Unknown'}</p>
+                            <p className="font-medium">{enrollment.profiles?.full_name ?? enrollment.profiles?.email ?? 'Unknown'}</p>
                             {enrollment.profiles?.email && enrollment.profiles?.full_name && (
-                              <p className="text-xs text-muted-foreground">{enrollment.profiles.email}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">{enrollment.profiles.email}</p>
                             )}
                           </Link>
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                        <td className="px-3 py-2 sm:px-4 text-muted-foreground whitespace-nowrap">
                           {new Date(enrollment.enrolled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-3 py-2 sm:px-4">
                           <Badge variant={enrollment.status === 'active' ? 'default' : enrollment.status === 'completed' ? 'secondary' : 'destructive'} className="text-[10px]">
                             {enrollment.status}
                           </Badge>
                         </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <Button size="sm" variant="ghost" asChild className="h-7 text-xs">
+                        <td className="px-3 py-2 sm:px-4 text-right">
+                          <Button size="sm" variant="ghost" asChild className="h-7 px-2 text-xs">
                             <Link href={`/admin/students/${enrollment.student_id}`}>View</Link>
                           </Button>
                         </td>
@@ -1809,6 +1858,65 @@ export function CourseDetailClient({
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={!!editingLesson}
+        onOpenChange={(open) => {
+          if (!open) setEditingLesson(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Lesson Description</DialogTitle>
+            <DialogDescription>
+              Add or format the description for this lesson. Pasted source formatted text will retain its styles automatically.
+            </DialogDescription>
+          </DialogHeader>
+          {editingLesson && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Lesson Title
+                </label>
+                <Input
+                  value={editingLesson.title}
+                  onChange={(e) =>
+                    setEditingLesson({ ...editingLesson, title: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Lesson Description (Rich Text)
+                </label>
+                <RichTextEditor
+                  value={editingLesson.description}
+                  onChange={(html) =>
+                    setEditingLesson({ ...editingLesson, description: html })
+                  }
+                  className="mt-1"
+                  minHeight="min-h-[220px]"
+                />
+              </div>
+              <DialogFooter className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingLesson(null)}
+                  disabled={editingLessonSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveLessonDetails}
+                  disabled={editingLessonSaving || !editingLesson.title.trim()}
+                >
+                  {editingLessonSaving ? 'Saving...' : 'Save Details'}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { startChapter } from '@/server/student/chapters.server';
 import type {
   StudentCourseProgress,
   StudentLessonProgress,
+  CourseLeaderboardData,
 } from '@/server/student/courses.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
@@ -11,12 +12,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Progress } from '@repo/shadcn/progress';
 import {
   AlertTriangle,
+  Award,
   CheckCircle2,
   ClipboardList,
+  Compass,
   FileText,
   Lock,
+  Medal,
   PlayCircle,
+  Sparkles,
   Timer,
+  TrendingUp,
+  Trophy,
+  Users,
 } from '@repo/shadcn/lucide';
 import Link from 'next/link';
 import { useMemo, useState, useTransition, type ComponentType } from 'react';
@@ -61,7 +69,7 @@ function StartChapterButton({
       <Button
         size="sm"
         disabled={pending}
-        className="h-11 sm:h-9"
+        className="h-8 sm:h-9 px-2.5 text-xs sm:text-sm"
         onClick={() =>
           startTransition(async () => {
             setError(null);
@@ -159,7 +167,7 @@ function LessonRow({
 
   if (locked) {
     return (
-      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-2 text-muted-foreground opacity-60 sm:px-3">
+      <div className="flex min-h-9 flex-wrap items-center justify-between gap-1.5 rounded-md px-2 py-1.5 text-muted-foreground opacity-60 sm:px-3">
         {content}
       </div>
     );
@@ -168,7 +176,7 @@ function LessonRow({
   return (
     <Link
       href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
-      className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/60 sm:px-3"
+      className="flex min-h-9 flex-wrap items-center justify-between gap-1.5 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/60 sm:px-3"
     >
       {content}
     </Link>
@@ -178,10 +186,14 @@ function LessonRow({
 export function CourseProgressClient({
   courseId,
   progress,
+  initialLeaderboard,
 }: {
   courseId: string;
   progress: StudentCourseProgress | null;
+  initialLeaderboard?: CourseLeaderboardData | null;
 }) {
+  const [activeTab, setActiveTab] = useState<'curriculum' | 'leaderboard'>('curriculum');
+
   const chapters = useMemo(
     () =>
       [...(progress?.chapters ?? [])]
@@ -208,6 +220,10 @@ export function CourseProgressClient({
     );
   }
 
+  const leaderboard = initialLeaderboard?.leaderboard ?? [];
+  const currentUserRank = initialLeaderboard?.currentUserRank ?? null;
+  const totalEnrolled = initialLeaderboard?.totalEnrolled ?? leaderboard.length;
+
   return (
     <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
       <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
@@ -215,8 +231,14 @@ export function CourseProgressClient({
       </Link>
 
       <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-6">
+        {/* Header summary */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-bold sm:text-2xl">Course Progress</h1>
+          <div>
+            <h1 className="text-xl font-bold sm:text-2xl">Course Overview</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Flight training progress & enrolled peer rankings
+            </p>
+          </div>
           <div className="flex items-center gap-3">
             <Badge
               variant={progress.overall_status === 'completed' ? 'default' : 'secondary'}
@@ -232,76 +254,248 @@ export function CourseProgressClient({
           </div>
         </div>
 
-        {chapters.map((chapter, chapterIndex) => {
-          const done = chapter.lessons.filter(
-            (lesson) => lesson.progress?.status === 'completed',
-          ).length;
-          const previousChapter = chapterIndex > 0 ? chapters[chapterIndex - 1] : null;
-          const unlocked =
-            chapterIndex === 0 ||
-            (previousChapter?.lessons.length
-              ? previousChapter.lessons.every(
+        {/* Tab switch */}
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <Button
+            variant={activeTab === 'curriculum' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('curriculum')}
+            className="gap-2 h-9 text-xs"
+          >
+            <Compass className="h-4 w-4" />
+            Curriculum & Lessons
+          </Button>
+          <Button
+            variant={activeTab === 'leaderboard' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('leaderboard')}
+            className="gap-2 h-9 text-xs"
+          >
+            <Trophy className="h-4 w-4 text-amber-500" />
+            Class Leaderboard
+            {totalEnrolled > 0 && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                {totalEnrolled}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {/* Tab 1: Curriculum */}
+        {activeTab === 'curriculum' && (
+          <div className="space-y-4">
+            {chapters.map((chapter, chapterIndex) => {
+              const done = chapter.lessons.filter(
                 (lesson) => lesson.progress?.status === 'completed',
-              )
-              : false);
+              ).length;
+              const previousChapter = chapterIndex > 0 ? chapters[chapterIndex - 1] : null;
+              const unlocked =
+                chapterIndex === 0 ||
+                (previousChapter?.lessons.length
+                  ? previousChapter.lessons.every(
+                    (lesson) => lesson.progress?.status === 'completed',
+                  )
+                  : false);
 
-          return (
-            <Card key={chapter.id}>
-              <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
-                <div className="min-w-0">
-                  <CardTitle className="text-base">
-                    {chapterIndex + 1}. {chapter.title}
+              return (
+                <Card key={chapter.id}>
+                  <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base">
+                        {chapterIndex + 1}. {chapter.title}
+                      </CardTitle>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {done}/{chapter.lessons.length} lessons
+                        {chapter.started_at
+                          ? ` · Started ${formatDate(chapter.started_at)}`
+                          : ''}
+                        {!unlocked ? ' · Locked' : ''}
+                      </p>
+                    </div>
+                    {!unlocked ? (
+                      <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
+                        <Lock className="size-3" />
+                        Locked
+                      </Badge>
+                    ) : chapter.started_at ? (
+                      <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
+                        <CheckCircle2 className="size-3" />
+                        Started
+                      </Badge>
+                    ) : (
+                      <StartChapterButton chapterId={chapter.id} courseId={courseId} />
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="space-y-1">
+                    {!unlocked && (
+                      <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                        Complete the previous chapter to unlock this content.
+                      </p>
+                    )}
+                    {unlocked && !chapter.started_at && (
+                      <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                        Press &ldquo;Start now&rdquo; to unlock the lessons in this chapter.
+                      </p>
+                    )}
+                    {chapter.lessons.map((lesson, lessonIndex) => (
+                      <LessonRow
+                        key={lesson.id}
+                        courseId={courseId}
+                        lesson={lesson}
+                        index={`${chapterIndex + 1}.${lessonIndex + 1}`}
+                        locked={!unlocked || !chapter.started_at}
+                      />
+                    ))}
+                    {chapter.lessons.length === 0 && (
+                      <p className="px-3 text-sm text-muted-foreground">No lessons</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Tab 2: Leaderboard */}
+        {activeTab === 'leaderboard' && (
+          <div className="space-y-5">
+            {/* Current user rank banner */}
+            {currentUserRank && (
+              <Card className="border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+                <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg shadow-sm">
+                      #{currentUserRank.rank}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-base">{currentUserRank.fullName} (You)</span>
+                        <Badge variant="outline" className="text-[10px] bg-background/80">
+                          {currentUserRank.status === 'completed' ? 'Completed' : 'Enrolled'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Ranked #{currentUserRank.rank} of {totalEnrolled} enrolled pilots in this course
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0 sm:border-l sm:border-border/60 sm:pl-4">
+                    <div className="text-center">
+                      <span className="block text-xs text-muted-foreground">Progress</span>
+                      <span className="font-bold text-sm text-primary">{currentUserRank.progressPercent}%</span>
+                    </div>
+                    {currentUserRank.avgScore !== null && (
+                      <div className="text-center">
+                        <span className="block text-xs text-muted-foreground">Avg Score</span>
+                        <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                          {currentUserRank.avgScore}%
+                        </span>
+                      </div>
+                    )}
+                    <div className="text-center">
+                      <span className="block text-xs text-muted-foreground">Completed</span>
+                      <span className="font-bold text-sm">
+                        {currentUserRank.completedLessons}/{currentUserRank.totalLessons}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Leaderboard Table / Cards */}
+            <Card>
+              <CardHeader className="pb-3 border-b border-border/60">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    Enrolled Pilots Ranking
                   </CardTitle>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {done}/{chapter.lessons.length} lessons
-                    {chapter.started_at
-                      ? ` · Started ${formatDate(chapter.started_at)}`
-                      : ''}
-                    {!unlocked ? ' · Locked' : ''}
-                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {leaderboard.length} student{leaderboard.length !== 1 ? 's' : ''} enrolled
+                  </span>
                 </div>
-                {!unlocked ? (
-                  <Badge variant="outline" className="shrink-0 gap-1 text-[10px]">
-                    <Lock className="size-3" />
-                    Locked
-                  </Badge>
-                ) : chapter.started_at ? (
-                  <Badge variant="secondary" className="shrink-0 gap-1 text-[10px]">
-                    <CheckCircle2 className="size-3" />
-                    Started
-                  </Badge>
-                ) : (
-                  <StartChapterButton chapterId={chapter.id} courseId={courseId} />
-                )}
               </CardHeader>
+              <CardContent className="p-0">
+                {leaderboard.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No active student rankings found for this course yet.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    {leaderboard.map((entry) => {
+                      const isTop1 = entry.rank === 1;
+                      const isTop2 = entry.rank === 2;
+                      const isTop3 = entry.rank === 3;
 
-              <CardContent className="space-y-1">
-                {!unlocked && (
-                  <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-                    Complete the previous chapter to unlock this content.
-                  </p>
-                )}
-                {unlocked && !chapter.started_at && (
-                  <p className="mb-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-                    Press &ldquo;Start now&rdquo; to unlock the lessons in this chapter.
-                  </p>
-                )}
-                {chapter.lessons.map((lesson, lessonIndex) => (
-                  <LessonRow
-                    key={lesson.id}
-                    courseId={courseId}
-                    lesson={lesson}
-                    index={`${chapterIndex + 1}.${lessonIndex + 1}`}
-                    locked={!unlocked || !chapter.started_at}
-                  />
-                ))}
-                {chapter.lessons.length === 0 && (
-                  <p className="px-3 text-sm text-muted-foreground">No lessons</p>
+                      return (
+                        <div
+                          key={entry.studentId}
+                          className={`flex items-center justify-between p-3.5 sm:px-5 transition-colors ${
+                            entry.isCurrentUser ? 'bg-primary/5' : 'hover:bg-muted/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                                isTop1
+                                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40'
+                                  : isTop2
+                                    ? 'bg-slate-300/30 text-slate-700 dark:text-slate-300 border border-slate-400/40'
+                                    : isTop3
+                                      ? 'bg-amber-700/20 text-amber-700 dark:text-amber-500 border border-amber-700/40'
+                                      : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : `#${entry.rank}`}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium text-sm truncate">{entry.fullName}</span>
+                                {entry.isCurrentUser && (
+                                  <Badge variant="default" className="text-[9px] px-1 py-0 h-4">
+                                    You
+                                  </Badge>
+                                )}
+                                {entry.status === 'completed' && (
+                                  <Badge variant="outline" className="text-[9px] text-emerald-600 border-emerald-500/30 px-1 py-0 h-4">
+                                    Graduated
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-muted-foreground block">
+                                {entry.completedLessons} of {entry.totalLessons} lessons done
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0">
+                            {entry.avgScore !== null && (
+                              <div className="hidden sm:block text-right">
+                                <span className="text-[10px] text-muted-foreground block">Score</span>
+                                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                  {entry.avgScore}%
+                                </span>
+                              </div>
+                            )}
+                            <div className="text-right w-20 sm:w-24">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="text-[10px] text-muted-foreground sm:hidden">Prog</span>
+                                <span className="font-semibold text-xs ml-auto">{entry.progressPercent}%</span>
+                              </div>
+                              <Progress value={entry.progressPercent} className="h-1.5" />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>
-          );
-        })}
+          </div>
+        )}
       </div>
     </section>
   );

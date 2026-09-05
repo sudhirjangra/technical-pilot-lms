@@ -124,12 +124,12 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">Students &amp; Users</h1>
           <p className="text-muted-foreground text-xs">{users.length} total</p>
         </div>
-        <Button size="sm" variant="outline" onClick={handleExportCsv}>
+        <Button size="sm" variant="outline" className="h-9 w-full sm:w-auto" onClick={handleExportCsv}>
           Export CSV
         </Button>
       </div>
@@ -149,7 +149,7 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
           </FilterField>
           <FilterField label="Role" className="w-full sm:w-40">
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -169,7 +169,7 @@ export function StudentsClient({ users }: { users: AdminUser[] }) {
                 setActiveFilter(value as 'all' | 'active' | 'inactive')
               }
             >
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

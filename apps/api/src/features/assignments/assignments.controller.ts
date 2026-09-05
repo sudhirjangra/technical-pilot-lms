@@ -174,6 +174,22 @@ export class AssignmentsController {
     return { message: 'Grades applied', data };
   }
 
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Post(':id/assign-attempts')
+  async assignAttempts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: { student_id: string; attempts: number },
+    @Req() req: { user: { id: string } },
+  ) {
+    const data = await this.assignmentsService.assignStudentAttempts(
+      id,
+      dto.student_id,
+      dto.attempts,
+      req.user.id,
+    );
+    return { message: 'Attempt allowance assigned successfully', data };
+  }
+
   // ── End admin analytics routes ────────────────────────────────────────────
 
   @Get('student/attempts/:attemptId')

@@ -213,7 +213,7 @@ function TocBody({
             return (
               <AccordionItem key={chapter.id} value={chapter.id} className="border-b-0">
                 <AccordionTrigger className={cn(
-                  'min-h-11 gap-2 rounded-md px-2 py-2 text-left hover:no-underline',
+                  'min-h-9 sm:min-h-10 gap-2 rounded-md px-2 py-1.5 text-left hover:no-underline',
                   chapterUnlocked ? 'hover:bg-muted/60' : 'opacity-60 cursor-not-allowed',
                 )}>
                   <div className="min-w-0 flex-1">
@@ -270,7 +270,7 @@ function TocBody({
                               onClick={onNavigate}
                               aria-current={isActive ? 'page' : undefined}
                               className={cn(
-                                'flex min-h-11 items-start gap-2 rounded-md px-2 py-2 text-sm transition-colors',
+                                'flex min-h-9 sm:min-h-10 items-start gap-2 rounded-md px-2 py-1.5 text-xs sm:text-sm transition-colors',
                                 isActive
                                   ? 'bg-primary/10 font-medium text-primary'
                                   : 'text-foreground/80 hover:bg-muted/60',
@@ -292,24 +292,24 @@ function TocBody({
                                     {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
                                   </span>
                                 </span>
-                                <span className="mt-1 flex flex-wrap items-center gap-1">
-                                  <Badge variant="outline" className="text-[10px]">
+                                <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">
                                     {LESSON_TYPE_LABELS[lesson.lesson_type] ??
                                       lesson.lesson_type}
                                   </Badge>
                                   {status === 'in_progress' && (
-                                    <Badge variant="secondary" className="text-[10px]">
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0">
                                       {lesson.progress?.progress_percent ?? 0}%
                                     </Badge>
                                   )}
                                   {lesson.assessment?.failed && status !== 'completed' && (
-                                    <Badge variant="destructive" className="gap-1 text-[10px]">
+                                    <Badge variant="destructive" className="gap-1 text-[10px] px-1 py-0">
                                       <AlertTriangle className="size-3" />
                                       Failed
                                     </Badge>
                                   )}
                                   {isSubmitted && lesson.lesson_type === 'assignment' && (
-                                    <Badge variant="secondary" className="gap-1 text-[10px]">
+                                    <Badge variant="secondary" className="gap-1 text-[10px] px-1 py-0">
                                       <CheckCircle2 className="size-3" />
                                       Submitted{submittedAt ? ` ${formatDate(submittedAt)}` : ''}
                                     </Badge>
@@ -317,7 +317,7 @@ function TocBody({
                                   {due && lesson.due_at && (
                                     <Badge
                                       variant={due.overdue ? 'destructive' : 'secondary'}
-                                      className="gap-1 text-[10px]"
+                                      className="gap-1 text-[10px] px-1 py-0"
                                     >
                                       {due.overdue && (
                                         <AlertTriangle className="size-3" />
@@ -330,10 +330,10 @@ function TocBody({
                             </Link>
                           ) : (
                             <div className={cn(
-                              'flex min-h-11 items-start gap-2 rounded-md px-2 py-2 text-sm',
+                              'flex min-h-9 sm:min-h-10 items-start gap-2 rounded-md px-2 py-1.5 text-xs sm:text-sm',
                               'text-muted-foreground/60 opacity-60 cursor-not-allowed'
                             )}>
-                              <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
+                              <Lock className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/50" />
                               <span className="min-w-0 flex-1">
                                 <span className="flex items-center gap-1.5">
                                   <Icon
@@ -343,8 +343,8 @@ function TocBody({
                                     {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
                                   </span>
                                 </span>
-                                <span className="mt-1 flex flex-wrap items-center gap-1">
-                                  <Badge variant="outline" className="text-[10px]">
+                                <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">
                                     {LESSON_TYPE_LABELS[lesson.lesson_type] ??
                                       lesson.lesson_type}
                                   </Badge>
@@ -398,11 +398,11 @@ export function CourseToc({
   return (
     <>
       {/* Mobile: drawer toggle */}
-      <div className="shrink-0 border-b border-border/60 bg-background/80 px-4 py-2 md:hidden">
+      <div className="shrink-0 border-b border-border/60 bg-background/80 px-3 py-1.5 md:hidden">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-11 w-full justify-start gap-2">
-              <ListTree className="size-4" />
+            <Button variant="outline" size="sm" className="h-9 w-full justify-start gap-2 text-xs sm:text-sm">
+              <ListTree className="size-3.5 sm:size-4" />
               Course Content
               <span className="ml-auto text-xs text-muted-foreground">
                 {progress.overall_percent}%

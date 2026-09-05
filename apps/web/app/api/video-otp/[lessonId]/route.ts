@@ -3,7 +3,7 @@ import { env } from '@/lib/env';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ lessonId: string }> },
 ) {
   const session = await auth();
@@ -12,12 +12,16 @@ export async function POST(
   }
 
   const { lessonId } = await params;
+  const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
+  const userAgent = req.headers.get('user-agent') || '';
 
   const apiRes = await fetch(`${env.API_URL}/videos/${lessonId}/otp`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${session.user.tokens.access_token}`,
       'Content-Type': 'application/json',
+      ...(clientIp ? { 'x-forwarded-for': clientIp } : {}),
+      ...(userAgent ? { 'user-agent': userAgent } : {}),
     },
     body: JSON.stringify({}),
     cache: 'no-store',

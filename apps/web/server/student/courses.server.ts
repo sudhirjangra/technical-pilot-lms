@@ -123,6 +123,7 @@ const ProgressLessonSchema = z
   .object({
     id: z.string(),
     title: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
     sort_order: z.coerce.number().nullable().optional(),
     lesson_type: z.string().nullable().optional(),
     due_at: z.string().nullable().optional(),
@@ -161,6 +162,7 @@ export type StudentAssessmentState = {
 export type StudentLessonProgress = {
   id: string;
   title: string;
+  description?: string | null;
   sort_order: number;
   lesson_type: string;
   due_at: string | null;
@@ -323,4 +325,47 @@ export async function getCourseProgress(
     overall_percent: data!.overall_percent ?? 0,
     overall_status: toOverallStatus(data!.overall_status),
   };
+}
+
+const LeaderboardEntrySchema = z.object({
+  rank: z.number(),
+  studentId: z.string(),
+  fullName: z.string(),
+  avatarUrl: z.string().nullable().optional(),
+  progressPercent: z.number(),
+  completedLessons: z.number(),
+  totalLessons: z.number(),
+  avgScore: z.number().nullable().optional(),
+  status: z.string(),
+  enrolledAt: z.string(),
+  isCurrentUser: z.boolean(),
+});
+
+const CourseLeaderboardResponseSchema = z.object({
+  leaderboard: z.array(LeaderboardEntrySchema),
+  totalEnrolled: z.number(),
+  currentUserRank: LeaderboardEntrySchema.nullable().optional(),
+});
+
+export type CourseLeaderboardData = z.infer<typeof CourseLeaderboardResponseSchema>;
+export type CourseLeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+
+export async function getCourseLeaderboard(
+  courseId: string,
+): Promise<CourseLeaderboardData | null> {
+  const session = await auth();
+  if (!session?.user) return null;
+  const [error, data] = await safeFetch(
+    z.object({ data: CourseLeaderboardResponseSchema }),
+    `/courses/${courseId}/leaderboard`,
+    {
+      headers: { Authorization: `Bearer ${session.user.tokens.access_token}` },
+      cache: 'no-store',
+    },
+  );
+  if (error) {
+    console.error('getCourseLeaderboard failed:', error);
+    return null;
+  }
+  return data!.data;
 }

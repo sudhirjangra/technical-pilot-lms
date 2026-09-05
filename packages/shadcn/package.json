@@ -11,7 +11,8 @@
     "./lib/*": "./src/lib/*.ts",
     "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
     "./hooks/x/*": "./src/hooks/*.tsx",
-    "./hooks/t/*": "./src/hooks/*.ts",
+    "./rich-text-editor": "./src/ui/tiptap/rich-text-editor.tsx",
+    "./tiptap/*": "./src/ui/tiptap/*",
     "./lucide": "./src/icon/lucide/index.tsx",
     "./tabler": "./src/icon/tabler/index.tsx",
     "./google": "./src/icon/google.tsx"

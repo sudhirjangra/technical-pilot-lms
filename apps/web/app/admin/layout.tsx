@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <ModeSwitcher />
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-3 sm:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

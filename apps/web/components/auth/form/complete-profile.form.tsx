@@ -106,6 +106,7 @@ const CompleteProfileForm = ({ initialData }: CompleteProfileFormProps) => {
                     id="date_of_birth"
                     name="date_of_birth"
                     type="date"
+                    max={new Date(Date.now() - 15 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                     autoComplete="bday"
                     required
                     disabled={isExecuting}

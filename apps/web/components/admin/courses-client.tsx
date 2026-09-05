@@ -282,12 +282,12 @@ export function CoursesClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">Courses</h1>
           <p className="text-muted-foreground text-xs">{courses.length} total</p>
         </div>
-        <Button size="sm" className="h-11 sm:h-9" onClick={openCreate}>
+        <Button size="sm" className="h-9 w-full sm:w-auto" onClick={openCreate}>
           + New Course
         </Button>
       </div>
@@ -296,7 +296,7 @@ export function CoursesClient({
         <CardHeader className="px-3 sm:px-4">
           <CardTitle className="text-sm font-medium">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 px-3 sm:flex-row sm:flex-wrap sm:items-end sm:px-4">
+        <CardContent className="flex flex-col gap-2.5 px-3 sm:flex-row sm:flex-wrap sm:items-end sm:px-4">
           <FilterField label="Search" className="w-full sm:max-w-xs">
             <SearchInput
               value={search}
@@ -312,7 +312,7 @@ export function CoursesClient({
                 setStatusFilter(value === 'all' || isCourseStatus(value) ? value : 'all')
               }
             >
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -325,7 +325,7 @@ export function CoursesClient({
           </FilterField>
           <FilterField label="Category" className="w-full sm:w-52">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -353,7 +353,7 @@ export function CoursesClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto px-6 sm:px-8">
+          <div className="w-full overflow-x-auto px-3 sm:px-6">
             <Table className="text-sm">
               <TableHeader>
                 <TableRow>
@@ -418,7 +418,7 @@ export function CoursesClient({
                         >
                           <SelectTrigger
                             size="sm"
-                            className="h-11 w-[7.5rem] sm:h-8"
+                            className="h-8 w-[6.5rem] sm:w-[7.5rem] text-xs"
                             aria-label={`Status for ${course.title}`}
                           >
                             <SelectValue />
@@ -432,11 +432,11 @@ export function CoursesClient({
                       </div>
                     </TableCell>
                     <TableCell className="py-2 text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-11 sm:h-8"
+                          className="h-8 px-2 text-xs"
                           asChild
                         >
                           <Link href={`/admin/courses/${course.id}/analytics`}>
@@ -446,7 +446,7 @@ export function CoursesClient({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-11 sm:h-8"
+                          className="h-8 px-2 text-xs"
                           onClick={() => openEdit(course)}
                         >
                           Edit
@@ -454,7 +454,7 @@ export function CoursesClient({
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="h-11 sm:h-8"
+                          className="h-8 px-2 text-xs"
                           disabled={loading}
                           onClick={() => handleDelete(course.id)}
                         >

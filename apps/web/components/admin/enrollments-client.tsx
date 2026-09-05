@@ -256,12 +256,12 @@ export function EnrollmentsClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl">Enrollments</h1>
           <p className="text-muted-foreground text-xs">{total} matching enrollments</p>
         </div>
-        <Button onClick={() => setEnrollDialogOpen(true)}>+ Manual Enrollment</Button>
+        <Button className="h-9 w-full sm:w-auto" onClick={() => setEnrollDialogOpen(true)}>+ Manual Enrollment</Button>
       </div>
 
       <Card className="gap-3 py-3">
@@ -286,7 +286,7 @@ export function EnrollmentsClient({
           </FilterField>
           <FilterField label="Status" className="w-full sm:w-40">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-11 w-full sm:h-9">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -489,8 +489,8 @@ export function EnrollmentsClient({
         />
       ) : (
         <Card className="gap-0 py-0">
-          <div className="w-full overflow-x-auto px-6 sm:px-8">
-            <Table className="text-sm">
+          <div className="w-full overflow-x-auto px-2 sm:px-6">
+            <Table className="text-xs sm:text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="px-2 py-1.5 text-xs uppercase">Student</TableHead>
@@ -510,7 +510,7 @@ export function EnrollmentsClient({
                 ) : (
                   enrollments.map((enrollment) => (
                     <TableRow key={enrollment.id}>
-                      <TableCell className="max-w-[220px] py-2">
+                      <TableCell className="max-w-[200px] py-2">
                         <div className="flex flex-col">
                           <span className="truncate font-medium">
                             {enrollment.profiles?.full_name ??
@@ -538,12 +538,13 @@ export function EnrollmentsClient({
                           variant={
                             enrollment.status === 'active' ? 'default' : 'secondary'
                           }
+                          className="text-[10px]"
                         >
                           {enrollment.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="py-2">
-                        <Button size="sm" variant="outline" onClick={() => void openProgress(enrollment)}>
+                        <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => void openProgress(enrollment)}>
                           View
                         </Button>
                       </TableCell>

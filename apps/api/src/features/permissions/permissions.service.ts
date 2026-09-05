@@ -36,17 +36,32 @@ export class PermissionsService {
       throw new BadRequestException('User must have sub_admin role');
     }
 
-    const { error } = await this.supabase
+    const { data: existing } = await this.supabase
       .from('sub_admin_permissions')
-      .upsert(
-        {
+      .select('id')
+      .eq('user_id', dto.user_id)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await this.supabase
+        .from('sub_admin_permissions')
+        .update({
+          permissions: dto.permissions,
+          granted_by: grantedBy,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', dto.user_id);
+      if (error) throw new BadRequestException(error.message);
+    } else {
+      const { error } = await this.supabase
+        .from('sub_admin_permissions')
+        .insert({
           user_id: dto.user_id,
           permissions: dto.permissions,
           granted_by: grantedBy,
-        },
-        { onConflict: 'user_id' },
-      );
-    if (error) throw new BadRequestException(error.message);
+        });
+      if (error) throw new BadRequestException(error.message);
+    }
     return { success: true };
   }
 

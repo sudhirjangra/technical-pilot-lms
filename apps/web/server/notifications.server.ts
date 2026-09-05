@@ -85,7 +85,13 @@ export async function broadcastNotification(
   return error ? { error } : { success: true };
 }
 
-export async function sendNotification(recipientId: string, title: string, body: string, type: string, metadata?: Record<string, unknown>) {
+export async function sendNotification(
+  recipientId: string,
+  title: string,
+  body: string,
+  type = 'announcement',
+  metadata: Record<string, any> = {},
+) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), '/notifications/send', {
     method: 'POST',
@@ -94,4 +100,33 @@ export async function sendNotification(recipientId: string, title: string, body:
     body: JSON.stringify({ recipient_id: recipientId, title, body, type, metadata }),
   });
   return error ? { error } : { success: true };
+}
+
+export const NotificationLogSchema = z.object({
+  id: z.string(),
+  recipient_id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  body: z.string().nullable().optional(),
+  metadata: z.any().default({}),
+  is_read: z.boolean(),
+  created_at: z.string(),
+  profiles: z.object({
+    id: z.string().optional(),
+    full_name: z.string().nullable().optional(),
+    email: z.string().optional(),
+  }).nullable().optional(),
+}).passthrough();
+
+export type NotificationLog = z.infer<typeof NotificationLogSchema>;
+
+export async function getAdminNotificationLogs(): Promise<NotificationLog[]> {
+  const h = await headers();
+  const [error, data] = await safeFetch(
+    z.array(NotificationLogSchema),
+    '/notifications/admin/logs',
+    { headers: h, cache: 'no-store' },
+  );
+  if (error) return [];
+  return data!;
 }

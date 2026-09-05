@@ -142,9 +142,19 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
           method: 'POST',
           cache: 'no-store',
         });
-        if (res.status === 403) { setError('You are not enrolled in this course.'); return; }
-        if (res.status === 404) { setError('Video not available.'); return; }
-        if (!res.ok) { setError('Playback unavailable. Try refreshing.'); return; }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const errMsg =
+            data?.message ||
+            data?.error ||
+            (res.status === 403
+              ? 'Access denied. Active enrollment required.'
+              : res.status === 404
+                ? 'Video not available.'
+                : 'Playback unavailable. Try refreshing.');
+          setError(errMsg);
+          return;
+        }
         setOtpData(await res.json());
       } catch {
         setError('Network error. Please check your connection.');

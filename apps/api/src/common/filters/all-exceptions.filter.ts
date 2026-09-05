@@ -28,7 +28,9 @@ const SAFE_CLIENT_MESSAGES: Record<number, string> = {
   500: 'Something went wrong. Please try again later.',
 };
 
-function isSafeMessage(message: string): boolean {
+function isSafeMessage(message: unknown): message is string {
+  if (typeof message !== 'string') return false;
+
   const lower = message.toLowerCase();
   return !(
     lower.includes('relation ') ||
@@ -64,7 +66,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const res = exceptionResponse as Record<string, unknown>;
-        const rawMessage = (res.message as string) ?? exception.message;
+        const rawMessage = res.message ?? exception.message;
         message = isSafeMessage(rawMessage) ? rawMessage : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
         errorCode = (res.errorCode as string) ?? exception.constructor.name;
         responseData = {

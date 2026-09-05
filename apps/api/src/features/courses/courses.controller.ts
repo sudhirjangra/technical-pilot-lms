@@ -53,6 +53,15 @@ export class CoursesController {
     return { message: 'Course fetched successfully', data };
   }
 
+  @Get(':id/leaderboard')
+  async getLeaderboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @User() user: { id: string },
+  ) {
+    const data = await this.coursesService.getCourseLeaderboard(id, user.id);
+    return { message: 'Course leaderboard fetched successfully', data };
+  }
+
   @Public()
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {

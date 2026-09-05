@@ -17,13 +17,39 @@ const passWordSchema = z
     message: 'Password must contain at least one special character',
   });
 
+const dobSchema = z
+  .string()
+  .min(1, 'Date of birth is required')
+  .date('Enter a valid date of birth (YYYY-MM-DD)')
+  .refine(
+    (val) => {
+      const birthDate = new Date(val);
+      const today = new Date();
+      return birthDate < today;
+    },
+    { message: 'Date of birth cannot be in the future or today' },
+  )
+  .refine(
+    (val) => {
+      const birthDate = new Date(val);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age >= 15;
+    },
+    { message: 'You must be at least 15 years old to register' },
+  );
+
 /**
  * Schema for user sign-up.
  */
 export const SignUpSchema = z.object({
   email: z.string().email(),
   full_name: z.string().trim().min(2, 'Full name must be at least 2 characters'),
-  date_of_birth: z.string().date('Enter a valid date of birth'),
+  date_of_birth: dobSchema,
   password: passWordSchema,
   phone: z
     .string()
@@ -174,7 +200,7 @@ export type GoogleSignIn = z.infer<typeof GoogleSignInSchema>;
  */
 export const CompleteProfileSchema = z.object({
   full_name: z.string().trim().min(2, 'Full name must be at least 2 characters'),
-  date_of_birth: z.string().date('Enter a valid date of birth'),
+  date_of_birth: dobSchema,
   phone: z
     .string()
     .min(10, 'Phone number must be at least 10 digits')

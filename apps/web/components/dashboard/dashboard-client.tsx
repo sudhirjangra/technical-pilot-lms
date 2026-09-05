@@ -160,19 +160,19 @@ export function DashboardClient({
   const greeting = getGreeting();
 
   return (
-    <section className="container max-w-7xl py-6 sm:py-8 space-y-8">
+    <section className="container max-w-7xl px-3 sm:px-6 py-4 sm:py-8 space-y-5 sm:space-y-8">
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="text-xl sm:text-3xl font-bold tracking-tight">
           {greeting}, {user.full_name ?? user.email?.split('@')[0]}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
           Here&apos;s your learning overview.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
         <StatCard
           icon={BookOpen}
           label="Enrolled"
@@ -201,21 +201,21 @@ export function DashboardClient({
       {/* Assignment Due Reminders */}
       {upcomingDue.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300">
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-amber-800 dark:text-amber-300">
               <AlertTriangle className="size-4" />
               Upcoming Deadlines
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 px-3 pb-3 sm:px-6 sm:pb-6">
             {upcomingDue.map((item, i) => {
               const daysLeft = Math.ceil((new Date(item.dueAt).getTime() - Date.now()) / 86_400_000);
               const isOverdue = daysLeft < 0;
               return (
-                <Link key={i} href={`/dashboard/courses/${item.courseId}`} className="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-amber-100/50 dark:hover:bg-amber-900/20">
+                <Link key={i} href={`/dashboard/courses/${item.courseId}`} className="flex items-center justify-between rounded-md px-2.5 py-1.5 transition-colors hover:bg-amber-100/50 dark:hover:bg-amber-900/20">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{item.lessonTitle}</p>
-                    <p className="text-xs text-muted-foreground">{item.courseTitle}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate">{item.lessonTitle}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{item.courseTitle}</p>
                   </div>
                   <Badge variant={isOverdue ? 'destructive' : 'secondary'} className="shrink-0 text-[10px]">
                     {isOverdue ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
@@ -229,17 +229,17 @@ export function DashboardClient({
 
       {/* Continue Learning */}
       {activeCourses.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Play className="size-5 text-primary" />
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-1.5 sm:gap-2">
+              <Play className="size-4 sm:size-5 text-primary" />
               Continue Learning
             </h2>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" asChild>
               <Link href="/dashboard/courses">View all</Link>
             </Button>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {activeCourses.slice(0, 3).map((enrollment) => (
               <CourseCard key={enrollment.id} enrollment={enrollment} />
             ))}
@@ -249,12 +249,12 @@ export function DashboardClient({
 
       {/* Completed Courses */}
       {completedCourses.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <CheckCircle2 className="size-5 text-green-600" />
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-base sm:text-lg font-semibold flex items-center gap-1.5 sm:gap-2">
+            <CheckCircle2 className="size-4 sm:size-5 text-green-600" />
             Completed
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {completedCourses.slice(0, 3).map((enrollment) => (
               <CourseCard key={enrollment.id} enrollment={enrollment} />
             ))}
@@ -264,17 +264,17 @@ export function DashboardClient({
 
       {/* New Courses Available */}
       {availableCourses.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="size-5 text-amber-500" />
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-1.5 sm:gap-2">
+              <Sparkles className="size-4 sm:size-5 text-amber-500" />
               New Courses Available
             </h2>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" asChild>
               <Link href="/courses">Browse all</Link>
             </Button>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {availableCourses.slice(0, 6).map((course) => (
               <AvailableCourseCard key={course.id} course={course} />
             ))}
@@ -287,8 +287,8 @@ export function DashboardClient({
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <GraduationCap className="mb-3 size-12 text-muted-foreground/50" />
-            <h2 className="font-semibold text-lg">Welcome aboard!</h2>
-            <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            <h2 className="font-semibold text-base sm:text-lg">Welcome aboard!</h2>
+            <p className="mt-2 max-w-sm text-xs sm:text-sm text-muted-foreground">
               No courses available yet. Check back soon or contact your institution.
             </p>
           </CardContent>
@@ -309,13 +309,13 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="rounded-lg bg-primary/10 p-2">
-          <Icon className="size-5 text-primary" />
+      <CardContent className="flex items-center gap-2.5 sm:gap-3 p-3 sm:p-4">
+        <div className="rounded-lg bg-primary/10 p-1.5 sm:p-2 shrink-0">
+          <Icon className="size-4 sm:size-5 text-primary" />
         </div>
-        <div>
-          <p className="text-2xl font-bold leading-none">{value}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+        <div className="min-w-0">
+          <p className="text-lg sm:text-2xl font-bold leading-none">{value}</p>
+          <p className="mt-1 text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>
         </div>
       </CardContent>
     </Card>

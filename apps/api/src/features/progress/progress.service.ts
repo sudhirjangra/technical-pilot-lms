@@ -190,7 +190,7 @@ export class ProgressService {
     const { data: chapters, error: chaptersError } = await this.supabase
       .from('chapters')
       .select(
-        'id, title, description, sort_order, is_published, lessons(id, title, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start, max_attempts, passing_score_percent), tests(id, title, passing_score_percent, max_attempts))',
+        'id, title, description, sort_order, is_published, lessons(id, title, description, sort_order, lesson_type, is_published, assignments(id, title, due_days_after_start, max_attempts, passing_score_percent), tests(id, title, passing_score_percent, max_attempts))',
       )
       .eq('course_id', courseId)
       .eq('is_published', true)

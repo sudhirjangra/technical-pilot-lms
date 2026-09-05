@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   BookSlotDto,
   CreateSlotDto,
@@ -18,6 +19,7 @@ import {
 export class DoubtSessionsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createSlot(dto: CreateSlotDto, createdBy: string) {
@@ -120,6 +122,25 @@ export class DoubtSessionsService {
       })
       .eq('id', dto.slot_id);
 
+    // Notify admins about new doubt session booking
+    try {
+      const { data: student } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', studentId)
+        .maybeSingle();
+
+      const studentName = student?.full_name || student?.email || 'A student';
+      await this.notificationsService.notifyAdmins(
+        `New Doubt Session Booked`,
+        `${studentName} booked a session for ${slot.date} at ${slot.start_time.slice(0, 5)} (${slot.topic || 'General'}).`,
+        'doubt_booking',
+        { booking_id: booking.id, slot_id: slot.id, student_id: studentId },
+      );
+    } catch {
+      // Don't fail booking if notification fails
+    }
+
     return booking;
   }
 
@@ -155,7 +176,7 @@ export class DoubtSessionsService {
     const { data, error } = await this.supabase
       .from('doubt_bookings')
       .select(
-        '*, doubt_slots(id, date, start_time, end_time, duration_minutes, status, topic, meeting_link)',
+        'id, slot_id, student_id, status, booked_at, cancelled_at, meeting_link, updated_at, doubt_slots(id, date, start_time, end_time, duration_minutes, status, topic, description)',
       )
       .eq('student_id', studentId)
       .neq('status', 'cancelled')

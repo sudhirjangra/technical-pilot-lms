@@ -307,13 +307,6 @@ export function StudentDetailClient({
     setGradingState({});
     const detail = await getAttemptDetail(attemptId, type);
     setAttemptDetail(detail);
-    if (detail?.questionReview) {
-      const initial: Record<string, boolean | null> = {};
-      for (const q of detail.questionReview) {
-        initial[q.questionId] = q.isCorrect ?? null;
-      }
-      setGradingState(initial);
-    }
   };
 
   const handleGrade = async () => {
@@ -596,26 +589,27 @@ export function StudentDetailClient({
       </div>
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-xl sm:text-2xl font-bold">
             {student.full_name || student.email}
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             {student.email}
             {student.phone ? ` · ${student.phone}` : ''}
           </p>
-          <div className="mt-1 flex flex-wrap gap-2">
+          <div className="mt-1 flex flex-wrap gap-1.5 sm:gap-2">
             <Badge
               variant={student.role === 'admin' ? 'default' : 'secondary'}
+              className="text-[10px] sm:text-xs"
             >
               {student.role}
             </Badge>
-            <Badge variant={isActive ? 'default' : 'destructive'}>
+            <Badge variant={isActive ? 'default' : 'destructive'} className="text-[10px] sm:text-xs">
               {isActive ? 'Active' : 'Disabled'}
             </Badge>
             {student.date_of_birth && (
-              <span className="text-muted-foreground text-xs">
+              <span className="text-muted-foreground text-[10px] sm:text-xs">
                 DOB: {formatDate(student.date_of_birth)}
               </span>
             )}
@@ -624,6 +618,7 @@ export function StudentDetailClient({
         <Button
           size="sm"
           variant={isActive ? 'destructive' : 'default'}
+          className="h-9 w-full sm:w-auto"
           onClick={handleToggleActive}
           disabled={loading}
         >
@@ -633,15 +628,15 @@ export function StudentDetailClient({
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="flex w-full flex-wrap justify-start gap-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="enrollments">
+        <TabsList className="flex w-full flex-wrap justify-start gap-1 sm:gap-2 h-auto p-1">
+          <TabsTrigger value="overview" className="text-xs px-2.5 py-1.5">Overview</TabsTrigger>
+          <TabsTrigger value="enrollments" className="text-xs px-2.5 py-1.5">
             Enrollments ({enrollments.length})
           </TabsTrigger>
-          <TabsTrigger value="assessments">
+          <TabsTrigger value="assessments" className="text-xs px-2.5 py-1.5">
             Assessments{attempts ? ` (${attempts.length})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
+          <TabsTrigger value="sessions" className="text-xs px-2.5 py-1.5">Sessions</TabsTrigger>
         </TabsList>
 
         {/* ── Tab 1: Overview ──────────────────────────────────── */}

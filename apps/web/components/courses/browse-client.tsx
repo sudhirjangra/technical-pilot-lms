@@ -57,19 +57,19 @@ export function CourseBrowseClient({
   }, [courses, search, selectedCategory]);
 
   return (
-    <section className="min-h-dvh container max-w-7xl py-6 sm:py-8 space-y-6">
+    <section className="min-h-dvh container max-w-7xl px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Browse Courses</h1>
-        <p className="text-muted-foreground mt-1">Discover courses to build your skills.</p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight md:text-3xl">Browse Courses</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Discover courses to build your skills.</p>
       </div>
 
       {/* Categories */}
       {visibleCategories.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2.5">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Categories
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2.5 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {visibleCategories.map((cat) => {
               const isSelected = selectedCategory === cat.id;
               return (
@@ -79,13 +79,13 @@ export function CourseBrowseClient({
                   onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
                   aria-pressed={isSelected}
                   className={cn(
-                    'flex min-h-11 items-center gap-3 rounded-lg border bg-card p-3 text-left transition-all',
+                    'flex min-h-10 items-center gap-2.5 rounded-lg border bg-card p-2.5 sm:p-3 text-left transition-all',
                     isSelected
                       ? 'border-primary ring-2 ring-primary/30'
                       : 'hover:border-primary/40 hover:bg-muted/40',
                   )}
                 >
-                  <div className="size-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                  <div className="size-11 sm:size-14 shrink-0 overflow-hidden rounded-md bg-muted">
                     {cat.thumbnail_url ? (
                       <Image
                         src={cat.thumbnail_url}
@@ -96,18 +96,18 @@ export function CourseBrowseClient({
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
-                        <Tag className="size-5" />
+                        <Tag className="size-4 sm:size-5" />
                       </div>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{cat.name}</p>
+                    <p className="truncate text-xs sm:text-sm font-medium">{cat.name}</p>
                     {cat.description && (
-                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                      <p className="line-clamp-2 text-[11px] sm:text-xs text-muted-foreground">
                         {cat.description}
                       </p>
                     )}
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 text-[10px] sm:text-[11px] text-muted-foreground">
                       {courseCountByCategory.get(cat.id) ?? 0} course
                       {(courseCountByCategory.get(cat.id) ?? 0) === 1 ? '' : 's'}
                     </p>
@@ -120,24 +120,24 @@ export function CourseBrowseClient({
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-2.5 rounded-lg border bg-card p-2.5 sm:p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search courses..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-9 text-xs sm:text-sm"
           />
         </div>
         {categories.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto">
-            <SlidersHorizontal className="my-2.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <SlidersHorizontal className="size-3.5 shrink-0 text-muted-foreground mr-1" />
             <Button
               variant={selectedCategory === 'all' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setSelectedCategory('all')}
-              className="shrink-0"
+              className="h-8 px-2.5 text-xs shrink-0"
             >
               All
             </Button>
@@ -147,7 +147,7 @@ export function CourseBrowseClient({
                 variant={selectedCategory === cat.id ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setSelectedCategory(cat.id)}
-                className="shrink-0"
+                className="h-8 px-2.5 text-xs shrink-0"
               >
                 {cat.name}
               </Button>

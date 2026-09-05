@@ -26,6 +26,31 @@ export class ConfirmEmailDto {
   @IsOptional()
   @IsString()
   ip?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  device_os?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  device_type?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  browser?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  userAgent?: string;
 }
 
 export class ResendOtpDto {
