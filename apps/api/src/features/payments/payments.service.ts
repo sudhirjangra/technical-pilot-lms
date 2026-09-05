@@ -242,11 +242,17 @@ export class PaymentsService {
   }) {
     let query = this.supabase
       .from('payments')
-      .select('*, profiles(id, full_name, email), courses(id, title)')
+      .select(
+        '*, profiles(id, full_name, email, phone, avatar_url), courses(id, title, slug, price, discount_price, thumbnail_url)',
+      )
       .order('created_at', { ascending: false });
 
-    if (filters?.status) query = query.eq('status', filters.status);
-    if (filters?.course_id) query = query.eq('course_id', filters.course_id);
+    if (filters?.status && filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+    if (filters?.course_id && filters.course_id !== 'all') {
+      query = query.eq('course_id', filters.course_id);
+    }
     if (filters?.student_id) query = query.eq('student_id', filters.student_id);
 
     const { data, error } = await query;
@@ -278,32 +284,61 @@ export class PaymentsService {
 
     const refundAmount = dto.amount ?? payment.amount;
 
-    // Call Razorpay refund API
-    const res = await fetch(
-      `https://api.razorpay.com/v1/payments/${payment.razorpay_payment_id}/refund`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${Buffer.from(`${this.razorpayKeyId}:${this.razorpayKeySecret}`).toString('base64')}`,
-        },
-        body: JSON.stringify({
-          amount: Math.round(refundAmount * 100),
-          notes: { reason: dto.reason },
-        }),
-      },
-    );
+    // Call Razorpay refund API if credentials and payment id are valid
+    if (
+      this.razorpayKeyId &&
+      this.razorpayKeySecret &&
+      payment.razorpay_payment_id &&
+      !payment.razorpay_payment_id.startsWith('mock_')
+    ) {
+      try {
+        const res = await fetch(
+          `https://api.razorpay.com/v1/payments/${payment.razorpay_payment_id}/refund`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Basic ${Buffer.from(`${this.razorpayKeyId}:${this.razorpayKeySecret}`).toString('base64')}`,
+            },
+            body: JSON.stringify({
+              amount: Math.round(refundAmount * 100),
+              notes: { reason: dto.reason },
+            }),
+          },
+        );
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new BadRequestException(err.error?.description ?? 'Refund failed');
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as Record<string, any>;
+          const desc = err?.error?.description;
+          if (this.config.get('NODE_ENV') === 'production') {
+            throw new BadRequestException(desc ?? 'Refund failed with payment gateway');
+          } else {
+            console.warn('Razorpay refund failed in non-production:', desc ?? err);
+          }
+        }
+      } catch (err) {
+        if (err instanceof BadRequestException) throw err;
+        if (this.config.get('NODE_ENV') === 'production') {
+          throw new BadRequestException('Failed to communicate with payment gateway');
+        } else {
+          console.warn('Razorpay gateway refund error in non-production:', err);
+        }
+      }
     }
 
     // Update payment status
-    await this.supabase
+    const { error: updateError } = await this.supabase
       .from('payments')
-      .update({ status: 'refunded', refund_reason: dto.reason })
+      .update({
+        status: 'refunded',
+        refund_reason: dto.reason,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', paymentId);
+
+    if (updateError) {
+      throw new BadRequestException(updateError.message);
+    }
 
     // Expire enrollment
     await this.supabase

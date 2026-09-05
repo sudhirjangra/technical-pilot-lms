@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </Link>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <NotificationBell />
+            <NotificationBell isAdmin />
             <ModeSwitcher />
           </div>
         </header>

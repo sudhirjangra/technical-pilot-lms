@@ -123,7 +123,7 @@ const SignInForm = () => {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full">
-      <Card className={cn('water-surface', cardMaxWidth)} style={{ maxWidth: uiConfig.signInCardMaxWidth }}>
+      <Card className={cn('border-border/80 bg-card/80 backdrop-blur-md shadow-sm', cardMaxWidth)} style={{ maxWidth: uiConfig.signInCardMaxWidth }}>
         <CardHeader className="text-center pb-2 sm:pb-3">
           {/* Logo */}
           <div className="flex justify-center mb-3 sm:mb-4">

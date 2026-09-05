@@ -48,7 +48,7 @@ export class NotificationsController {
   @Post('broadcast')
   @Roles('ADMIN', 'SUB_ADMIN')
   broadcast(@Body() dto: BroadcastNotificationDto) {
-    return this.service.broadcast(dto.title, dto.body, dto.type);
+    return this.service.broadcast(dto.title, dto.body, dto.type, dto.course_id);
   }
 
   @Post('send')

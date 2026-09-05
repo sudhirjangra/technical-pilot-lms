@@ -103,8 +103,8 @@ export const {
      * @param session - Current session object (on update)
      */
     async jwt({ token, user, trigger, session }) {
-      // On initial sign-in with Supabase OAuth, user object contains tokens
-      if (trigger === 'signIn' && user) {
+      // On sign-in, user object contains tokens and profile data
+      if (user) {
         return {
           ...token,
           user: {

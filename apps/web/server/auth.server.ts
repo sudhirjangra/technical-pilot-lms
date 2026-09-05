@@ -469,14 +469,15 @@ export const getAuthSessions = async (): Promise<Session[]> => {
 };
 
 /**
- * Confirm email with token
+ * Confirm email with token and sign in directly
  * @schema ConfirmEmailSchema
  */
 export const confirmEmail = safeAction
   .schema(ConfirmEmailSchema)
   .action(async ({ parsedInput }) => {
-    const [error] = await safeFetch(
-      DefaultReturnSchema,
+    const deviceInfo = await getDeviceInfo();
+    const [error, data] = await safeFetch(
+      SignInDataSchema,
       '/auth/confirm-email',
       {
         method: 'PATCH',
@@ -485,11 +486,43 @@ export const confirmEmail = safeAction
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify(parsedInput),
+        body: JSON.stringify({
+          ...parsedInput,
+          ...deviceInfo,
+        }),
       },
     );
+
     if (error) throw new Error(error);
-    redirect(`/auth/sign-in`);
+
+    const { data: user, tokens } = data!;
+    const targetUrl = user.role === 'admin' ? '/admin' : '/dashboard';
+
+    try {
+      await signIn('Supabase', {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        session_token: tokens.session_token,
+        session_refresh_time:
+          typeof tokens.session_refresh_time === 'string'
+            ? tokens.session_refresh_time
+            : new Date(tokens.session_refresh_time).toISOString(),
+        user_id: user.id,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name ?? '',
+        date_of_birth: user.date_of_birth ?? '',
+        phone: user.phone ?? '',
+        avatar_url: user.avatar_url ?? '',
+        redirectTo: targetUrl,
+      });
+    } catch (signInError) {
+      if (isRedirectError(signInError)) throw signInError;
+      console.error('Direct sign-in after OTP failed:', signInError);
+      redirect('/auth/sign-in');
+    }
+
+    redirect(targetUrl);
   });
 
 export const resendOtp = safeAction

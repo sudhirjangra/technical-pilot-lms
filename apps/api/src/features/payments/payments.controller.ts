@@ -1,4 +1,4 @@
-import { Public, Roles } from '@/common/decorators';
+import { Permissions, Public, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -53,9 +53,10 @@ export class PaymentsController {
     return this.paymentsService.findByStudent(req.user.id);
   }
 
-  /** Admin: list all payments */
+  /** Admin / Sub-admin: list all payments */
   @Get()
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('payments:read')
   async findAll(
     @Query('status') status?: string,
     @Query('course_id') course_id?: string,
@@ -69,9 +70,10 @@ export class PaymentsController {
     return { data };
   }
 
-  /** Admin: refund a payment */
+  /** Admin / Sub-admin: refund a payment */
   @Post(':id/refund')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('payments:refund')
   refund(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RefundPaymentDto,

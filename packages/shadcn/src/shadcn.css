@@ -426,10 +426,7 @@
   }
 
   .auth-shell {
-    background:
-      radial-gradient(circle at 16% 12%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 32%),
-      radial-gradient(circle at 90% 80%, color-mix(in oklab, var(--chart-2) 10%, transparent), transparent 28%),
-      var(--background);
+    background: var(--background);
   }
 
   .prose-article {

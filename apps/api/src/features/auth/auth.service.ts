@@ -492,7 +492,7 @@ export class AuthService {
     }
   }
 
-  async confirmEmail(dto: ConfirmEmailDto): Promise<void> {
+  async confirmEmail(dto: ConfirmEmailDto): Promise<LoginUserInterface> {
     const { error } = await this.supabaseAnon.auth.verifyOtp({
       email: dto.email,
       token: dto.token,
@@ -510,18 +510,24 @@ export class AuthService {
     }
 
     const authUser = await this.getUserByEmail(dto.email);
-    const { data: profile } = await this.supabase
+    if (!authUser) throw new NotFoundException('User not found');
+
+    const { data: profile, error: profileError } = await this.supabase
       .from('profiles')
-      .select('full_name')
-      .eq('id', authUser?.id ?? '')
+      .select('*')
+      .eq('id', authUser.id)
       .single();
+
+    if (profileError || !profile) {
+      throw new NotFoundException('Profile not found');
+    }
 
     try {
       await this.mailService.sendEmail({
         to: [dto.email],
         subject: 'Confirmation Successful',
         html: ConfirmEmailSuccessMail({
-          name: profile?.full_name ?? dto.email,
+          name: profile.full_name ?? dto.email,
         }),
       });
     } catch (mailError) {
@@ -530,6 +536,57 @@ export class AuthService {
         'Failed to send confirmation success email',
       );
     }
+
+    // Direct sign-in after successful OTP verification:
+    // Generate access & refresh tokens
+    const tokens = await this.generateTokens(
+      authUser.id,
+      authUser.email!,
+      profile.role ?? 'student',
+    );
+
+    // Register active device (check device limits)
+    const { data: existingDevices } = await this.supabase
+      .from('devices')
+      .select('id, created_at')
+      .eq('user_id', authUser.id)
+      .order('created_at', { ascending: true });
+
+    const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
+    if (
+      (existingDevices?.length ?? 0) >= maxDevices &&
+      existingDevices &&
+      existingDevices.length > 0
+    ) {
+      // Remove oldest device to ensure clean onboarding
+      await this.supabase.from('devices').delete().eq('id', existingDevices[0].id);
+    }
+
+    const deviceName = dto.device_name ?? 'Web Browser';
+    const { data: device } = await this.supabase
+      .from('devices')
+      .insert({
+        user_id: authUser.id,
+        device_fingerprint: tokens.refresh_token,
+        device_name: deviceName,
+        platform: dto.platform ?? 'web',
+      })
+      .select('id')
+      .single();
+
+    const session_refresh_time = await generateRefreshTime(
+      this.config.get<number>('SESSION_TIMEOUT_DAYS', 3),
+    );
+
+    return {
+      data: profile,
+      tokens: {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        session_token: device?.id ?? authUser.id,
+        session_refresh_time,
+      },
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<void> {

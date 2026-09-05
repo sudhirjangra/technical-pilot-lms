@@ -60,7 +60,7 @@ const HeroAviation = () => {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none relative mx-auto aspect-square w-full max-w-[260px] select-none [perspective:1200px] sm:max-w-[320px] md:max-w-[380px] lg:max-w-[440px]"
+      className="pointer-events-none relative mx-auto aspect-square w-full max-w-[260px] select-none rounded-full bg-muted/60 dark:bg-neutral-900/80 [perspective:1200px] sm:max-w-[320px] md:max-w-[380px] lg:max-w-[440px]"
     >
       <div
         ref={sceneRef}

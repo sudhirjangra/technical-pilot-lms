@@ -66,14 +66,36 @@ export class NotificationsService {
     return { success: true };
   }
 
-  async broadcast(title: string, body: string | undefined, type: string) {
-    // Get all active students
+  async broadcast(
+    title: string,
+    body: string | undefined,
+    type: string,
+    courseId?: string,
+  ) {
+    let studentIds: string[] | undefined;
+
+    if (courseId) {
+      const { data: enrollments, error: enrollmentsErr } = await this.supabase
+        .from('enrollments')
+        .select('student_id')
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+      if (enrollmentsErr) throw new BadRequestException(enrollmentsErr.message);
+      studentIds = [
+        ...new Set((enrollments ?? []).map((enrollment) => enrollment.student_id)),
+      ];
+      if (studentIds.length === 0) return { sent: 0 };
+    }
+
     // Roles are stored lowercase in profiles.
-    const { data: students, error: studentsErr } = await this.supabase
+    let studentsQuery = this.supabase
       .from('profiles')
       .select('id')
       .eq('role', 'student')
       .eq('is_active', true);
+    if (studentIds) studentsQuery = studentsQuery.in('id', studentIds);
+
+    const { data: students, error: studentsErr } = await studentsQuery;
     if (studentsErr) throw new BadRequestException(studentsErr.message);
     if (!students || students.length === 0) return { sent: 0 };
 

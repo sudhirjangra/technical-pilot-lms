@@ -218,9 +218,13 @@ export class AuthController {
   @Patch('confirm-email')
   async confirmEmail(
     @Body() confirmEmailDto: ConfirmEmailDto,
-  ): Promise<MessageResponse> {
-    await this.authService.confirmEmail(confirmEmailDto);
-    return { message: 'Email confirmed successfully' };
+  ): Promise<SignInResponse> {
+    const result = await this.authService.confirmEmail(confirmEmailDto);
+    return {
+      message: 'Email confirmed successfully',
+      data: result.data,
+      tokens: result.tokens,
+    };
   }
 
   /**

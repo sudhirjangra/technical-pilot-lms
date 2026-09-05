@@ -69,13 +69,18 @@ export async function markAllRead() {
   return error ? { error } : { success: true };
 }
 
-export async function broadcastNotification(title: string, body: string, type = 'announcement') {
+export async function broadcastNotification(
+  title: string,
+  body: string,
+  type = 'announcement',
+  courseId?: string,
+) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), '/notifications/broadcast', {
     method: 'POST',
     headers: h,
     cache: 'no-store',
-    body: JSON.stringify({ title, body, type }),
+    body: JSON.stringify({ title, body, type, course_id: courseId }),
   });
   return error ? { error } : { success: true };
 }

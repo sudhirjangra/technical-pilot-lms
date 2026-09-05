@@ -28,6 +28,10 @@ export class BroadcastNotificationDto {
 
   @IsEnum(NOTIFICATION_TYPES)
   type: string;
+
+  @IsOptional()
+  @IsUUID()
+  course_id?: string;
 }
 
 export class SendNotificationDto {
