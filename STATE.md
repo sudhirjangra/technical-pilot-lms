@@ -150,6 +150,7 @@
 - [x] Signup auto-login reviewed: blocked safely because new accounts are created with email confirmation required and the password is not retained; confirmation continues to lead to sign-in.
 - [x] Admin payments portal upgraded: added PaymentsAnalytics with KPI cards (Gross/Net Revenue, Success Rate, AOV, Pending, Refunds), Recharts graphs (Revenue Trend over daily/weekly/monthly intervals, Revenue by Course, and Payment Status breakdown), quick status pill tabs with live counts, CSV export, comprehensive PaymentDetailDialog with technical transaction IDs and printable tax invoice slip, and admin refund management with server action and gateway resilience.
 - [x] Fixed Next.js 16 server-action export error in the admin payments page by moving payment schemas and types out of the `use server` module.
+- [x] Fixed Next.js 16 server-action export error in notifications by moving exported Zod schemas and types out of the `use server` module.
 - [x] Admin notification bell now supports broadcasting to all active students or active students enrolled in a selected course; API and in-app compose dialog are wired.
 - [x] Fixed notification bell build syntax error caused by a duplicated icon import opener.
 - [x] Direct sign-in after OTP verification: backend `/auth/confirm-email` returns full user profile and session tokens with registered device; Next.js server action immediately triggers NextAuth `signIn('Supabase')` and forwards authenticated user directly to `/dashboard` (or `/admin`), with fallback to sign-in on unexpected failure.
