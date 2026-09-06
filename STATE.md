@@ -2,6 +2,19 @@
 
 ## Completed
 
+### Sub-Admin Login Routing & Student Revoked Access Blocking (Done)
+- [x] **Sub-Admin Login & Dashboard Navigation Fix**:
+  - Updated home page (`(home)/page.tsx`), `AdminLayout` (`apps/web/app/admin/layout.tsx`), `middleware.ts`, and auth server actions (`confirmEmail`) to recognize `sub_admin` alongside `admin`. Sub-admins are now routed directly to `/admin`, can view the admin dashboard, and are blocked from student `/dashboard`.
+  - Updated `AdminSidebar` to filter out the `Sub-Admins` configuration nav link when a `sub_admin` is logged in, and show `Sub-Admin` title in profile dropdown.
+  - Added full admin route guard to `apps/web/app/admin/sub-admins/page.tsx` to redirect sub-admins to `/admin`.
+  - Extended RBAC `@Roles('ADMIN', 'SUB_ADMIN')` and `@Permissions('courses:write')` / `@Permissions('enrollments:*')` across Categories, Chapters, Lessons, Videos, and Enrollments backend controllers.
+- [x] **Student Access Revoked Warning & Course Access Blocking**:
+  - Created [`AccessRevokedView`](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/dashboard/access-revoked-view.tsx) component with clear administrator notice, locked state indicators, and return buttons.
+  - Enforced revoked access blocking in `CourseLayout` (`apps/web/app/dashboard/courses/[courseId]/layout.tsx`), course progress page, and lesson viewer: if a student's enrollment status is `expired` (revoked), the course TOC, lessons, videos, notes, and tests are completely blocked and replaced with the `AccessRevokedView`.
+  - Updated `MyCoursesClient` (`apps/web/components/dashboard/my-cources-client.tsx`): revoked courses display prominent red `Access Revoked` badges, locked backdrop indicators, warning banners, and disable opening the course player in favor of an informative detail dialog.
+  - Backend `EnrollmentGuard` and `ProgressService.getCourseProgress` / `initOrGet` throw `ForbiddenException('COURSE_ACCESS_REVOKED')` on expired enrollment rows.
+- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` pass with 0 errors.
+
 ### Sub-Admin Permissions Matrix & Dedicated Admin Notifications Dispatch (Done)
 - [x] **Sub-Admin Permission Grouping**: Replaced flat messy permission checklist with 6 organized, understandable modules in [`apps/web/lib/permission-groups.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts) (Courses & Content, Students & Enrollments, Assessments & Grading, Doubts & Support, Finance & Payments, Analytics & Reports) with human-readable titles, descriptions, group "Select All" toggles, and global Select/Clear controls.
 - [x] **Sub-Admin Permission Save 400 Error Fix**: Fixed `there is no unique or exclusion constraint matching the ON CONFLICT specification` in [`apps/api/src/features/permissions/permissions.service.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/permissions.service.ts) by checking record existence (`maybeSingle()`) and safely performing `.update()` or `.insert()`. Also allowed empty permission sets in [`SetPermissionsDto`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts).

@@ -1,4 +1,4 @@
-import { Public, Roles } from '@/common/decorators';
+import { Permissions, Public, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -20,7 +20,8 @@ import { CreateCategoryDto, ReorderCategoriesDto, UpdateCategoryDto } from './dt
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post()
   async create(@Body() dto: CreateCategoryDto) {
     const data = await this.categoriesService.create(dto);
@@ -43,14 +44,16 @@ export class CategoriesController {
     return { message: 'Category fetched successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch('reorder')
   async reorder(@Body() dto: ReorderCategoriesDto) {
     await this.categoriesService.reorder(dto.categories);
     return { message: 'Categories reordered successfully' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -60,14 +63,16 @@ export class CategoriesController {
     return { message: 'Category updated successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.categoriesService.remove(id);
     return { message: 'Category deleted successfully' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post(':id/thumbnail')
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } }, required: ['file'] } })

@@ -1,10 +1,11 @@
 import { auth } from '@/auth';
+import { AccessRevokedView } from '@/components/dashboard/access-revoked-view';
 import { LessonPlaceholder } from '@/components/dashboard/lesson-placeholder';
 import { LessonProgressActions } from '@/components/dashboard/lesson-progress-actions';
 import { PDFViewer } from '@/components/dashboard/pdf-viewer';
 import { TestViewer } from '@/components/dashboard/test-viewer';
 import { VideoPlayer } from '@/components/video-player';
-import { getCourseProgress } from '@/server/student/courses.server';
+import { getCourseProgress, getMyEnrollments } from '@/server/student/courses.server';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent } from '@repo/shadcn/card';
 import { Lock } from '@repo/shadcn/lucide';
@@ -20,7 +21,29 @@ export default async function LessonPage({
   if (!session?.user) redirect('/auth/sign-in');
 
   const { courseId, lessonId } = await params;
+
+  const enrollments = await getMyEnrollments();
+  const enrollment = enrollments.find((e) => e.course_id === courseId);
+
+  if (enrollment && enrollment.status === 'expired') {
+    return (
+      <AccessRevokedView
+        courseTitle={enrollment.courses?.title}
+        courseSlug={enrollment.courses?.slug}
+      />
+    );
+  }
+
   const progress = await getCourseProgress(courseId);
+
+  if (!progress && enrollment?.status === 'expired') {
+    return (
+      <AccessRevokedView
+        courseTitle={enrollment?.courses?.title}
+        courseSlug={enrollment?.courses?.slug}
+      />
+    );
+  }
 
   // Lesson sort_order is scoped per chapter, so a global sort would interleave chapters.
   const orderedChapters = [...(progress?.chapters ?? [])].sort(

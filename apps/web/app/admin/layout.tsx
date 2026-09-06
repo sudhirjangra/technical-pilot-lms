@@ -12,7 +12,7 @@ import { ReactNode } from 'react';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
-  if (!session?.user || session.user.role !== 'admin') {
+  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'sub_admin')) {
     redirect('/');
   }
 

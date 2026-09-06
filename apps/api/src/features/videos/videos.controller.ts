@@ -1,4 +1,4 @@
-import { Ip, Roles, User } from '@/common/decorators';
+import { Ip, Permissions, Roles, User } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -22,14 +22,16 @@ export class VideosController {
 
   // ── Admin endpoints ──────────────────────────────────────────────────────
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post('lesson')
   async createVideoLesson(@Body() dto: CreateVideoLessonDto) {
     const data = await this.videosService.createVideoLesson(dto);
     return { message: 'Video lesson created', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post('lesson/:lessonId/upload')
   async uploadVideo(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
@@ -39,21 +41,24 @@ export class VideosController {
     return { message: 'Video uploaded', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Get('lesson/:lessonId')
   async findByLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
     const data = await this.videosService.findByLesson(lessonId);
     return { message: 'Video lesson fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Get('course/:courseId')
   async findByCourse(@Param('courseId', ParseUUIDPipe) courseId: string) {
     const data = await this.videosService.findByCourse(courseId);
     return { message: 'Video lessons fetched', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch('lesson/:lessonId')
   async updateVideoLesson(
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
@@ -63,7 +68,8 @@ export class VideosController {
     return { message: 'Video lesson updated', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete('lesson/:lessonId')
   async deleteVideoLesson(@Param('lessonId', ParseUUIDPipe) lessonId: string) {
     await this.videosService.deleteVideoLesson(lessonId);

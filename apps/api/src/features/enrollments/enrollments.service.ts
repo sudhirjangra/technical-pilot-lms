@@ -153,7 +153,15 @@ export class EnrollmentsService {
 
     const { data, error } = await this.supabase
       .from('enrollments')
-      .insert({ student_id: studentId, course_id: courseId, status: 'active' })
+      .upsert(
+        {
+          student_id: studentId,
+          course_id: courseId,
+          status: 'active',
+          enrolled_at: new Date().toISOString(),
+        },
+        { onConflict: 'student_id,course_id' },
+      )
       .select('*')
       .single();
     if (error) {
@@ -164,7 +172,7 @@ export class EnrollmentsService {
     return data;
   }
 
-  /** Verify a student is enrolled in a specific course (active enrollment) */
+  /** Verify a student is enrolled in a specific course (active or completed enrollment) */
   async verifyEnrollment(
     studentId: string,
     courseId: string,
@@ -174,8 +182,8 @@ export class EnrollmentsService {
       .select('id')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'completed'])
+      .maybeSingle();
     return !!data;
   }
 }

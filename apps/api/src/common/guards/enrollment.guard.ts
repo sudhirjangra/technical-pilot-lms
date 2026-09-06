@@ -57,16 +57,18 @@ export class EnrollmentGuard implements CanActivate {
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, status')
       .eq('student_id', user.id)
       .eq('course_id', courseId)
-      .in('status', ['active', 'completed'])
       .maybeSingle();
 
-    if (!enrollment)
+    if (!enrollment || enrollment.status === 'expired') {
       throw new ForbiddenException(
-        'Active enrollment required to access this content',
+        enrollment?.status === 'expired'
+          ? 'COURSE_ACCESS_REVOKED'
+          : 'Active enrollment required to access this content',
       );
+    }
     return true;
   }
 }

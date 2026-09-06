@@ -47,7 +47,8 @@ export class EnrollmentsController {
 
   /** Admin: get enrollments for a course */
   @Get('course/:courseId')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('enrollments:read')
   async findByCourse(@Param('courseId', ParseUUIDPipe) courseId: string) {
     const data = await this.enrollmentsService.findByCourse(courseId);
     return { data };
@@ -55,14 +56,16 @@ export class EnrollmentsController {
 
   /** Admin: get specific enrollment */
   @Get(':id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('enrollments:read')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.enrollmentsService.findOne(id);
   }
 
   /** Admin: update enrollment status */
   @Patch(':id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('enrollments:write')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEnrollmentDto,

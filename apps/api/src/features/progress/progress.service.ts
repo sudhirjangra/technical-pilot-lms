@@ -30,15 +30,18 @@ export class ProgressService {
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, status')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
-      .in('status', ['active', 'completed'])
       .maybeSingle();
-    if (!enrollment)
+
+    if (!enrollment || enrollment.status === 'expired') {
       throw new ForbiddenException(
-        'Active enrollment required to access this content',
+        enrollment?.status === 'expired'
+          ? 'COURSE_ACCESS_REVOKED'
+          : 'Active enrollment required to access this content',
       );
+    }
 
     // Upsert progress record
     const { data, error } = await this.supabase
@@ -184,6 +187,18 @@ export class ProgressService {
 
   /** Get all progress for a student in a course */
   async getCourseProgress(courseId: string, studentId: string) {
+    // Check if the student's enrollment is revoked
+    const { data: enrollment } = await this.supabase
+      .from('enrollments')
+      .select('id, status')
+      .eq('student_id', studentId)
+      .eq('course_id', courseId)
+      .maybeSingle();
+
+    if (enrollment && enrollment.status === 'expired') {
+      throw new ForbiddenException('COURSE_ACCESS_REVOKED');
+    }
+
     // Get all lessons for the course. Note: nested-table dot filters (e.g. "lessons.is_published")
     // are not reliably applied by PostgREST without an `!inner` join hint, and silently return
     // no matching rows in some client versions — so publish filtering for lessons is done in JS below.

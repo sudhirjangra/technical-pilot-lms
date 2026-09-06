@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
+import { AccessRevokedView } from '@/components/dashboard/access-revoked-view';
 import { CourseToc } from '@/components/dashboard/course-toc';
-import { getCourseProgress } from '@/server/student/courses.server';
+import { getCourseProgress, getMyEnrollments } from '@/server/student/courses.server';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
@@ -18,7 +19,29 @@ export default async function CourseLayout({
   if (!session?.user) redirect('/auth/sign-in');
 
   const { courseId } = await params;
+
+  // Check student's enrollment status for this course
+  const enrollments = await getMyEnrollments();
+  const enrollment = enrollments.find((e) => e.course_id === courseId);
+
+  if (enrollment && enrollment.status === 'expired') {
+    return (
+      <AccessRevokedView
+        courseTitle={enrollment.courses?.title}
+        courseSlug={enrollment.courses?.slug}
+      />
+    );
+  }
+
   const progress = await getCourseProgress(courseId);
+  if (!progress && enrollment?.status === 'expired') {
+    return (
+      <AccessRevokedView
+        courseTitle={enrollment?.courses?.title}
+        courseSlug={enrollment?.courses?.slug}
+      />
+    );
+  }
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
@@ -27,3 +50,4 @@ export default async function CourseLayout({
     </div>
   );
 }
+

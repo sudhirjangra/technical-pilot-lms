@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -17,7 +17,8 @@ import { CreateChapterDto, ReorderChaptersDto, UpdateChapterDto } from './dto';
 export class ChaptersController {
   constructor(private readonly chaptersService: ChaptersService) {}
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post()
   async create(@Body() dto: CreateChapterDto) {
     const data = await this.chaptersService.create(dto);
@@ -57,14 +58,16 @@ export class ChaptersController {
     return { message: 'Chapter start fetched successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch('reorder')
   async reorder(@Body() dto: ReorderChaptersDto) {
     await this.chaptersService.reorder(dto.chapters);
     return { message: 'Chapters reordered successfully' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -74,7 +77,8 @@ export class ChaptersController {
     return { message: 'Chapter updated successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.chaptersService.remove(id);

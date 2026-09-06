@@ -25,8 +25,12 @@ export default auth(async (req) => {
       const user = req.auth.user;
       const pathname = req.nextUrl.pathname;
 
-      if (user.role === 'admin' && pathname.startsWith('/dashboard')) {
+      if ((user.role === 'admin' || user.role === 'sub_admin') && pathname.startsWith('/dashboard')) {
         return Response.redirect(new URL('/admin', req.url));
+      }
+
+      if (user.role === 'student' && pathname.startsWith('/admin')) {
+        return Response.redirect(new URL('/dashboard', req.url));
       }
 
       if (pathname.startsWith('/dashboard')) {

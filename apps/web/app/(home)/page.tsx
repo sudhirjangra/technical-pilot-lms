@@ -8,7 +8,9 @@ import Link from 'next/link';
 const Page = async () => {
   const session = await auth();
   if (session?.user) {
-    if (session.user.role === 'admin') redirect('/admin');
+    if (session.user.role === 'admin' || session.user.role === 'sub_admin') {
+      redirect('/admin');
+    }
     redirect('/dashboard');
   }
   return (
@@ -33,7 +35,7 @@ const Page = async () => {
               <Button variant="ghost" asChild>
                 <Link href="/profile">Profile</Link>
               </Button>
-              {session.user.role === 'admin' && (
+              {(session.user.role === 'admin' || session.user.role === 'sub_admin') && (
                 <Button variant="secondary" asChild>
                   <Link href="/admin">Admin Panel</Link>
                 </Button>

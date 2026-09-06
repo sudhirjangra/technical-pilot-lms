@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -19,14 +19,16 @@ import { LessonsService } from './lessons.service';
 export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) {}
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post()
   async create(@Body() dto: CreateLessonDto) {
     const data = await this.lessonsService.create(dto);
     return { message: 'Lesson created successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Post(':id/pdf')
   async uploadPdf(
     @Param('id', ParseUUIDPipe) id: string,
@@ -36,7 +38,8 @@ export class LessonsController {
     return { message: 'PDF uploaded', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete(':id/pdf')
   async deletePdf(@Param('id', ParseUUIDPipe) id: string) {
     await this.lessonsService.deletePdf(id);
@@ -71,14 +74,16 @@ export class LessonsController {
     return { message: 'Lesson fetched successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch('reorder')
   async reorder(@Body() dto: ReorderLessonsDto) {
     await this.lessonsService.reorder(dto.lessons);
     return { message: 'Lessons reordered successfully' };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -88,7 +93,8 @@ export class LessonsController {
     return { message: 'Lesson updated successfully', data };
   }
 
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.lessonsService.remove(id);

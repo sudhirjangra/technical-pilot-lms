@@ -171,6 +171,17 @@ export function AdminSidebar() {
     await signOut({ callbackUrl: '/auth/sign-in' });
   };
 
+  const isSubAdmin = user?.role === 'sub_admin';
+  const roleTitle = isSubAdmin ? 'Sub-Admin' : 'Admin';
+
+  const visibleNavGroups = navGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => {
+      if (item.href === '/admin/sub-admins' && isSubAdmin) return false;
+      return true;
+    }),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">
       <SidebarHeader className="flex flex-row h-14 items-center border-b border-sidebar-border px-3 py-0">
@@ -190,7 +201,7 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-1 py-3 no-scrollbar">
-        {navGroups.map((group, i) => (
+        {visibleNavGroups.map((group, i) => (
           <Fragment key={group.group}>
             {i > 0 && <SidebarSeparator />}
             <NavGroup group={group.group} items={group.items} />
@@ -215,7 +226,7 @@ export function AdminSidebar() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight overflow-hidden">
-                    <span className="truncate font-semibold">{user?.full_name ?? 'Admin'}</span>
+                    <span className="truncate font-semibold">{user?.full_name || roleTitle}</span>
                     <span className="truncate text-xs text-sidebar-foreground/60">{user?.email}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 shrink-0 text-sidebar-foreground/50" />
@@ -237,7 +248,7 @@ export function AdminSidebar() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{user?.full_name ?? 'Admin'}</span>
+                      <span className="truncate font-semibold">{user?.full_name || roleTitle}</span>
                       <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
                     </div>
                   </div>

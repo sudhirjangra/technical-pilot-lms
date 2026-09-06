@@ -496,7 +496,7 @@ export const confirmEmail = safeAction
     if (error) throw new Error(error);
 
     const { data: user, tokens } = data!;
-    const targetUrl = user.role === 'admin' ? '/admin' : '/dashboard';
+    const targetUrl = (user.role === 'admin' || user.role === 'sub_admin') ? '/admin' : '/dashboard';
 
     try {
       await signIn('Supabase', {
