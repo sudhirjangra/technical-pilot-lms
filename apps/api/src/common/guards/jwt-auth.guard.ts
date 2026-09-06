@@ -12,7 +12,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Request } from 'express';
-import { IS_PUBLIC_KEY } from 'src/common/decorators';
+import { IS_PUBLIC_KEY } from '@/common/decorators';
 
 /**
  * JWT Authentication Guard for protecting routes in a NestJS application.
