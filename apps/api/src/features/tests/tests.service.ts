@@ -7,6 +7,7 @@ import {
   validateQuestionOptions,
 } from '@/common/utils';
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MongoService } from '@/common/modules/mongodb.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -50,6 +51,7 @@ type QuestionOptionRow = {
 export class TestsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly mongoService: MongoService,
   ) {}
 
   async create(dto: CreateTestDto) {
@@ -405,7 +407,7 @@ export class TestsService {
     // Verify attempt belongs to student and is not completed
     const { data: attempt, error: attemptError } = await this.supabase
       .from('test_attempts')
-      .select('*, tests(passing_score_percent)')
+      .select('*, tests(id, title, passing_score_percent, lesson_id, lessons(id, title, chapter_id, chapters(id, title, course_id, courses(id, title))))')
       .eq('id', attemptId)
       .eq('student_id', studentId)
       .single();
@@ -497,19 +499,144 @@ export class TestsService {
       });
     }
 
-    const passingPercent = attempt.tests?.passing_score_percent ?? 60;
+    const testRel = attempt.tests as {
+      id?: string;
+      title?: string;
+      passing_score_percent?: number;
+      lesson_id?: string;
+      lessons?: {
+        id?: string;
+        title?: string;
+        chapter_id?: string;
+        chapters?: {
+          id?: string;
+          title?: string;
+          course_id?: string;
+          courses?: { id?: string; title?: string };
+        };
+      };
+    } | null;
+
+    const passingPercent = testRel?.passing_score_percent ?? 60;
     const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     const passed = percentage >= passingPercent;
+    const completedAt = new Date().toISOString();
 
     // Calculate total time spent
     const startedAt = new Date(attempt.started_at).getTime();
     const totalTimeSeconds = Math.round((Date.now() - startedAt) / 1000);
 
-    // Update attempt
+    // Get prior completed attempts to determine attempt number
+    const { count: priorAttemptsCount } = await this.supabase
+      .from('test_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('test_id', attempt.test_id)
+      .eq('student_id', studentId)
+      .not('completed_at', 'is', null);
+    const attemptNumber = (priorAttemptsCount ?? 0) + 1;
+
+    // Fetch student profile details
+    let profile: { full_name?: string; email?: string } | null = null;
+    const { data: profileData } = await this.supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', studentId)
+      .maybeSingle();
+    profile = profileData ?? null;
+
+    const courseObj = testRel?.lessons?.chapters?.courses;
+
+    // Build per-question review (include correct answers and explanation now)
+    const questionReview = (questions ?? []).map((q) => {
+      const result = answerResults.find((r) => r.questionId === q.id)!;
+      const answer = dto.answers.find((a) => a.questionId === q.id);
+      const qOptions = (allOptions ?? [])
+        .filter((opt) => opt.question_id === q.id)
+        .map((opt) => ({
+          id: opt.id,
+          text: opt.option_text,
+          isCorrect: opt.is_correct,
+          isSelected: (answer?.selectedOptionIds ?? []).includes(opt.id),
+        }));
+
+      return {
+        questionId: q.id,
+        isCorrect: result.isCorrect,
+        pointsEarned: result.pointsEarned,
+        points: result.points,
+        explanation: result.explanation,
+        correctOptionIds: result.correctOptionIds,
+        selectedOptionIds: answer?.selectedOptionIds ?? [],
+        correctOptionTexts: (allOptions ?? [])
+          .filter((opt) => opt.question_id === q.id && opt.is_correct)
+          .map((opt) => opt.option_text),
+        selectedOptionTexts: (allOptions ?? [])
+          .filter((opt) => opt.question_id === q.id && (answer?.selectedOptionIds ?? []).includes(opt.id))
+          .map((opt) => opt.option_text),
+        options: qOptions,
+        textAnswer: answer?.textAnswer ?? null,
+        topic: (q as { topic?: string | null }).topic ?? null,
+        timeSpentSeconds: answer?.timeSpentSeconds ?? 0,
+        questionType: q.question_type,
+        questionText: (q as { question_text?: string }).question_text ?? '',
+      };
+    });
+
+    // Build topic breakdown
+    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    for (const q of questions ?? []) {
+      const topic = (q as { topic?: string | null }).topic ?? 'General';
+      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const result = answerResults.find((r) => r.questionId === q.id)!;
+      const answer = dto.answers.find((a) => a.questionId === q.id);
+      current.total += 1;
+      if (result.isCorrect === true) current.correct += 1;
+      current.totalTime += answer?.timeSpentSeconds ?? 0;
+      current.points += result.points;
+      current.earnedPoints += result.pointsEarned;
+      topicMap.set(topic, current);
+    }
+    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({
+      topic,
+      ...stats,
+    }));
+
+    const totalQCount = (questions ?? []).length;
+    const avgTimePerQuestion = totalQCount > 0 ? Math.round(totalTimeSeconds / totalQCount) : 0;
+
+    // Save complete attempt document into MongoDB
+    await this.mongoService.saveAttempt({
+      attempt_id: attemptId,
+      assessment_type: 'test',
+      student_id: studentId,
+      student_name: profile?.full_name ?? null,
+      student_email: profile?.email ?? null,
+      course_id: courseObj?.id ?? null,
+      course_title: courseObj?.title ?? null,
+      lesson_id: testRel?.lesson_id ?? null,
+      assessment_id: attempt.test_id,
+      assessment_title: testRel?.title ?? null,
+      attempt_number: attemptNumber,
+      started_at: attempt.started_at,
+      completed_at: completedAt,
+      submitted_at: completedAt,
+      score: totalScore,
+      max_score: maxScore,
+      percentage,
+      passed,
+      time_spent_seconds: totalTimeSeconds,
+      correct_count: correctCount,
+      total_count: totalQCount,
+      avg_time_per_question: avgTimePerQuestion,
+      topic_breakdown: topicBreakdown,
+      question_review: questionReview,
+    });
+
+    // Update Supabase reference attempt
     const { error: updateError } = await this.supabase
       .from('test_attempts')
       .update({
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
         score: totalScore,
         max_score: maxScore,
         time_spent_seconds: totalTimeSeconds,
@@ -555,48 +682,6 @@ export class TestsService {
         );
       }
     }
-
-    // Build per-question review (include correct answers and explanation now)
-    const questionReview = (questions ?? []).map((q) => {
-      const result = answerResults.find((r) => r.questionId === q.id)!;
-      const answer = dto.answers.find((a) => a.questionId === q.id);
-      return {
-        questionId: q.id,
-        isCorrect: result.isCorrect,
-        pointsEarned: result.pointsEarned,
-        points: result.points,
-        explanation: result.explanation,
-        correctOptionIds: result.correctOptionIds,
-        selectedOptionIds: answer?.selectedOptionIds ?? [],
-        textAnswer: answer?.textAnswer ?? null,
-        topic: (q as { topic?: string | null }).topic ?? null,
-        timeSpentSeconds: answer?.timeSpentSeconds ?? 0,
-        questionType: q.question_type,
-        questionText: (q as { question_text?: string }).question_text ?? '',
-      };
-    });
-
-    // Build topic breakdown
-    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
-    for (const q of questions ?? []) {
-      const topic = (q as { topic?: string | null }).topic ?? 'General';
-      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
-      const result = answerResults.find((r) => r.questionId === q.id)!;
-      const answer = dto.answers.find((a) => a.questionId === q.id);
-      current.total += 1;
-      if (result.isCorrect === true) current.correct += 1;
-      current.totalTime += answer?.timeSpentSeconds ?? 0;
-      current.points += result.points;
-      current.earnedPoints += result.pointsEarned;
-      topicMap.set(topic, current);
-    }
-    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({
-      topic,
-      ...stats,
-    }));
-
-    const totalQCount = (questions ?? []).length;
-    const avgTimePerQuestion = totalQCount > 0 ? Math.round(totalTimeSeconds / totalQCount) : 0;
 
     return {
       score: totalScore,
@@ -728,7 +813,11 @@ export class TestsService {
       .order('started_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
 
+    const mongoAttempts = await this.mongoService.getAttemptsByStudent(studentId, 'test');
+    const mongoMap = new Map(mongoAttempts.map((m) => [m.attempt_id, m]));
+
     return (attempts ?? []).map((a: any) => {
+      const mongo = mongoMap.get(a.id);
       const test = a.tests;
       const lesson = test?.lessons;
       const chapter = lesson?.chapters;
@@ -737,26 +826,55 @@ export class TestsService {
       const percentage =
         a.max_score && a.max_score > 0
           ? Math.round(((a.score ?? 0) / a.max_score) * 100)
-          : null;
+          : mongo?.percentage ?? null;
       return {
         id: a.id,
         type: 'test' as const,
-        testTitle: test?.title ?? 'Test',
-        lessonId: lesson?.id ?? null,
-        courseId: course?.id ?? null,
-        courseTitle: course?.title ?? 'Unknown course',
-        started_at: a.started_at,
-        completed_at: a.completed_at,
-        score: a.score,
-        max_score: a.max_score,
-        time_spent_seconds: a.time_spent_seconds,
+        testTitle: test?.title ?? mongo?.assessment_title ?? 'Test',
+        lessonId: lesson?.id ?? mongo?.lesson_id ?? null,
+        courseId: course?.id ?? mongo?.course_id ?? null,
+        courseTitle: course?.title ?? mongo?.course_title ?? 'Unknown course',
+        started_at: a.started_at ?? mongo?.started_at,
+        completed_at: a.completed_at ?? mongo?.completed_at,
+        score: a.score ?? mongo?.score,
+        max_score: a.max_score ?? mongo?.max_score,
+        time_spent_seconds: a.time_spent_seconds ?? mongo?.time_spent_seconds,
         percentage,
-        passed: percentage !== null ? percentage >= passingPct : null,
+        passed: percentage !== null ? percentage >= passingPct : (mongo?.passed ?? null),
       };
     });
   }
 
   async getAttemptDetail(attemptId: string, studentId?: string) {
+    // Check MongoDB primary store first
+    const mongoDoc = await this.mongoService.getAttemptByAttemptId(attemptId, studentId);
+    if (mongoDoc) {
+      if (studentId && mongoDoc.student_id !== studentId) {
+        throw new ForbiddenException('Access denied');
+      }
+      return {
+        id: mongoDoc.attempt_id,
+        test_id: mongoDoc.assessment_id,
+        student_id: mongoDoc.student_id,
+        student_name: mongoDoc.student_name ?? null,
+        student_email: mongoDoc.student_email ?? null,
+        started_at: mongoDoc.started_at,
+        completed_at: mongoDoc.completed_at,
+        score: mongoDoc.score,
+        max_score: mongoDoc.max_score,
+        maxScore: mongoDoc.max_score,
+        time_spent_seconds: mongoDoc.time_spent_seconds,
+        totalTimeSeconds: mongoDoc.time_spent_seconds,
+        percentage: mongoDoc.percentage,
+        passed: mongoDoc.passed,
+        correctCount: mongoDoc.correct_count,
+        totalCount: mongoDoc.total_count,
+        avgTimePerQuestion: mongoDoc.avg_time_per_question,
+        topicBreakdown: mongoDoc.topic_breakdown,
+        questionReview: mongoDoc.question_review,
+      };
+    }
+
     const query = this.supabase
       .from('test_attempts')
       .select('*')
@@ -1218,38 +1336,8 @@ export class TestsService {
   }
 
   async findAttemptForStudent(attemptId: string, studentId: string, role?: string) {
-    const isAdmin = (role ?? '').toUpperCase() === 'ADMIN';
-    if (isAdmin) {
-      return this.getAttemptDetail(attemptId);
-    }
-
-    const { data: attempt } = await this.supabase
-      .from('test_attempts')
-      .select('id, student_id')
-      .eq('id', attemptId)
-      .maybeSingle();
-
-    if (attempt) {
-      if (attempt.student_id !== studentId) {
-        throw new ForbiddenException('Access denied');
-      }
-      return this.getAttemptDetail(attemptId, studentId);
-    }
-
-    const { data: assignmentAttempt } = await this.supabase
-      .from('assignment_attempts')
-      .select('id, student_id')
-      .eq('id', attemptId)
-      .maybeSingle();
-
-    if (assignmentAttempt) {
-      if (assignmentAttempt.student_id !== studentId) {
-        throw new ForbiddenException('Access denied');
-      }
-      return this.getAttemptDetail(attemptId, studentId);
-    }
-
-    throw new NotFoundException('Attempt not found');
+    const isAdmin = (role ?? '').toUpperCase() === 'ADMIN' || (role ?? '').toUpperCase() === 'SUB_ADMIN';
+    return this.getAttemptDetail(attemptId, isAdmin ? undefined : studentId);
   }
 
   async assignStudentAttempts(

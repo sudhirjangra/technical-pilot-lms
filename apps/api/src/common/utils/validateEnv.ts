@@ -28,6 +28,8 @@ export const EnvSchema = z.object({
   PASSWORD_RESET_REDIRECT_URL: z.string().url().optional(),
   VDOCIPHER_API_SECRET: z.string().min(1),
   VDOCIPHER_OTP_TTL_SECONDS: z.coerce.number().default(300),
+  MONGODB_URI: z.string().optional().default(''),
+  MONGODB_DB_NAME: z.string().default('technical_pilot_lms'),
 });
 
 /**

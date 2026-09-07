@@ -1,127 +1,58 @@
-# Technical Pilot LMS Portal
+# Technical Pilot LMS
 
-A comprehensive Learning Management System for institutional use. Students purchase courses, learn through videos, notes, assignments and tests, track progress, book doubt sessions, and earn referral rewards. Admins manage all content, users, payments, and analytics.
+Learning management portal for course delivery, protected video/PDF content, assessments, progress tracking, payments, doubt sessions, notifications, and admin operations.
+
+## Current Stack
+
+| Layer | Technology |
+| --- | --- |
+| Web | Next.js App Router + TypeScript + Tailwind CSS + ShadCN UI |
+| API | NestJS + Fastify + TypeScript |
+| Database/Auth/Storage | Supabase PostgreSQL, Auth, RLS, and Storage |
+| Sessions | NextAuth 5 plus backend device/session tracking |
+| Video | VdoCipher DRM and OTP playback |
+| Payments | Razorpay |
+| State | Server actions/server fetches, React Query, and Zustand where needed |
+| Tests | Vitest (web) and Jest (API) |
+| Monorepo | Turborepo + pnpm workspaces |
 
 ## Features
 
-### Student Experience
+- Student and admin authentication with email confirmation, Google sign-in, password recovery, device limits, and session management.
+- Course and category management with chapters, lessons, VdoCipher videos, protected PDFs, thumbnails, publishing, and progress tracking.
+- Assignments and tests with MCQ/MSQ/text questions, imports, attempts, auto-grading, manual grading, and review history.
+- Razorpay orders, signature verification, idempotent webhooks, enrollment activation, payment history, and refunds.
+- Student enrollments, doubt-session booking, in-app notifications, admin analytics, sub-admin permissions, and access-revoked handling.
 
-- Secure registration with max 2 device limit and session monitoring
-- Personal dashboard — enrolled courses, progress, payment history, upcoming doubt sessions, pending assignments
-- Watch lecture videos with resume-from-position
-- Download PDF notes (enrolled students only)
-- Complete assignments and take chapter-wise tests
-- Post-test analytics: score, accuracy, time per question, weak topics, improvement suggestions
-- Book doubt session slots via calendar view
-- Referral system — unique code/link, earn commissions, track rewards
+## Repository Layout
 
-### Admin & Sub-admin
-
-- Full course builder: chapters, video lessons, PDF notes, assignments, MCQ tests
-- Draft/publish workflow
-- Student management: enrollment, progress monitoring, device management
-- Doubt session slot creation and booking management
-- Referral configuration: discount %, commission %, reward approvals
-- Reports & analytics: performance, completion rates, revenue, referral conversions
-- Configurable sub-admin permissions
-
-### Security
-
-- DRM-protected video streaming via Vimeo (no download enforcement)
-- Dynamic watermark (student email/name overlay on video player)
-- PDF access restricted to enrolled students via Supabase Storage policies
-- Audit logs for all sensitive actions
-- Session timeout on inactivity
-- Razorpay webhook signature verification
-
-## Tech Stack
-
-| Layer        | Technology                                  |
-| ------------ | ------------------------------------------- |
-| Frontend     | Next.js 15 (App Router, Turbopack)          |
-| UI           | TailwindCSS v4 + ShadCN UI + Aceternity     |
-| Backend      | NestJS 11 + Fastify                         |
-| Database     | Supabase (PostgreSQL 15+ with RLS)          |
-| Auth         | Supabase Auth + NextAuth 5                  |
-| Video        | Vimeo Professional (DRM, secure streaming)  |
-| Payments     | Razorpay (webhooks, signature verification) |
-| File Storage | Supabase Storage                            |
-| Email        | Resend                                      |
-| State        | React Query + Zustand                       |
-| Charts       | Recharts                                    |
-| Scheduling   | React Big Calendar + pg_cron                |
-| Monorepo     | Turborepo + pnpm workspaces                 |
-
-## Project Structure
-
-```
-apps/
-├── api/          — NestJS backend (serves web + future mobile)
-└── web/          — Next.js frontend (student + admin)
-packages/
-├── supabase/     — Shared Supabase client, types, migrations
-├── shadcn/       — UI component library (ShadCN + custom)
-├── constants/    — Shared constants
-├── utils/        — Shared utilities
-├── eslint-config/
-└── ts-config/
+```text
+apps/api/       NestJS backend
+apps/web/       Next.js frontend
+packages/       Shared config, Supabase, UI, constants, utilities, and TypeScript config
 ```
 
 ## Setup
 
-**Requirements:** Node >= 20, pnpm 10+
+Requirements: Node 20 or newer and pnpm 11.
 
 ```shell
 pnpm install
-```
-
-Copy environment files:
-
-```shell
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
-```
-
-Start development:
-
-```shell
 pnpm dev
 ```
 
-## Scripts
+Copy the environment examples into `apps/api/.env` and `apps/web/.env` before starting the applications. Required third-party credentials include Supabase, VdoCipher, Razorpay, and the configured mail provider.
 
-| Command        | Description                        |
-| -------------- | ---------------------------------- |
-| `pnpm dev`     | Start both api and web in dev mode |
-| `pnpm dev:api` | Start api only                     |
-| `pnpm dev:web` | Start web only                     |
-| `pnpm build`   | Production build (both apps)       |
-| `pnpm lint`    | Lint all workspaces                |
-| `pnpm format`  | Format with Prettier               |
-| `pnpm test`    | Run all tests                      |
-| `pnpm add:api` | Add package to api workspace       |
-| `pnpm add:web` | Add package to web workspace       |
+## Useful Commands
 
-## Third-Party Services
+```shell
+pnpm dev
+pnpm --filter api exec tsc --noEmit
+pnpm --filter web exec tsc --noEmit
+pnpm test
+pnpm lint
+```
 
-The following services are required and procured separately by the client:
+## Development Guidance
 
-| Service            | Purpose                           |
-| ------------------ | --------------------------------- |
-| Supabase Pro       | Database, Auth, Storage, Realtime |
-| Vimeo Professional | Video hosting with DRM (5TB)      |
-| Razorpay           | Payment gateway                   |
-| Resend             | Transactional email               |
-| Vercel Pro         | Frontend hosting                  |
-
-## Future Enhancements (Phase 2)
-
-- Mobile apps (iOS & Android) — React Native
-- AI Doubt Solver
-- Parent Dashboard
-- Live Classes (Zoom/Google Meet integration)
-- Advanced server-side video watermarking
-
-## License
-
-MIT
+Read `AGENTS.md`, `ARCHITECTURE.md`, and `STATE.md` before coding. `STATE.md` contains the only active implementation task. `API_AUDIT.md` and `SUPABASE_FEATURES.md` are reference documents, not execution queues.

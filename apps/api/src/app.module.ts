@@ -1,6 +1,7 @@
 import { JwtAuthGuard, PermissionGuard, RolesGuard } from '@/common/guards';
 import {
   LoggerModule,
+  MongoModule,
   NodeMailerModule,
   SupabaseModule,
   ThrottleModule,
@@ -59,6 +60,7 @@ import { MailModule } from './features/mail/mail.module';
       isGlobal: true,
       validate: validateEnv,
     }),
+    MongoModule,
     SupabaseModule,
     NodeMailerModule,
     LoggerModule,

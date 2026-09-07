@@ -1,300 +1,259 @@
 # Project State
 
-## Completed
+`STATE.md` is the only execution queue for coding agents. Work on exactly one item under `Immediate Next Step`, then stop after focused validation and update this file.
 
-### Sub-Admin Login Routing & Student Revoked Access Blocking (Done)
-- [x] **Sub-Admin Login & Dashboard Navigation Fix**:
-  - Updated home page (`(home)/page.tsx`), `AdminLayout` (`apps/web/app/admin/layout.tsx`), `middleware.ts`, and auth server actions (`confirmEmail`) to recognize `sub_admin` alongside `admin`. Sub-admins are now routed directly to `/admin`, can view the admin dashboard, and are blocked from student `/dashboard`.
-  - Updated `AdminSidebar` to filter out the `Sub-Admins` configuration nav link when a `sub_admin` is logged in, and show `Sub-Admin` title in profile dropdown.
-  - Added full admin route guard to `apps/web/app/admin/sub-admins/page.tsx` to redirect sub-admins to `/admin`.
-  - Extended RBAC `@Roles('ADMIN', 'SUB_ADMIN')` and `@Permissions('courses:write')` / `@Permissions('enrollments:*')` across Categories, Chapters, Lessons, Videos, and Enrollments backend controllers.
-- [x] **Student Access Revoked Warning & Course Access Blocking**:
-  - Created [`AccessRevokedView`](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/dashboard/access-revoked-view.tsx) component with clear administrator notice, locked state indicators, and return buttons.
-  - Enforced revoked access blocking in `CourseLayout` (`apps/web/app/dashboard/courses/[courseId]/layout.tsx`), course progress page, and lesson viewer: if a student's enrollment status is `expired` (revoked), the course TOC, lessons, videos, notes, and tests are completely blocked and replaced with the `AccessRevokedView`.
-  - Updated `MyCoursesClient` (`apps/web/components/dashboard/my-cources-client.tsx`): revoked courses display prominent red `Access Revoked` badges, locked backdrop indicators, warning banners, and disable opening the course player in favor of an informative detail dialog.
-  - Backend `EnrollmentGuard` and `ProgressService.getCourseProgress` / `initOrGet` throw `ForbiddenException('COURSE_ACCESS_REVOKED')` on expired enrollment rows.
-- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` pass with 0 errors.
+Detailed requirements and acceptance criteria are preserved in the **Technical Pilot Portal - Master Implementation Specification** section of `LMS_ROADMAP.md`. The IDs below are the source-of-truth references for that specification.
 
-### Sub-Admin Permissions Matrix & Dedicated Admin Notifications Dispatch (Done)
-- [x] **Sub-Admin Permission Grouping**: Replaced flat messy permission checklist with 6 organized, understandable modules in [`apps/web/lib/permission-groups.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts) (Courses & Content, Students & Enrollments, Assessments & Grading, Doubts & Support, Finance & Payments, Analytics & Reports) with human-readable titles, descriptions, group "Select All" toggles, and global Select/Clear controls.
-- [x] **Sub-Admin Permission Save 400 Error Fix**: Fixed `there is no unique or exclusion constraint matching the ON CONFLICT specification` in [`apps/api/src/features/permissions/permissions.service.ts`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/permissions.service.ts) by checking record existence (`maybeSingle()`) and safely performing `.update()` or `.insert()`. Also allowed empty permission sets in [`SetPermissionsDto`](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts).
-- [x] **Dedicated Admin Notifications Management (`/admin/notifications`)**:
-  - Moved notification dispatch controls out of the topbar bell icon into a dedicated sidebar category under **Communications**.
-  - Added targeting options: All Active Students, Enrolled in specific Course, and **Direct Notification to a specific Student** with instant search by name or email.
-  - Added rich notification category presets (System Announcement, New Course/Content, Special Offer, Achievement, Assessment Alert) with live device preview card and recent dispatch history logs.
-  - Added `GET /notifications/admin/logs` and `POST /notifications/send` integration.
-- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` compile cleanly with 0 type errors.
+## Completed Baseline
 
-### Mobile-First Compact UI Overhaul & Cross-Lookup Past Attempts Fix (Done)
-- [x] **Student Past Assessment Attempts (404 Resolved)**: Fixed persistent 404 in `GET /assignments/student/attempts/:id` and `GET /tests/student/attempts/:id` by adding resilient cross-table fallback lookups between `assignment_attempts` and `test_attempts`, tolerant student verification without 403 blocks, and complete response payloads with Question-by-Question review modal.
-- [x] **Universal Mobile Compactness across ALL Admin & Student Routes**:
-  - Re-engineered all table action buttons, search/filter inputs, dialog controls, and navigation buttons to compact heights (`h-8`/`h-9`, `text-xs`/`text-sm`, `px-2`/`px-2.5`).
-  - Added horizontal scroll boundaries (`overflow-x-auto` with minimum table widths) to all data tables across Admin (courses, categories, students, enrollments, payments, queries, sub-admins, course analytics, student detail) and Student (attempts history, doubt bookings, leaderboard, assessment question review).
-  - Made tab headers, filter toolbars, stat card grids, and action groups auto-wrap with responsive layouts (`grid grid-cols-2 sm:grid-cols-4`, `flex-col sm:flex-row`, `flex-wrap gap-2`).
-  - Adjusted container paddings (`px-3 sm:px-6`) across all client components to maximize usable viewport on 320px–768px screens and prevent button overlap.
-  - Replaced problematic Tiptap dependencies in RichTextEditor with a self-contained, robust toolbar and standard extensions.
-- [x] **Strict TypeScript Verification**: Both `pnpm --filter api exec tsc --noEmit` and `pnpm --filter web exec tsc --noEmit` compile with 0 type errors.
+- Authentication, email confirmation, password recovery, Google sign-in, device limits, session management, and role routing are implemented.
+- Admin and sub-admin RBAC, permission storage, permission guards, and permission-aware content/student/payment actions are implemented.
+- Course, category, chapter, lesson, video, PDF, assignment, test, question-bank import, grading, enrollment, payment, notification, doubt-session, progress, and analytics flows are implemented in the current codebase.
+- VdoCipher OTP playback, watermarking, concurrent playback checks, private PDF proxying, Supabase course media uploads, Razorpay verification/webhooks/refunds, and responsive admin/student UX are implemented.
+- Student and admin assessment attempt history, progress inspection, manual grading, access-revoked handling, and the combined attempts page are implemented as the current baseline and may be changed only by the new requirements below.
+- Migrations through `015_private_course_materials.sql` have been written in the repository. Applying database migrations is an environment operation, not a coding task.
+- [x] **TP-DISCOVERY-001 - Inspect affected flows and define migration boundaries**
+  - **Inspected Code Paths**:
+    - Submission & History: `apps/api/src/features/assignments/` and `apps/api/src/features/tests/` (controllers, services, DTOs), `apps/web/server/student/{assignments,tests}.server.ts`, `apps/web/components/dashboard/attempts-client.tsx`, `apps/web/components/dashboard/attempts-history-client.tsx`, `apps/web/components/admin/student-detail-client.tsx`.
+    - Progress & Analytics: `apps/api/src/features/progress/` and `apps/api/src/features/analytics/`.
+    - Enrollments, Payments, Doubt Sessions, Notifications: `apps/api/src/features/{enrollments,payments,doubt-sessions,notifications}/`.
+  - **Current Supabase Attempt Tables & Schema**:
+    - `assignment_attempts` / `test_attempts`: `id`, `student_id`, `assignment_id` / `test_id`, `started_at`, `completed_at`, `score`, `max_score`, `time_spent_seconds`, `created_at`, `updated_at`.
+    - `assignment_answers` / `test_answers`: `id`, `attempt_id`, `question_id`, `selected_option_id`, `text_answer`, `is_correct`, `time_spent_seconds`.
+    - `assignment_answer_options` / `test_answer_options`: `assignment_answer_id` / `test_answer_id`, `option_id`.
+    - `assessment_attempt_grants`: `id`, `student_id`, `assignment_id`, `test_id`, `extra_attempts`, `granted_by`.
+    - Consumed Attempt Detail Fields: `id`, `student_id`, `student_name`, `student_email`, `assignment_id`/`test_id`, `started_at`, `completed_at`, `score`, `max_score`, `percentage`, `passed`, `time_spent_seconds`, `correctCount`, `totalCount`, `avgTimePerQuestion`, `topicBreakdown` (`topic`, `total`, `correct`, `totalTime`, `points`, `earnedPoints`), `questionReview` (`questionId`, `questionText`, `questionType`, `topic`, `isCorrect`, `timeSpentSeconds`, `points`, `pointsEarned`, `explanation`, `correctOptionIds`, `selectedOptionIds`, `correctOptionTexts`, `selectedOptionTexts`, `options`, `textAnswer`).
+  - **MongoDB Configuration Status**:
+    - MongoDB driver/ORM is not yet installed in `apps/api/package.json`.
+    - Required packages: `mongodb` (or `@nestjs/mongoose` + `mongoose`).
+    - Required environment variable: `MONGODB_URI` (and database name configuration).
+    - Connection module: Dedicated NestJS module (`apps/api/src/common/modules/mongodb.module.ts`) providing a singleton database client connection with lifecycle hooks (`onModuleInit`, `onModuleDestroy`).
+    - Deployment assumption: `MONGODB_URI` provided via environment variables in dev, staging, and production environments.
 
-### Phase 4: Admin Portal Bug Sweep + Sub-Admin RBAC + Media Storage (Done)
-- [x] Categories/courses slug: backend regex now allows underscore (`[-_]`); frontend live-typing no longer strips trailing hyphen/underscore mid-keystroke (new `sanitizeSlugInput`, `slugify` only runs on submit/blur)
-- [x] Categories/courses/enrollments admin tables: increased horizontal padding
-- [x] Removed dead unused `Badge` import from courses-client (no duplicate Published badge existed; status is dropdown-only)
-- [x] Fixed systemic bug: `safeFetch` threw "Invalid JSON response" on any empty-body 200/204 response (e.g. DELETE endpoints), making successful deletes look like failures — now tolerates empty bodies
-- [x] Doubt-session slot delete now returns `{ success: true }` body explicitly
-- [x] Verified already-working: admin→/admin redirect + /dashboard block (middleware + home page), lesson drag-and-drop reorder (already implemented via `@repo/shadcn` Sortable), question editor inline expand-in-place (already correct), manual grading endpoints for assignments/tests (already implemented)
-- [x] Sub-Admin RBAC: added missing `013_sub_admin_permissions.sql` migration; registered previously-unused `PermissionGuard` as a global `APP_GUARD`; widened `@Roles` to include `SUB_ADMIN` + added `@Permissions(...)` on courses, students (users), enrollments, doubt-sessions, and assignment/test grading endpoints
-- [x] Media storage: new public `course-media` Supabase Storage bucket (`014_course_media_bucket.sql`) for course/category thumbnails; added `uploadThumbnail` endpoints + services; admin UI now uploads image files (png/jpeg/webp) instead of external URLs
-- [x] Enrollment manual-enrollment modal: enhanced with iOS-style translucent glass panel (backdrop-blur + translucent background) in addition to the existing blurred overlay
-- [x] Fixed question-bank bulk import silently dropping the `topic`/subject column: `question-import.util.ts` never parsed a `topic` cell even though the DB, question builder UI, and analytics breakdown all support it — added parsing + propagated to CSV/JSON/XLSX templates
-- [x] Enrollment status labels clarified ("Access revoked" instead of "Expired") for course-access disable/restore
-- [x] Students list: added client-side "Export CSV" button (name, email, role, status, joined)
+- [x] **TP-ARCH-001 - MongoDB for assignment/test attempt history**
+  - Configured MongoDB connection module (`MongoModule` & `MongoService`) with connection pooling, lifecycle management, and index initialization (`attempt_id`, `student_id`, `assessment_id`, `created_at`).
+  - Updated `AssignmentsService` and `TestsService` `submitAttempt` to create unique attempt documents in MongoDB storing complete history (student info, course/lesson context, attempt number, score, max score, percentage, passed, total time, topic breakdown, question reviews) and maintain lightweight references in Supabase.
+  - Updated `getAssignmentAttemptDetail` and `getAttemptDetail` to retrieve detailed history from MongoDB as the primary store with fallback to Supabase.
+  - Added unit test suites verifying MongoDB persistence, retrieval, and fallback mechanisms.
 
-### Next Step
-- Apply migrations `013_sub_admin_permissions.sql` and `014_course_media_bucket.sql` in Supabase
-- Wire granular `@Permissions` checks onto remaining assignment/test CRUD routes (currently only grading is permission-gated; others are role-gated to ADMIN+SUB_ADMIN without a fine-grained slug)
-- Build out full `/admin/students` payments + login/device-activity tabs (devices table exists but isn't surfaced in student detail yet)
-- Excel/CSV export server endpoint (current export is client-side CSV only, no XLSX)
+## Immediate Next Step
 
-### Phase 1: Auth + Profile + Cleanup (Done)
-- [x] Full auth flow: sign-up, sign-in, sign-out, confirm-email, forgot/reset password, change password, delete account
-- [x] Device tracking (max 2 devices) with sessions management UI
-- [x] Profile page with tabs: profile info, general settings, security, sessions, appearance
-- [x] Password visibility toggle (PasswordInput component) on all password fields
-- [x] Fixed type mismatches (general-settings used non-existent user.profile.name/username)
-- [x] Fixed SessionSchema to match actual DB devices table columns
-- [x] Removed S3/Backblaze code with hardcoded credentials
-- [x] Removed blog tables (content_blog_posts, content_blog_post_comments, private_items)
-- [x] Cleaned home page (removed RichTextEditor, media player cruft)
-- [x] Fixed is-authorized middleware (home page now accessible to guests)
-- [x] Updated APP_NAME/metadata from "Turbo NPN" to "Technical Pilot LMS"
-- [x] Removed public file upload test endpoint
-- [x] Created migration 002_drop_unused_tables.sql
-- [x] Full migration 001 with all ARCHITECTURE.md tables + RLS policies
-- [x] Cleaned env schema (removed AWS vars)
-- [x] Updated .env.example with correct required vars
+- [ ] **TP-ARCH-003 - Attempt-history migration and data integrity**
+  - Inspect the existing Supabase attempt schemas and identify every field consumed by frontend, backend, reports, and student dashboards before defining the MongoDB schema.
+  - Define a mapping that preserves all required information and migrate existing submitted attempts where applicable.
+  - Maintain a reliable mapping between legacy Supabase records and MongoDB records. Handle missing or incomplete historical data without crashing.
+  - Acceptance: historical attempts remain accessible, each has a valid reference, new submissions use MongoDB, no duplicate records are created, results remain accurate, and failed migration records are identifiable and safely handled.
 
-## Current Database
-- profiles, devices, audit_logs (as per current_in_database.sql)
-- Blog tables exist but migration 002 drops them
+## New Requirements Queue
 
-### Phase 3.2: Admin Lesson Asset Uploads (Done)
-- [x] Video lessons can upload directly to VdoCipher with a course/chapter/lesson title hierarchy
-- [x] PDF lessons upload to the private `course-materials` Supabase bucket using course/chapter/lesson folders
-- [x] Video metadata and PDF note paths are persisted against the lesson
-- [x] Assignment and test lessons remain unchanged for later implementation
-- [x] Multipart upload size uses the configured `FILE_MAX_SIZE` limit
-- [x] Fixed validation error: removed duration_seconds requirement for PDF uploads, accepting any response.
-- [x] Removed duration_seconds field from lesson schema as it's not needed for pre-recorded/uploaded content.
-- [x] Removed Duration (s) input from admin lesson creation form.
+Promote only the next unchecked task to `Immediate Next Step`. Do not implement multiple queue items in one session. The full requirements below are intentionally preserved; do not replace them with a UI-only approximation or a short summary.
 
-### Next Step
-- Apply `009_course_materials_bucket.sql`, configure an upload-sized `FILE_MAX_SIZE`, and test video/PDF uploads with provider credentials.
-- Fixed video upload 413 handling: multipart requests no longer receive a JSON content type, and Fastify body limits now follow `FILE_MAX_SIZE`.
-- Fixed VdoCipher upload credentials: use documented `PUT /api/videos` with course/chapter folder IDs instead of unsupported `POST /api/videos`.
-- Fixed admin upload UX: file uploads now show a centered blocking loading overlay instead of inline button spinners, and the non-functional PDF watermark overlay was removed.
+### Attempt History and Grading
 
-### Phase 1.5: Frontend Auth Error Handling (Done)
-- [x] Sign-in form handles EMAIL_NOT_CONFIRMED → redirects to /auth/confirm-email?email=...
-- [x] Sign-in form handles DEVICE_LIMIT_REACHED → shows sessions picker UI, user removes one, then auto-retries sign-in
-- [x] Device-limit sign-in now forcibly opens a translucent session-management popup from the action result, with device metadata and sign-out controls
-- [x] API exception filter preserves structured device-limit code and session records for the frontend
-- [x] Confirm-email form reads email from URL params (no session required)
-- [x] confirmEmail server action no longer requires auth header (endpoint is @Public)
-- [x] Sign-up no longer attempts signIn after registration → redirects to confirm-email page
-- [x] /auth/confirm-email added to public paths in middleware
-- [x] safeFetch preserves structured error payloads (JSON objects)
-- [x] removeSession server action for device-limit flow
+- [ ] **TP-ARCH-004 - Attempt-history API and fetching**
+  - Use the Supabase attempt ID to fetch the corresponding MongoDB attempt. Keep the API response compatible with existing student and admin screens.
+  - Handle missing IDs, invalid references, unavailable MongoDB records, and mismatched ownership with safe understandable responses.
+  - Prevent Student A from reading Student B's attempt history. Preserve behavior after multiple submissions and do not return incorrect scores.
+  - Acceptance: all valid attempts load, invalid references fail safely, ownership is enforced, repeated submissions remain accurate, and existing screens continue working.
 
-### Auth Bug Fixes + Sidebar (Done)
-- [x] Fixed sign-up hang: dev SMTP fallback now uses jsonTransport (no network connection) instead of fake Ethereal credentials that caused 2-min timeout
-- [x] mail.service.ts no longer re-throws errors — emails are best-effort, failures logged only
-- [x] Fixed sign-out not deleting device: sidebar now calls removeSession (NestJS) before signOut (NextAuth) — prevents device accumulation and subsequent login failures
-- [x] Fixed sign-out-all-devices bug: sends a valid empty JSON payload with a real bearer token, and guards missing authenticated sessions before hitting the API.
-- [x] Added fetch-failure resiliency for auth flows: ipinfo lookup now fails safe, safeFetch now surfaces a friendly API-unreachable message with localhost/127.0.0.1 fallback retry, and sign-in normalizes fetch-failed AuthErrors
-- [x] Fixed reset-password OTP mismatch and security: UI now accepts 6-8 digits, schema/DTO aligned, and backend now verifies recovery OTP before allowing password change
-- [x] Fixed signup OTP confirmation requests carrying device metadata: confirmation DTO now accepts the shared device fields, and the exception filter safely handles array validation messages instead of converting the 400 into a 500
-- [x] Improved resend-OTP errors by surfacing/logging provider error message instead of generic failure
-- [x] Fixed sign-up for existing unconfirmed users: resend OTP failure no longer hard-fails registration flow (warning logged, flow continues to confirm-email screen)
-- [x] Sidebar: user avatar + name + email in footer dropdown (ShadCN pattern)
-- [x] Sidebar: dropdown includes Profile, Settings, Sign out with proper destructive style
-- [x] Sidebar: removed duplicate Account nav group (moved to footer dropdown)
-- [x] Sidebar: added SidebarSeparator between nav groups
+- [ ] **TP-ARCH-005 - Remove manual-grading data dependencies**
+  - Identify every database field, API path, service, background operation, and frontend path related to manual grading.
+  - Remove or update logic that resets marks after submission, resets scores to zero, changes a passed test to incorrect, overwrites calculated marks, or depends on manual-grading status for display.
+  - Make the MongoDB attempt result authoritative for submitted results. Supabase reference rows must not contain conflicting score/status values that override it.
+  - Acceptance: no manual-grading dependency remains in submission, marks are not reset, passed tests remain passed, statuses match the actual result, and stale Supabase values cannot overwrite MongoDB results.
 
-### Phase 3.4: Admin Course/Chapter/Lesson Bug Fixes (Done)
-- [x] Fixed chapters/lessons invisible in admin UI: `chapters.findByCourse` returned a partial lesson projection (`id, title, lesson_type, sort_order, is_published`) that failed the frontend Zod `LessonSchema` (which required `chapter_id`/`description`) — `getChapters` swallowed the error and returned `[]`. Now selects `*, lessons(*)` with nested sort ordering.
-- [x] Fixed broken chapter/lesson reorder: `ReorderChaptersDto`/`ReorderLessonsDto` had no validation decorators, so the global `ValidationPipe({ whitelist: true })` stripped the array, making `dto.chapters`/`dto.lessons` undefined and throwing on `.map()`. Added nested `@ValidateNested` item DTOs.
-- [x] Reorder services now surface Supabase errors instead of silently discarding them
-- [x] Course status: all draft/published/archived transitions available (was one-way into archived); `published_at` preserved on re-publish and cleared when returning to draft
-- [x] Categories: slug auto-generated/sanitized via new `slugify()` in `@repo/utils` (fixes "Slug must be kebab-case" 400)
-- [x] Admin categories page now sends auth + `includeInactive=true` so inactive categories are visible
-- [x] Frontend schemas (chapter/lesson/course/category/video) made tolerant (`.passthrough()`, optional nullables) so a single field drift no longer blanks the entire admin page
-- [x] Cascade delete: removes VdoCipher video assets and Supabase Storage PDFs for a deleted lesson/chapter/course (DB rows already cascade via FKs)
-- [x] Fixed duplicate `fastify` install (5.11.3 via @nestjs/platform-fastify vs direct 5.12.1) that broke the API type build — added pnpm override; API now compiles with 0 TSC issues and boots successfully
+- [ ] **TP-ARCH-006 - Submission and attempt-history consistency**
+  - On submission: validate input, determine attempt number, generate a unique ID, calculate result, store the complete MongoDB attempt, store the Supabase reference, update assessment status from the actual result, return the result, and make history immediately readable.
+  - Ensure exactly one attempt record is created. A failed request must not create misleading completed/pass state, and retrying a failed request must not create duplicates.
+  - Acceptance: unique attempt, successful MongoDB write, correct Supabase reference, immediate history access, stable marks after refresh, and correct failure behavior.
 
-### Phase 3.5: VdoCipher Upload 403 Fix (Done)
-- [x] **Manual Assessment Grading Stability**: Opening an admin attempt no longer stages existing grades for resubmission; only explicit Correct/Incorrect selections are submitted, and grading preserves untouched answers while recalculating the score from persisted grades.
+- [ ] **TP-ARCH-002 - Remove manual grading entirely**
+  - Remove manual-grading controls from the web application and manual-grading APIs, services, and backend logic.
+  - Do not allow any manual action to overwrite a calculated score. A completed or passed test must never show zero merely because a manual-grading path previously ran.
+  - Acceptance: manual grading is absent from frontend and backend, submitted marks remain correct, assignment/test status matches stored results, and existing attempts are not corrupted.
 
-## Immediate Next Step (In Progress)
-### Requested Student/Admin UX Corrections (In Progress)
-- [x] Secured course PDFs: the API now validates JWT + active enrollment and streams private Supabase bytes through the Next.js proxy; no Supabase URL, bucket, object key, or signed URL reaches the browser.
-- [x] Added migration `015_private_course_materials.sql` to force `course-materials` private and remove common public-read policies.
-- [x] VdoCipher playback remains OTP-gated with provider-side watermarking and a short configurable TTL; the provider iframe URL necessarily remains visible to the browser for DRM playback.
-- [x] Applied shared responsive liquid-glass surfaces, cursor-reactive ambient motion, and blurred modal/sheet backdrops across auth, student dashboard, My Courses, and admin routes.
-- [x] Removed Dashboard from the student sidebar; `/dashboard` now redirects to `/dashboard/courses`.
-- [x] My Courses now uses the correctly spelled `/dashboard/courses` route and library view; removed the legacy `/cources` routes.
-- [x] Admin sidebar now signs out instead of linking back to the site.
-- [x] Doubt-session DELETE no longer sends an empty JSON request body.
-- [x] Admin enrollment rows now include a View dialog with ordered chapter/lesson progress and PDF completion state.
-- [x] Admin student progress is grouped by course, chapter, and lesson hierarchy.
-- [x] Added student-scoped assignment/test attempt history and on-demand question analytics inside the enrollment progress dialog, including attempt timing, score/pass bars, marks, correctness, answers, and per-question time.
-- [x] `safeFetch` retries transient API connection failures during concurrent web/API startup, preventing initial course-progress loads from failing on the startup race.
-- [x] Student `/courses` now always shows published courses, including for authenticated students; enrolled-course content remains under `/dashboard/courses`.
-- [x] Paid course enrollment now creates a Razorpay order, opens Checkout, verifies the payment signature server-side, and activates enrollment.
-- [x] Razorpay payment verification is idempotent when `payment.captured` reaches the webhook before the browser callback; Checkout now prefills the signed-in email.
-- [x] Razorpay `payment.failed` webhook events now mark pending payment rows as failed instead of leaving stale pending orders.
-- [x] Added the existing favicon asset at the web public root so browser requests to `/favicon.ico` no longer return 404.
-- [x] Diagnosed production Auth.js invalid JSON: web API URL template incorrectly used `/api`, while NestJS auth routes are rooted at `/auth`; corrected both web API URL examples and added upstream status/content-type/path details to non-JSON errors.
-- [x] Fixed admin video upload UnauthorizedException after 15-minute access-token expiry: direct uploads now obtain a server-refreshed token, and middleware checks the JWT `exp` claim instead of the unrelated three-day session refresh timestamp.
-- [x] Fixed student past-attempt detail 403s by separating the ownership lookup from nested attempt details, explicitly verifying `student_id`, and then loading the detail record without the fragile ownership-filtered join.
-- [x] Fixed extra-attempt requests for assignments and tests: students now submit a typed assessment reference, admins grant against the correct assessment, and approved test grants increase the student's available attempts.
-- [x] Fixed student Test opening validation error: the latest test attempt response now includes `test_id` and `student_id`, matching the frontend attempt schema.
-- [x] Replaced the student `/dashboard/attempts` redirect placeholder with a combined assignment/test attempt history page and added it to the student navigation.
-- [x] Added inline admin chapter title/description editing with update action; softened the admin course-completion tooltip to low-opacity translucent styling; invalid/stale sessions now redirect to normal sign-in instead of falsely showing the disabled-account message.
-- [x] Signup auto-login reviewed: blocked safely because new accounts are created with email confirmation required and the password is not retained; confirmation continues to lead to sign-in.
-- [x] Admin payments portal upgraded: added PaymentsAnalytics with KPI cards (Gross/Net Revenue, Success Rate, AOV, Pending, Refunds), Recharts graphs (Revenue Trend over daily/weekly/monthly intervals, Revenue by Course, and Payment Status breakdown), quick status pill tabs with live counts, CSV export, comprehensive PaymentDetailDialog with technical transaction IDs and printable tax invoice slip, and admin refund management with server action and gateway resilience.
-- [x] Fixed Next.js 16 server-action export error in the admin payments page by moving payment schemas and types out of the `use server` module.
-- [x] Fixed Next.js 16 server-action export error in notifications by moving exported Zod schemas and types out of the `use server` module.
-- [x] Admin notification bell now supports broadcasting to all active students or active students enrolled in a selected course; API and in-app compose dialog are wired.
-- [x] Fixed notification bell build syntax error caused by a duplicated icon import opener.
-- [x] Direct sign-in after OTP verification: backend `/auth/confirm-email` returns full user profile and session tokens with registered device; Next.js server action immediately triggers NextAuth `signIn('Supabase')` and forwards authenticated user directly to `/dashboard` (or `/admin`), with fallback to sign-in on unexpected failure.
-- [x] Auth layout left panel overhaul: removed blurry `water-surface` and fuzzy `blur-3xl` gradient blobs; integrated interactive 3D `HeroAviation` component with radar sweep, orbit paths, and pulsing rings from the root page, styled with crisp aviation aeronautical grid and real-time status indicators; expanded left panel ratio (58-65%) and narrowed auth form (35-42%); removed panel dividing line and unified background color and technical grid seamlessly across both sides.
-- [ ] Diagnose live booking response/configuration if My Bookings remains empty against the configured Supabase data.
+- [ ] **TP-ATT-001 - Unlimited attempts**
+  - Treat configured `attempts = 0` as unlimited. A value greater than zero permits only that many attempts.
+  - Enforce the rule in the backend; reopening or refreshing must not bypass a positive limit; preserve all attempt history.
+  - Acceptance: zero allows unlimited attempts, three allows three, server enforcement is authoritative, and existing history remains intact.
 
-### Phase 3.3: Assignment/Test MSQ Module + Admin Content Ordering + Student UX (Complete)
-- [x] Migration 010_msq_assignments_tests.sql written (questions now belong to test OR assignment, msq question_type, assignment_attempts/answers + option-junction tables, RLS)
-- [x] Sample import templates created: apps/web/public/templates/question-import-template.{csv,json,xlsx}
-- [x] Backend: AssignmentsModule + TestsModule (CRUD, question/option CRUD, CSV/JSON/XLSX bulk import), lessons PDF delete endpoint
-- [x] Frontend: admin course-detail UI — chapter/lesson up/down reorder buttons, publish/draft toggle buttons, video/pdf delete+reupload, assignment/test question builder + import UI
-- [x] Imported bulk questions append below existing questions instead of replacing them, while preserving question_number and sort_order offsets.
-- [x] Admin question editor accepts manual question numbers and no longer exposes reorder arrows as the ordering mechanism.
-- [x] Student lesson view includes prev/next lesson navigation and a manual completion action for video/PDF lessons.
-- [x] Video progress now persists at completion threshold, on natural end, and on unload/visibility hide so last_position_seconds is not lost.
-- [x] Mark as completed only when video progress is above 80% (manual action); auto-complete at 90% (unobtrusive)
-- [x] Prevent downgrade of completed status on re-watch (if already completed, toggle button is disabled)
-- [x] Chapter progression: first chapter always unlocked; other chapters unlock only when ALL lessons in previous chapter are completed
-- [x] Lock icon + disabled state + informative message shown for locked chapters
-- [x] PDF viewer with "CONTENT RESERVED" watermark (2x per page, light visible, rotated -45 degrees)
-- [x] PDF access requires active enrollment verification (server-side)
-- [x] Signed PDF URLs expire after 1 hour
-- [x] Responsive admin portal: mobile drawer sidebar (Sheet component), desktop fixed sidebar, proper flex layout
-- [x] Loading spinners for all async operations (OrbitalSpinner SVG component, 3 rotating orbits)
-- [x] Device limit flow: "Sign out all devices" button on device limit error using Supabase global signOut
-- [x] Type check passes: web (tsc --noEmit), api (nest build)
-- [x] Fixed student access to past attempts: the student detail route now queries attempt rows by both id and student_id instead of reusing the admin-only detail lookup, which was returning 404 even for valid student attempts.
-- [x] Added regression tests covering student-owned assignment/test attempt retrieval.
+- [ ] **TP-ATT-002 - Attempt display**
+  - When unlimited, show only attempts used/tried. Do not display `0`, infinity, or `0 remaining` as a total limit.
+  - When limited, show configured limit and meaningful used/remaining information.
 
-### Previously queued
-- Apply migration 008_profile_details.sql in Supabase
-- Test registration with full name and date of birth, then verify the profile view
-- Test video resume/completion and confirm course progress averages all video lessons
-- Verify the security curtain appears on tab switch without triggering on player clicks
-- Verify the API honors MAX_DEVICES_PER_USER from apps/api/.env
+### Student Analysis
 
-### Phase 3.1: Video Resume + Security Hardening (Done)
-- [x] GET /progress/lesson/:lessonId endpoint (NestJS) — returns last_position_seconds
-- [x] Next.js proxy routes: GET + PATCH /api/progress/[lessonId]
-- [x] VideoPlayer: fetches resume position on mount; sets player.video.currentTime on loadedmetadata
-- [x] VideoPlayer: VdoCipher api.js SDK (VdoPlayer.getInstance) — real API, not postMessage hacks
-- [x] VideoPlayer: timeupdate/ended event listeners via player.video.addEventListener
-- [x] VideoPlayer: upsert progress on PATCH — creates on first call, updates on subsequent
-- [x] VideoPlayer: 3-position randomly-moving HTML watermark overlay + server-side VdoCipher watermark
-- [x] VideoPlayer: black curtain on tab switch (visibilitychange), window blur, PrintScreen key
-- [x] VideoPlayer: player.video.pause() called on visibility loss/window blur
-- [x] VideoPlayer: keyboard shortcut blocking (PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5)
-- [x] VideoPlayer: saves on unmount, on visibility hide, periodic every 8s
-- [x] VideoPlayer: auto-completes at 90% watch threshold
-- [x] CSP: added player.vdocipher.com to script-src and *.vdocipher.com to connect-src
+- [ ] **TP-ANALYSIS-001 - Question categorization**
+  - Questions must support course/subject, topic, subtopic/section, question type such as calculation/reasoning/numerical/other, and difficulty values easy/medium/hard.
+  - Persist the fields for assignment and test questions, expose them in admin creation/edit/import flows, and preserve existing questions when fields are absent.
 
-### Phase 3.0: VdoCipher Video Streaming (Done)
-- [x] Migration 008: rename vimeo_video_id → vdocipher_video_id in video_lessons, drop vimeo_uri, add video_sessions table
-- [x] VideosModule (NestJS) — OTP endpoint with enrollment guard, concurrent session check, watermark, per-user rate limit (10/min), audit log
-- [x] Admin endpoints: create/update/delete/get video_lesson records
-- [x] OTP proxy route in Next.js (apps/web/app/api/video-otp/[lessonId]) — access token never reaches client
-- [x] VideoPlayer component — VdoCipher iframe, DRM-required allow="encrypted-media", loading/error states
-- [x] Lesson viewer page: /dashboard/courses/[courseId]/lessons/[lessonId]
-- [x] Course progress list links video lessons to viewer page
-- [x] Env vars: VDOCIPHER_API_SECRET, VDOCIPHER_OTP_TTL_SECONDS added to schema + .env.example
-- [x] Admin UI: "Link Video" / "Edit Video" button on video-type lessons in course detail page
-- [x] Admin UI: GET /videos/course/:courseId endpoint + server action for pre-loading video IDs
-- [x] Swagger: global bearer auth applied — token now sent on all requests after Authorize click
-- [x] Swagger URL: http://localhost:8000/api-docs (sign in → copy tokens.access_token → Authorize)
+- [ ] **TP-ANALYSIS-002 - Weak-point detection**
+  - Analyze actual assignment/test attempt performance to identify weak topics, sections, question types, and difficulty levels.
+  - Do not label a category weak based only on the number of questions. Use correct/incorrect results and meaningful performance calculations.
 
-### Phase 2.0: Course CRUD (Done)
-- [x] Categories module — full CRUD, public read, admin write
-- [x] Courses module — full CRUD with slug lookup, status management, published_at auto-set
-- [x] Chapters module — CRUD nested under courses, reorder support, auto sort_order
-- [x] Lessons module — CRUD nested under chapters, reorder support, auto sort_order
-- [x] All admin endpoints protected with @Roles('ADMIN')
-- [x] Public endpoints: course listing (published only), category listing, slug lookup
-- [x] Audit logging interceptor created + applied to courses (create/update/delete)
-- [x] UUID validation on all :id params via ParseUUIDPipe
-- [x] Input validation: slug format, max lengths, numeric constraints
-- [x] Database types added for categories, chapters, lessons
-- [x] All modules registered in app.module.ts
+- [ ] **TP-ANALYSIS-003 - Student-facing analysis**
+  - Show overall performance, weak topics/sections, weak question types, performance by difficulty, and suggestions for what to study or practice next.
+  - Use the student's actual attempt data and protect access to only the owning student's analysis.
 
-## Security Audit Fixes Applied (Phase 1.6)
-- [x] Password complexity enforcement on DTOs (min 8, uppercase, lowercase, number, special char)
-- [x] Users endpoint locked behind `@Roles('ADMIN')` guard
-- [x] Sessions endpoint ownership check (user can only access own sessions)
-- [x] JWT verification uses explicit `algorithms: ['HS256']`
-- [x] RolesGuard: removed SUPERADMIN backdoor, case-insensitive comparison
-- [x] Role constants aligned with ARCHITECTURE.md (ADMIN, SUB_ADMIN, STUDENT)
-- [x] Cookie security flags (httpOnly, secure, sameSite, path, maxAge)
-- [x] changePassword removed unsafe `as any` casts
-- [x] Production console.log statements gated behind NODE_ENV check
-- [x] Migration 003: sessions table + 40+ performance indexes
-- [x] Profile avatar editor: removed debug logs
+- [ ] **TP-ANALYSIS-004 - Relevant charts**
+  - Use truthful charts such as topic-wise bar charts and appropriate pie/donut or other visualizations.
+  - Charts must be derived from actual student data and must not imply unsupported conclusions.
 
-## Supabase Email Setup Required
-1. Dashboard → Authentication → Email Templates → Disable "Enable email confirmations" (we send custom emails via Resend)
-2. OR keep it enabled but set Custom SMTP to your Resend SMTP (smtp.resend.com:465, user=resend, pass=RESEND_API_KEY)
-3. In apps/api/.env set: RESEND_API_KEY, MAIL_FROM (e.g. noreply@yourdomain.com)
-4. Domain must be verified in Resend dashboard for MAIL_FROM to work
+### Notifications, Support, and Admin UX
 
-## Future Steps (Phase 2)
-- Video integration (Vimeo) — upload, signed URL generation, player embed
-- Referral system — codes, commissions, discount application
-- Doubt sessions — slot management, booking, calendar
-- Admin dashboard (frontend) — course/student/payment management UI
-- Sub-admin permissions — permission guard, permission matrix CRUD
-- CSP headers in Next.js middleware
-- Stricter rate limiting on auth endpoints (5/min per IP)
-- Session timeout on inactivity
+- [ ] **TP-MKT-001 - Periodic course-status notifications**
+  - If a student purchased course A out of A/B/C/D, periodically ask about the other courses without assuming the student has never studied them.
 
-### Phase 2.5: Enrollments + Payments + Progress (Done)
-- [x] Enrollments module — CRUD, student self-check, admin course-enrollments view
-- [x] Payments module — Razorpay order creation, client-side signature verification, webhook handler
-- [x] Progress module — lesson-level tracking, course progress overview, video position resume
-- [x] EnrollmentGuard — reusable guard that verifies active enrollment from any route param
-- [x] Migration 004 — enrollments, payments, progress tables + RLS + indexes + triggers
-- [x] Fixed migration 004 re-run safety by dropping existing trigger names before recreating them
-- [x] Razorpay env vars added to validation schema (with defaults for dev)
-- [x] safeFetch fixed: network errors caught gracefully (no more TypeError: fetch failed crashes)
-- [x] Middleware wrapped in try-catch (resilient to API being down)
-- Referral system
-- Doubt sessions
-- Admin dashboard (frontend)
-- Sub-admin permissions — permission guard, permission matrix CRUD
-- CSP headers in Next.js middleware
-- Stricter rate limiting on auth endpoints (5/min per IP)
-- Session timeout on inactivity
-- Frontend: course management UI (admin panel)
+- [ ] **TP-MKT-002 - Notification targeting**
+  - Admin must target all students, students enrolled in a specific course, or specific students.
 
-### Next Step
-- Re-run migration 004 in Supabase after applying this fix, then verify the payment and progress tables are writable for enrolled students.
+- [ ] **TP-MKT-003 - Personalized course-interest form**
+  - Notification navigation must open a personalized form about other subjects/courses. The form must allow the student to state that they completed the course already, study it elsewhere, have not started it, and/or provide other remarks.
 
-## Known Remaining Warnings (Not Blocking)
-- Health endpoints are public (acceptable for uptime monitoring)
-- Swagger only enabled in non-production (OK)
-- Device fingerprint uses refresh_token (works but could be decoupled later)
-- Frontend CSRF: Server Actions have built-in protection; direct fetches rely on SameSite cookies
+- [ ] **TP-MKT-004 - Marketing data**
+  - Store responses and remarks so admins can review them and target relevant campaigns. Do not interpret non-purchase as proof the student has never studied the course.
+
+- [ ] **TP-ADMIN-001 - Remove revenue from admin dashboard**
+  - Remove revenue cards and related dashboard metrics only. Do not remove unrelated payment functionality, payment records, or normal student purchases.
+
+- [ ] **TP-SUPPORT-001 - Contact Us link**
+  - Add a Contact Us/Support link to login and signup screens. It must be usable before authentication.
+
+- [ ] **TP-SUPPORT-002 - Contact form**
+  - Collect name, email, mobile number, and query/message without requiring login. Add validation and clear success/error feedback.
+
+- [ ] **TP-DOUBT-001 - Merge notification and doubt-session management**
+  - Organize doubt sessions and notifications into one clear, user-friendly admin workflow without losing existing booking behavior.
+
+- [ ] **TP-DOUBT-002 - Doubt-session targeting**
+  - Allow sessions to target all students, students enrolled in a selected course, or specific students.
+
+- [ ] **TP-DOUBT-003 - Course-based access**
+  - For a selected course, only enrolled students receive/access the session. For a selected student, only that student receives/access it.
+
+- [ ] **TP-DOUBT-004 - Fix admin creation**
+  - Make the complete flow work: create, target, save, notify, and student access. Diagnose the current admin creation failure rather than hiding it in the UI.
+
+- [ ] **TP-EMAIL-001 - Successful purchase receipt**
+  - After successful purchase, send confirmation/receipt to the registered email confirming purchase and enrollment. Do not generate or attach a PDF.
+  - Email failures must be handled gracefully and must not mark a successful purchase as failed.
+
+### Identity and Referral Codes
+
+- [ ] **TP-STUDENT-001 - Unique student ID**
+  - Assign every student a unique student ID generated using their email and mobile number. Use the student ID as the primary student identifier throughout the portal instead of email.
+  - Preserve existing student data and update references carefully. Do not make an unsafe identity migration or break existing enrollments, attempts, payments, or progress.
+
+- [ ] **TP-STUDENT-002 - Remove DOB**
+  - Remove date of birth entirely from signup, student profiles, admin views, backend DTO/service handling, schemas, and other student forms.
+  - Do not continue collecting DOB through hidden fields or compatibility-only form fields.
+
+- [ ] **TP-STUDENT-003 - Unique referral code**
+  - Assign every user a unique referral code beginning with `TP` followed by the required unique characters.
+  - Every user must be able to view their referral code.
+
+### Payment Safety
+
+- [ ] **TP-PAY-001 - Remove refund option**
+  - Remove refund buttons, actions, backend endpoints, and services from admin payments. Do not merely hide the controls.
+
+- [ ] **TP-PAY-002 - Remove admin money-deduction functions**
+  - Remove or disable every admin-side operation that could deduct money from the admin's Razorpay account, including refunds, reversals, transfers, payouts, and similar operations.
+  - Verify direct API requests cannot trigger those operations. Normal student order creation, payment processing, signature verification, and enrollment activation must continue working.
+
+### Course Access and Content
+
+- [ ] **TP-ARCHIVE-001 - Archive notification**
+  - When an admin archives a course, notify users that Technical Pilot/admin has archived it.
+
+- [ ] **TP-ARCHIVE-002 - Revoke archived-course access**
+  - Revoke access for all students, prevent enrolled and non-enrolled users from opening/viewing archived content, show a dimmed course tile with Archived status, and enforce restrictions in backend/API as well as UI.
+  - Preserve historical enrollment, payment, progress, and attempt data.
+
+- [ ] **TP-IMPORT-001 - Flexible two-to-four option imports**
+  - If option fields A/B/C/D contain empty values, accept the question and map only options with values. Support two, three, and four options.
+  - Preserve correct-answer mapping and do not reject a question solely because optional option fields are empty.
+
+- [ ] **TP-VIDEO-001 - Custom VdoCipher video thumbnail**
+  - Allow an admin to upload and associate a custom thumbnail with the correct video. Show it to students before playback.
+  - If no custom thumbnail exists, retain the existing fallback behavior.
+
+- [ ] **TP-DESC-001 - Lesson and chapter descriptions**
+  - Students must see lesson and chapter descriptions in appropriate views. Preserve supported formatting.
+
+- [ ] **TP-DESC-002 - Course description editor**
+  - Give admins the existing rich text editor used for relevant content. Pasted content must retain the same supported formatting.
+
+- [ ] **TP-DESC-003 - Course details display**
+  - Show the course description on the course details page before enrollment, in the area where Enroll Now information is shown.
+
+- [ ] **TP-UI-001 - Remove touch-device green cursor dot**
+  - Remove the green cursor dot on touch/mobile devices while retaining desktop cursor behavior if it is part of the existing experience.
+
+### Course Expiry and Subscriptions
+
+- [ ] **TP-SUB-001 - No lifetime access**
+  - Courses must not automatically grant lifetime access. Admin must configure fixed-duration access or subscription-based access.
+
+- [ ] **TP-SUB-002 - Admin plan configuration**
+  - Admin must configure expiry duration in days, subscription duration, subscription price, and available subscription plans. Support plans such as ₹5,000/3 months, ₹9,000/9 months, and ₹11,000/1 year without hardcoding those examples as the only choices.
+
+- [ ] **TP-SUB-003 - Student access and expiry**
+  - On enrollment/purchase, record access start date and calculate expiry. Show remaining days, revoke access when expired, and preserve progress.
+
+- [ ] **TP-SUB-004 - Renewal**
+  - Allow extension/renewal before and after expiry. Restore access, preserve progress, and avoid duplicate enrollments that disconnect progress.
+
+- [ ] **TP-SUB-005 - Admin visibility**
+  - Admin must see enrollment date, expiry date, remaining days, active/expired status, subscription plan, renewal history, and relevant payment/enrollment records.
+
+- [ ] **TP-SUB-006 - Exceptional handling**
+  - Define behavior for multiple purchases, renewal before/after expiry, multiple courses with different expiry dates, admin plan changes, payment success followed by access-update failure, expiry while viewing, direct access after expiry, and existing students enrolled before this feature.
+  - Do not assume lifetime access for existing students without an explicit migration rule.
+
+### Referral Credits and Manual Conversion
+
+- [ ] **TP-REF-001 - Referral relationship**
+  - Allow a new user to enter a referral code during signup and store the referral relationship safely.
+
+- [ ] **TP-REF-002 - Referral reward**
+  - When a referred user purchases a course, calculate a configurable percentage of the course purchase amount and award points/credits to the referring student.
+  - Do not automatically transfer money.
+
+- [ ] **TP-REF-003 - Referral tracking**
+  - Users must see referral code, referred users, purchase status, points earned, points used/converted, and remaining balance.
+
+- [ ] **TP-REF-004 - Manual cash conversion**
+  - Let users request conversion of points into real money and collect required account details.
+  - Admin must review and validate requests, manually send money directly, mark requests paid, and update remaining points.
+
+- [ ] **TP-REF-005 - Conversion safety**
+  - Prevent duplicate payment for the same points, preserve referral/conversion history, support partial conversion where applicable, do not deduct money automatically from Razorpay, and do not create an automatic payout flow.
+
+## Final Verification Checklist
+
+Do not mark the full specification complete until all of these are verified:
+
+- [ ] MongoDB attempt history works reliably and Supabase stores attempt references.
+- [ ] Manual grading is removed from frontend and backend without incorrect score resets.
+- [ ] Unlimited attempts and correct attempt display work.
+- [ ] Weak-point analysis uses real attempt data.
+- [ ] Course-based doubt sessions and notifications work.
+- [ ] Course expiry and renewal work without losing progress.
+- [ ] Archived courses revoke access in frontend and backend.
+- [ ] Refund and admin money-deduction functionality cannot be triggered.
+- [ ] Referral credits and manual conversion work safely.
+- [ ] Existing data is preserved and important edge cases are tested.
+- [ ] No unrelated functionality is broken.
+
+Deliverables are updated frontend, backend, database migrations, and a clear verification summary mapped to every requirement ID.
+
+## Handoff Rules
+
+When the immediate task is complete and verified:
+
+1. Mark that task `[x]` in its queue section.
+2. Record only the files changed and focused validation performed.
+3. Promote exactly one next task to `Immediate Next Step`.
+4. Do not mark a parent task complete when only its UI, migration, or one side of the API is complete.
+5. Do not reopen the completed baseline unless a new requirement explicitly changes it or a regression is found.
