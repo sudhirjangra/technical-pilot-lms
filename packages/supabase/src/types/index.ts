@@ -327,7 +327,125 @@ lesson_type: LessonType;
           description?: string | null;
 lesson_type?: LessonType;
            sort_order?: number;
-           is_published?: boolean;
+          is_published?: boolean;
+        };
+        Relationships: [];
+      };
+      doubt_slots: {
+        Row: {
+          id: string;
+          created_by: string | null;
+          date: string;
+          start_time: string;
+          end_time: string;
+          duration_minutes: number;
+          max_bookings: number;
+          current_bookings: number;
+          status: string;
+          topic: string | null;
+          description: string | null;
+          meeting_link: string | null;
+          target_type: 'all' | 'course' | 'student' | null;
+          course_id: string | null;
+          student_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          created_by?: string | null;
+          date: string;
+          start_time: string;
+          end_time: string;
+          duration_minutes: number;
+          max_bookings?: number;
+          current_bookings?: number;
+          status?: string;
+          topic?: string | null;
+          description?: string | null;
+          meeting_link?: string | null;
+          target_type?: 'all' | 'course' | 'student' | null;
+          course_id?: string | null;
+          student_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          date?: string;
+          start_time?: string;
+          end_time?: string;
+          duration_minutes?: number;
+          max_bookings?: number;
+          current_bookings?: number;
+          status?: string;
+          topic?: string | null;
+          description?: string | null;
+          meeting_link?: string | null;
+          target_type?: 'all' | 'course' | 'student' | null;
+          course_id?: string | null;
+          student_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      doubt_bookings: {
+        Row: {
+          id: string;
+          slot_id: string;
+          student_id: string;
+          status: BookingStatus;
+          meeting_link: string | null;
+          booked_at: string;
+          cancelled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slot_id: string;
+          student_id: string;
+          status?: BookingStatus;
+          meeting_link?: string | null;
+          booked_at?: string;
+          cancelled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: BookingStatus;
+          meeting_link?: string | null;
+          cancelled_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          title: string;
+          body: string | null;
+          type: string;
+          metadata: Json | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          title: string;
+          body?: string | null;
+          type: string;
+          metadata?: Json | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          body?: string | null;
+          type?: string;
+          metadata?: Json | null;
+          is_read?: boolean;
         };
         Relationships: [];
       };
