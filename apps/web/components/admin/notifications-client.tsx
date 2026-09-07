@@ -31,14 +31,17 @@ import {
   TableHeader,
   TableRow,
 } from '@repo/shadcn/table';
+import Link from 'next/link';
 import {
   AlertTriangle,
   Bell,
+  CalendarDays,
   CheckCircle2,
   Filter,
   GraduationCap,
   History,
   Megaphone,
+  MessageSquare,
   Radio,
   Search,
   Send,
@@ -173,14 +176,41 @@ export function AdminNotificationsClient({
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
-      <div className="space-y-1 sm:space-y-2">
-        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-          <Bell className="size-5 text-primary" />
-          Notification Dispatch & Announcements
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          Broadcast announcements, curriculum updates, or send direct in-app notifications to individual pilots.
-        </p>
+      <div className="space-y-3">
+        <div className="space-y-1 sm:space-y-2">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Bell className="size-5 text-primary" />
+            Notification Dispatch & Announcements
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Broadcast announcements, curriculum updates, or send direct in-app notifications to individual pilots.
+          </p>
+        </div>
+
+        {/* Unified Communications Hub Tabs */}
+        <div className="flex items-center gap-2 border-b pb-2 text-xs sm:text-sm overflow-x-auto">
+          <Link
+            href="/admin/doubt-sessions"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          >
+            <CalendarDays className="size-3.5" />
+            Doubt Sessions
+          </Link>
+          <Link
+            href="/admin/notifications"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold bg-primary text-primary-foreground shadow-sm shrink-0"
+          >
+            <Bell className="size-3.5" />
+            Notifications & Broadcasts
+          </Link>
+          <Link
+            href="/admin/queries"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          >
+            <MessageSquare className="size-3.5" />
+            Student Queries
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="compose" className="space-y-4">

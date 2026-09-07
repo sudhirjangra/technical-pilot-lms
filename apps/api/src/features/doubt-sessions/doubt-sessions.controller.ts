@@ -78,8 +78,8 @@ export class DoubtSessionsController {
   // ── Student endpoints ──
 
   @Get('upcoming')
-  getUpcomingSlots() {
-    return this.service.getUpcomingSlots();
+  getUpcomingSlots(@Req() req: { user?: { id: string } }) {
+    return this.service.getUpcomingSlots(req.user?.id);
   }
 
   @Post('book')

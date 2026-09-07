@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -45,6 +46,22 @@ export class CreateSlotDto {
   @IsString()
   @MaxLength(500)
   meeting_link?: string;
+
+  @IsOptional()
+  @IsEnum(['all', 'course', 'student'])
+  target_type?: 'all' | 'course' | 'student';
+
+  @IsOptional()
+  @IsUUID()
+  course_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  student_id?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notify_students?: boolean;
 }
 
 export class UpdateSlotDto {
@@ -90,6 +107,18 @@ export class UpdateSlotDto {
   @IsString()
   @MaxLength(2000)
   description?: string;
+
+  @IsOptional()
+  @IsEnum(['all', 'course', 'student'])
+  target_type?: 'all' | 'course' | 'student';
+
+  @IsOptional()
+  @IsUUID()
+  course_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  student_id?: string;
 }
 
 export class BookSlotDto {

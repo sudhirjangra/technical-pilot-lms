@@ -35,6 +35,12 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - Updated `AssignmentsService` and `TestsService` `submitAttempt` to create unique attempt documents in MongoDB storing complete history (student info, course/lesson context, attempt number, score, max score, percentage, passed, total time, topic breakdown, question reviews) and maintain lightweight references in Supabase.
   - Updated `getAssignmentAttemptDetail` and `getAttemptDetail` to retrieve detailed history from MongoDB as the primary store with fallback to Supabase.
   - Added unit test suites verifying MongoDB persistence, retrieval, and fallback mechanisms.
+- [x] **TP-DOUBT-001 through TP-DOUBT-004 - Course-based doubt sessions, targeting, and unified communications**
+  - **TP-DOUBT-001**: Merged doubt sessions, notifications, and student query ticket management into a unified admin communications navigation workflow with cross-linking tabs.
+  - **TP-DOUBT-002**: Added full targeting capabilities to doubt slots (`all`, `course`, and `student` modes) across backend DTOs, service methods, and frontend admin setup.
+  - **TP-DOUBT-003**: Enforced course-based and 1-on-1 student access rules in `getUpcomingSlots` (active course enrollment filtering and 1-on-1 matching) and `bookSlot` authorization guards (blocking unauthorized bookings with `ForbiddenException`).
+  - **TP-DOUBT-004**: Resolved admin slot creation by validating schedules, storing targeting references (`target_type`, `course_id`, `student_id`), providing meeting link inputs, and automatically dispatching targeted in-app notifications to eligible students upon slot creation.
+  - **Validation Performed**: Unit test suite `doubt-sessions.service.spec.ts` (8/8 passing tests covering targeting, notifications, course access filtering, and authorization guards) and clean TypeScript typechecks across `apps/api` and `apps/web`.
 
 ## Immediate Next Step
 
@@ -122,16 +128,16 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 - [ ] **TP-SUPPORT-002 - Contact form**
   - Collect name, email, mobile number, and query/message without requiring login. Add validation and clear success/error feedback.
 
-- [ ] **TP-DOUBT-001 - Merge notification and doubt-session management**
+- [x] **TP-DOUBT-001 - Merge notification and doubt-session management**
   - Organize doubt sessions and notifications into one clear, user-friendly admin workflow without losing existing booking behavior.
 
-- [ ] **TP-DOUBT-002 - Doubt-session targeting**
+- [x] **TP-DOUBT-002 - Doubt-session targeting**
   - Allow sessions to target all students, students enrolled in a selected course, or specific students.
 
-- [ ] **TP-DOUBT-003 - Course-based access**
+- [x] **TP-DOUBT-003 - Course-based access**
   - For a selected course, only enrolled students receive/access the session. For a selected student, only that student receives/access it.
 
-- [ ] **TP-DOUBT-004 - Fix admin creation**
+- [x] **TP-DOUBT-004 - Fix admin creation**
   - Make the complete flow work: create, target, save, notify, and student access. Diagnose the current admin creation failure rather than hiding it in the UI.
 
 - [ ] **TP-EMAIL-001 - Successful purchase receipt**

@@ -88,42 +88,74 @@ export function StudentDoubtClient({
 
         <TabsContent value="available" className="mt-4 space-y-3">
           {slots.length === 0 && <p className="text-muted-foreground text-sm">No upcoming slots available.</p>}
-          {slots.map((slot) => (
-            <Card key={slot.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                {slot.topic && <p className="font-medium text-sm">{slot.topic}</p>}
-                <p className={slot.topic ? 'text-xs sm:text-sm text-muted-foreground' : 'font-medium text-sm'}>
-                  {new Date(slot.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)} • {slot.duration_minutes}m
-                  • {slot.current_bookings}/{slot.max_bookings} booked
-                </p>
-                {slot.description && (
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{slot.description}</p>
-                )}
-              </div>
-              <div className="shrink-0 self-end sm:self-start">
-                {bookedSlotIds.has(slot.id) ? (
-                  <Badge>Booked</Badge>
-                ) : (
-                  <Button size="sm" className="h-8 text-xs px-3" onClick={() => handleBook(slot.id)} disabled={loading === slot.id}>
-                    {loading === slot.id ? 'Booking...' : 'Book'}
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
+          {slots.map((slot) => {
+            const courseTitle = slot.courses?.title;
+            const is1on1 = slot.target_type === 'student';
+
+            return (
+              <Card key={slot.id} className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {courseTitle && (
+                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                        Course: {courseTitle}
+                      </Badge>
+                    )}
+                    {is1on1 && (
+                      <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/30">
+                        1-on-1 Session
+                      </Badge>
+                    )}
+                  </div>
+                  {slot.topic && <p className="font-medium text-sm">{slot.topic}</p>}
+                  <p className={slot.topic ? 'text-xs sm:text-sm text-muted-foreground' : 'font-medium text-sm'}>
+                    {new Date(slot.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)} • {slot.duration_minutes}m
+                    • {slot.current_bookings}/{slot.max_bookings} booked
+                  </p>
+                  {slot.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{slot.description}</p>
+                  )}
+                </div>
+                <div className="shrink-0 self-end sm:self-start">
+                  {bookedSlotIds.has(slot.id) ? (
+                    <Badge>Booked</Badge>
+                  ) : (
+                    <Button size="sm" className="h-8 text-xs px-3" onClick={() => handleBook(slot.id)} disabled={loading === slot.id}>
+                      {loading === slot.id ? 'Booking...' : 'Book'}
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-4 space-y-3">
           {bookings.length === 0 && <p className="text-muted-foreground text-sm">No bookings yet.</p>}
           {bookings.map((b) => {
             const meetingLink = b.meeting_link || b.doubt_slots?.meeting_link;
+            const courseTitle = b.doubt_slots?.courses?.title;
+            const is1on1 = b.doubt_slots?.target_type === 'student';
+
             return (
               <Card key={b.id} className="p-3 sm:p-4">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {courseTitle && (
+                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                          Course: {courseTitle}
+                        </Badge>
+                      )}
+                      {is1on1 && (
+                        <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/30">
+                          1-on-1 Session
+                        </Badge>
+                      )}
+                    </div>
                     {b.doubt_slots?.topic && <p className="font-medium text-sm">{b.doubt_slots.topic}</p>}
                     {b.doubt_slots && (
                       <>

@@ -18,6 +18,19 @@ const SlotSchema = z.object({
   topic: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   meeting_link: z.string().nullable().optional(),
+  target_type: z.string().nullable().optional(),
+  course_id: z.string().nullable().optional(),
+  student_id: z.string().nullable().optional(),
+  courses: z.object({ id: z.string(), title: z.string() }).passthrough().nullable().optional(),
+  target_student: z.object({
+    id: z.string(),
+    full_name: z.string().nullable().optional(),
+    email: z.string().optional(),
+  }).passthrough().nullable().optional(),
+  profiles: z.object({
+    full_name: z.string().nullable().optional(),
+    email: z.string().optional(),
+  }).passthrough().nullable().optional(),
 }).passthrough();
 
 const BookingSchema = z.object({
@@ -29,10 +42,17 @@ const BookingSchema = z.object({
   cancelled_at: z.string().nullable().optional(),
   meeting_link: z.string().nullable().optional(),
   doubt_slots: z.object({
-    id: z.string(), date: z.string(), start_time: z.string(),
-    end_time: z.string(), duration_minutes: z.coerce.number(), status: z.string(),
+    id: z.string(),
+    date: z.string(),
+    start_time: z.string(),
+    end_time: z.string(),
+    duration_minutes: z.coerce.number(),
+    status: z.string(),
     topic: z.string().nullable().optional(),
     meeting_link: z.string().nullable().optional(),
+    target_type: z.string().nullable().optional(),
+    course_id: z.string().nullable().optional(),
+    courses: z.object({ id: z.string(), title: z.string() }).passthrough().nullable().optional(),
   }).passthrough().nullable().optional(),
 }).passthrough();
 
@@ -59,9 +79,18 @@ export async function getAdminSlots(date?: string): Promise<Slot[]> {
 }
 
 export async function createSlot(payload: {
-  date: string; start_time: string; end_time: string;
-  duration_minutes: number; max_bookings?: number;
-  topic?: string; description?: string; meeting_link?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  max_bookings?: number;
+  topic?: string;
+  description?: string;
+  meeting_link?: string;
+  target_type?: 'all' | 'course' | 'student';
+  course_id?: string;
+  student_id?: string;
+  notify_students?: boolean;
 }) {
   const h = await headers();
   const [error, data] = await safeFetch(SlotSchema, '/doubt-sessions/slots', {
@@ -81,6 +110,9 @@ export async function updateSlot(id: string, payload: {
   meeting_link?: string;
   topic?: string;
   description?: string;
+  target_type?: 'all' | 'course' | 'student';
+  course_id?: string | null;
+  student_id?: string | null;
 }) {
   const h = await headers();
   const [error, data] = await safeFetch(SlotSchema, `/doubt-sessions/slots/${id}`, {
