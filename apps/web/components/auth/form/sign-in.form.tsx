@@ -246,16 +246,27 @@ const SignInForm = () => {
                 <span>Continue with Google</span>
               </Button>
 
-              {/* Sign up link */}
-              <p className="text-center text-sm sm:text-base text-muted-foreground mt-4 sm:mt-6">
-                Don&apos;t have an account?{' '}
-                <Link
-                  href="/auth/sign-up"
-                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  Sign up
-                </Link>
-              </p>
+              {/* Sign up link & Support link */}
+              <div className="flex flex-col items-center gap-2 mt-4 sm:mt-6 text-center text-sm sm:text-base text-muted-foreground">
+                <p>
+                  Don&apos;t have an account?{' '}
+                  <Link
+                    href="/auth/sign-up"
+                    className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </p>
+                <p className="text-xs sm:text-sm">
+                  Need assistance?{' '}
+                  <Link
+                    href="/contact"
+                    className="underline underline-offset-4 hover:text-foreground transition-colors"
+                  >
+                    Contact Support
+                  </Link>
+                </p>
+              </div>
             </div>
           </form>
         </CardContent>

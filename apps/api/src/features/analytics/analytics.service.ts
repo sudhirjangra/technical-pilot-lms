@@ -519,7 +519,7 @@ export class AnalyticsService {
     const [profileRes, devicesRes, enrollmentsRes, recentProgressRes] = await Promise.all([
       this.supabase
         .from('profiles')
-        .select('id, email, role, full_name, phone, avatar_url, is_active, date_of_birth, created_at, updated_at')
+        .select('id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at')
         .eq('id', studentId)
         .single(),
       this.supabase

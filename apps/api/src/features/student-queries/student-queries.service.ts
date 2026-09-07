@@ -8,13 +8,22 @@ import {
 import { SupabaseClient } from '@supabase/supabase-js';
 import { NotificationsService } from '../notifications/notifications.service';
 
+import { CreateContactQueryDto } from './dto';
+
 function formatQueryRecord(row: any) {
   if (!row) return row;
   const meta = (row.metadata as Record<string, any>) || {};
   const queryNumber = meta.query_number || `Q-${row.id.slice(0, 6).toUpperCase()}`;
+  const student = row.profiles || {
+    id: row.student_id ?? null,
+    full_name: meta.guest_name || 'Guest Inquirer',
+    email: meta.guest_email || 'No email provided',
+    phone: meta.guest_phone || null,
+  };
   return {
     ...row,
     query_number: queryNumber,
+    profiles: student,
   };
 }
 
@@ -29,6 +38,60 @@ export class StudentQueriesService {
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async submitContact(dto: CreateContactQueryDto) {
+    const queryNumber = generateQueryNumber();
+    const subject = dto.subject?.trim() || `Inquiry from ${dto.name.trim()}`;
+
+    // Check if an existing student profile matches the email
+    const { data: existingProfile } = await this.supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', dto.email.trim().toLowerCase())
+      .maybeSingle();
+
+    const { data, error } = await this.supabase
+      .from('student_queries')
+      .insert({
+        student_id: existingProfile?.id ?? null,
+        subject,
+        body: dto.message.trim(),
+        type: 'contact_form',
+        metadata: {
+          query_number: queryNumber,
+          guest_name: dto.name.trim(),
+          guest_email: dto.email.trim().toLowerCase(),
+          guest_phone: dto.phone.trim(),
+          is_guest: !existingProfile,
+        },
+      })
+      .select('*')
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+
+    try {
+      await this.notificationsService.notifyAdmins(
+        `Contact Request #${queryNumber}`,
+        `${dto.name} (${dto.phone}): ${subject}`,
+        'contact_inquiry',
+        {
+          query_id: data.id,
+          query_number: queryNumber,
+          email: dto.email,
+          phone: dto.phone,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+
+    return {
+      message: 'Your inquiry has been submitted successfully. Our team will contact you shortly.',
+      query_number: queryNumber,
+      query: formatQueryRecord(data),
+    };
+  }
 
   async create(studentId: string, subject: string, body: string) {
     const queryNumber = generateQueryNumber();

@@ -23,7 +23,6 @@ import { ChangeEvent, useState } from 'react';
 interface CompleteProfileFormProps {
   initialData: {
     full_name: string;
-    date_of_birth: string;
     phone: string;
   };
 }
@@ -32,7 +31,6 @@ const CompleteProfileForm = ({ initialData }: CompleteProfileFormProps) => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     full_name: initialData.full_name,
-    date_of_birth: initialData.date_of_birth,
     phone: initialData.phone,
   });
 
@@ -93,28 +91,6 @@ const CompleteProfileForm = ({ initialData }: CompleteProfileFormProps) => {
                   />
                   {validationErrors?.full_name?._errors?.[0] && (
                     <p className="text-xs text-destructive">{validationErrors.full_name._errors[0]}</p>
-                  )}
-                </div>
-              )}
-
-              {!initialData.date_of_birth && (
-                <div className="grid gap-1.5 sm:gap-2">
-                  <Label isRequired htmlFor="date_of_birth" className="text-sm sm:text-base">
-                    Date of Birth
-                  </Label>
-                  <Input
-                    id="date_of_birth"
-                    name="date_of_birth"
-                    type="date"
-                    max={new Date(Date.now() - 15 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                    autoComplete="bday"
-                    required
-                    disabled={isExecuting}
-                    onChange={handleChange}
-                    className="h-10 sm:h-11 text-sm sm:text-base"
-                  />
-                  {validationErrors?.date_of_birth?._errors?.[0] && (
-                    <p className="text-xs text-destructive">{validationErrors.date_of_birth._errors[0]}</p>
                   )}
                 </div>
               )}

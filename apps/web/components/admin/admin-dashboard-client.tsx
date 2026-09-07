@@ -55,7 +55,7 @@ export function AdminDashboardClient({ overview }: Props) {
       <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         <StatCard
           title="Total Students"
           value={overview.totalStudents}
@@ -82,15 +82,6 @@ export function AdminDashboardClient({ overview }: Props) {
           value={overview.publishedCourses}
           subtitle={`${overview.totalCourses} total`}
           icon={<GraduationCap className="size-4 sm:size-5 text-muted-foreground" />}
-        />
-        <StatCard
-          title="Revenue"
-          value={`₹${overview.totalRevenue.toLocaleString('en-IN')}`}
-          icon={
-            <span className="text-sm sm:text-lg font-semibold text-muted-foreground">
-              ₹
-            </span>
-          }
         />
       </div>
 

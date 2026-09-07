@@ -24,7 +24,7 @@ export class UsersService {
     const { data, error } = await this.supabase
       .from('profiles')
       .select(
-        'id, email, role, full_name, phone, avatar_url, is_active, date_of_birth, created_at, updated_at',
+        'id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at',
       )
       .or(`id.eq.${identifier},email.eq.${identifier},full_name.eq.${identifier}`)
       .maybeSingle();
@@ -37,7 +37,7 @@ export class UsersService {
     const { data, error } = await this.supabase
       .from('profiles')
       .select(
-        'id, email, role, full_name, phone, avatar_url, is_active, date_of_birth, created_at, updated_at',
+        'id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at',
       )
       .eq('id', id)
       .single();

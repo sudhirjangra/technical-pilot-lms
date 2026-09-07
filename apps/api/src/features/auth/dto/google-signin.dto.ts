@@ -39,7 +39,6 @@ export class GoogleSignInResponseDto {
     email: string;
     role: string;
     full_name: string | null;
-    date_of_birth: string | null;
     phone: string | null;
     avatar_url: string | null;
     is_active: boolean;

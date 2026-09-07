@@ -15,7 +15,6 @@ export const ALL_PERMISSIONS = [
   'tests:write',
   'tests:grade',
   'payments:read',
-  'payments:refund',
   'doubt_sessions:manage',
   'queries:read',
   'queries:reply',

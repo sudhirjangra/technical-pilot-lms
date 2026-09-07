@@ -24,7 +24,6 @@ const SignUpForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    date_of_birth: '',
     password: '',
     phone: '',
   });
@@ -79,23 +78,6 @@ const SignUpForm = () => {
                 />
                 {validationErrors?.full_name?._errors?.[0] && (
                   <p className="text-xs text-destructive">{validationErrors.full_name._errors[0]}</p>
-                )}
-              </div>
-
-              <div className="grid gap-2">
-                <Label isRequired htmlFor="date_of_birth">Date of birth</Label>
-                <Input
-                  id="date_of_birth"
-                  name="date_of_birth"
-                  type="date"
-                  max={new Date(Date.now() - 15 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                  autoComplete="bday"
-                  required
-                  disabled={isExecuting}
-                  onChange={handleChange}
-                />
-                {validationErrors?.date_of_birth?._errors?.[0] && (
-                  <p className="text-xs text-destructive">{validationErrors.date_of_birth._errors[0]}</p>
                 )}
               </div>
 
@@ -167,15 +149,26 @@ const SignUpForm = () => {
               {/* Submit */}
               <SubmitButton isLoading={isExecuting} name="Create Account" />
 
-              <p className="text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Link
-                  href="/auth/sign-in"
-                  className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
-                >
-                  Sign in
-                </Link>
-              </p>
+              <div className="flex flex-col items-center gap-2 pt-2 text-center text-sm text-muted-foreground">
+                <p>
+                  Already have an account?{' '}
+                  <Link
+                    href="/auth/sign-in"
+                    className="font-medium text-foreground underline underline-offset-4 hover:text-primary transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+                <p className="text-xs">
+                  Need assistance?{' '}
+                  <Link
+                    href="/contact"
+                    className="underline underline-offset-4 hover:text-foreground transition-colors"
+                  >
+                    Contact Support
+                  </Link>
+                </p>
+              </div>
             </div>
           </form>
         </CardContent>

@@ -34,7 +34,7 @@ export default auth(async (req) => {
       }
 
       if (pathname.startsWith('/dashboard')) {
-        const isProfileComplete = user.full_name && user.date_of_birth && user.phone;
+        const isProfileComplete = user.full_name && user.phone;
         if (!isProfileComplete) {
           return Response.redirect(new URL('/auth/complete-profile', req.url));
         }

@@ -112,14 +112,13 @@ export const {
             email: user.email,
             role: user.role,
             full_name: user.full_name,
-            date_of_birth: user.date_of_birth,
             phone: user.phone,
             avatar_url: user.avatar_url,
             is_active: user.is_active,
             created_at: user.created_at,
             updated_at: user.updated_at,
             tokens: user.tokens,
-            profile_complete: !!(user.full_name && user.date_of_birth && user.phone),
+            profile_complete: !!(user.full_name && user.phone),
           },
         };
       }

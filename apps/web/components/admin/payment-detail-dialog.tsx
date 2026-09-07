@@ -1,6 +1,5 @@
 'use client';
 
-import { refundPayment } from '@/server/admin/payments.server';
 import { Payment } from '@/server/admin/payments.types';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
@@ -12,8 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@repo/shadcn/dialog';
-import { Input } from '@repo/shadcn/input';
-import { Label } from '@repo/shadcn/label';
 import {
   AlertTriangle,
   BookOpen,
@@ -88,10 +85,6 @@ export function PaymentDetailDialog({
   onPaymentUpdated,
 }: PaymentDetailDialogProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [isRefunding, setIsRefunding] = useState(false);
-  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
-  const [refundReason, setRefundReason] = useState('');
-  const [refundAmount, setRefundAmount] = useState<string>('');
 
   if (!payment) return null;
 
@@ -102,40 +95,6 @@ export function PaymentDetailDialog({
     setTimeout(() => {
       setCopiedField(null);
     }, 2000);
-  };
-
-  const handleRefundSubmit = async () => {
-    if (!refundReason.trim()) {
-      toast.error('Please specify a refund reason');
-      return;
-    }
-
-    const amt = refundAmount ? Number(refundAmount) : Number(payment.amount);
-    if (isNaN(amt) || amt <= 0 || amt > Number(payment.amount)) {
-      toast.error(`Refund amount must be between ₹1 and ₹${payment.amount}`);
-      return;
-    }
-
-    setIsRefunding(true);
-    try {
-      const res = await refundPayment(payment.id, {
-        reason: refundReason.trim(),
-        amount: amt,
-      });
-
-      if (res.error) {
-        toast.error(res.error);
-      } else {
-        toast.success(res.message || 'Payment refunded successfully');
-        setShowRefundConfirm(false);
-        onOpenChange(false);
-        if (onPaymentUpdated) onPaymentUpdated();
-      }
-    } catch {
-      toast.error('Unexpected error processing refund');
-    } finally {
-      setIsRefunding(false);
-    }
   };
 
   const handlePrintReceipt = () => {
@@ -504,97 +463,6 @@ export function PaymentDetailDialog({
               </div>
             </div>
           </div>
-
-          {/* Refund Manager Section (if completed) */}
-          {payment.status === 'completed' && (
-            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                    <ShieldAlert className="size-3.5" />
-                    Process Payment Refund
-                  </span>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Issuing a refund will return funds to the student and expire their course enrollment.
-                  </p>
-                </div>
-                {!showRefundConfirm && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8 text-xs gap-1.5 font-medium"
-                    onClick={() => {
-                      setRefundAmount(String(payment.amount));
-                      setShowRefundConfirm(true);
-                    }}
-                  >
-                    <RotateCcw className="size-3.5" />
-                    <span>Issue Refund</span>
-                  </Button>
-                )}
-              </div>
-
-              {showRefundConfirm && (
-                <div className="rounded-lg border border-rose-500/30 bg-background/80 p-3 space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-xs">Refund Amount (₹)</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max={payment.amount}
-                        value={refundAmount}
-                        onChange={(e) => setRefundAmount(e.target.value)}
-                        className="h-9 text-xs mt-1"
-                        placeholder={`Max ₹${payment.amount}`}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Reason for Refund</Label>
-                      <Input
-                        type="text"
-                        value={refundReason}
-                        onChange={(e) => setRefundReason(e.target.value)}
-                        className="h-9 text-xs mt-1"
-                        placeholder="e.g., Requested by student, duplicate charge"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => setShowRefundConfirm(false)}
-                      disabled={isRefunding}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="h-8 text-xs gap-1.5"
-                      onClick={handleRefundSubmit}
-                      disabled={isRefunding}
-                    >
-                      {isRefunding ? (
-                        <>
-                          <Loader2 className="size-3 animate-spin" />
-                          <span>Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check className="size-3" />
-                          <span>Confirm & Refund ₹{refundAmount || payment.amount}</span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         <DialogFooter className="border-t border-border/50 pt-3">

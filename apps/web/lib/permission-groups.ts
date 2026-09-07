@@ -123,17 +123,12 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     id: 'finance',
     name: 'Finance & Payments',
-    description: 'Review student payment orders, invoices, and process refunds',
+    description: 'Review student payment orders, invoices, and transaction logs',
     permissions: [
       {
         slug: 'payments:read',
         label: 'View Payments & Invoices',
         description: 'Access transaction history, revenue logs, and tax invoices.',
-      },
-      {
-        slug: 'payments:refund',
-        label: 'Process Refunds',
-        description: 'Initiate and manage Razorpay refunds for eligible students.',
       },
     ],
   },

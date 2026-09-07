@@ -8,11 +8,13 @@ import {
 } from '@/common/utils';
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import { MongoService } from '@/common/modules/mongodb.service';
+import { AttemptMigrationService } from '@/common/services/attempt-migration.service';
 import {
   BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -49,9 +51,12 @@ type QuestionOptionRow = {
 
 @Injectable()
 export class TestsService {
+  private readonly logger = new Logger(TestsService.name);
+
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly mongoService: MongoService,
+    private readonly attemptMigrationService: AttemptMigrationService,
   ) {}
 
   async create(dto: CreateTestDto) {
@@ -847,7 +852,7 @@ export class TestsService {
 
   async getAttemptDetail(attemptId: string, studentId?: string) {
     // Check MongoDB primary store first
-    const mongoDoc = await this.mongoService.getAttemptByAttemptId(attemptId, studentId);
+    const mongoDoc = await this.mongoService.getAttemptByAttemptId(attemptId);
     if (mongoDoc) {
       if (studentId && mongoDoc.student_id !== studentId) {
         throw new ForbiddenException('Access denied');
@@ -875,38 +880,32 @@ export class TestsService {
       };
     }
 
-    const query = this.supabase
+    const { data: attempt, error: attemptErr } = await this.supabase
       .from('test_attempts')
       .select('*')
-      .eq('id', attemptId);
-
-    if (studentId) {
-      query.eq('student_id', studentId);
-    }
-
-    const { data: attempt, error: attemptErr } = await query.maybeSingle();
+      .eq('id', attemptId)
+      .maybeSingle();
 
     if (attemptErr || !attempt) {
       // Fallback check in assignment_attempts in case an attempt ID was cross-referenced
-      const assignmentQuery = this.supabase
+      const { data: assignmentAttempt } = await this.supabase
         .from('assignment_attempts')
         .select('*')
-        .eq('id', attemptId);
-
-      if (studentId) {
-        assignmentQuery.eq('student_id', studentId);
-      }
-
-      const { data: assignmentAttempt } = await assignmentQuery.maybeSingle();
+        .eq('id', attemptId)
+        .maybeSingle();
 
       if (assignmentAttempt) {
+        if (studentId && assignmentAttempt.student_id !== studentId) {
+          throw new ForbiddenException('Access denied');
+        }
         return this.getAssignmentAttemptDetailDirect(assignmentAttempt);
       }
 
-      if (studentId) {
-        throw new ForbiddenException('Access denied');
-      }
       throw new NotFoundException('Attempt not found');
+    }
+
+    if (studentId && attempt.student_id !== studentId) {
+      throw new ForbiddenException('Access denied');
     }
 
     const { data: testData } = await this.supabase
@@ -1026,7 +1025,7 @@ export class TestsService {
     const avgTimePerQuestion = totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
     const maxScore = attempt.max_score ?? 0;
 
-    return {
+    const result = {
       id: attempt.id,
       test_id: attempt.test_id,
       student_id: attempt.student_id,
@@ -1047,9 +1046,30 @@ export class TestsService {
       topicBreakdown,
       questionReview,
     };
+
+    if (attempt.completed_at && this.mongoService.isConnected()) {
+      this.attemptMigrationService
+        .migrateSingleTestAttempt(attempt.id)
+        .catch((err) => {
+          this.logger.warn(
+            `Failed lazy migration for test attempt ${attempt.id}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        });
+    }
+
+    return result;
+  }
+
+  async migrateAllAttempts(dto?: { limit?: number; offset?: number }) {
+    return this.attemptMigrationService.migrateAllAttempts({
+      assessmentType: 'test',
+      limit: dto?.limit,
+      offset: dto?.offset,
+    });
   }
 
   async gradeAttemptAnswers(attemptId: string, grades: { questionId: string; isCorrect: boolean }[]) {
+
     for (const grade of grades) {
       const { error } = await this.supabase
         .from('test_answers')

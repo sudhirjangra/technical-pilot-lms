@@ -1,4 +1,4 @@
-import { Permissions, Roles } from '@/common/decorators';
+import { Permissions, Public, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -11,13 +11,20 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateQueryDto, GrantExtraAttemptDto, ReplyQueryDto, RequestExtraAttemptDto } from './dto';
+import { CreateContactQueryDto, CreateQueryDto, GrantExtraAttemptDto, ReplyQueryDto, RequestExtraAttemptDto } from './dto';
 import { StudentQueriesService } from './student-queries.service';
 
 @ApiTags('Student Queries')
 @Controller('student-queries')
 export class StudentQueriesController {
   constructor(private readonly service: StudentQueriesService) {}
+
+  /** Public: Submit a contact / support inquiry without authentication */
+  @Post('contact')
+  @Public()
+  submitContact(@Body() dto: CreateContactQueryDto) {
+    return this.service.submitContact(dto);
+  }
 
   // ── Student endpoints ──
 

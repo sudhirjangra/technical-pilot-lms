@@ -4,14 +4,12 @@ import {
   Controller,
   Get,
   Headers,
-  Param,
-  ParseUUIDPipe,
   Post,
   Query,
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateOrderDto, RefundPaymentDto, VerifyPaymentDto } from './dto';
+import { CreateOrderDto, VerifyPaymentDto } from './dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('Payments')
@@ -68,16 +66,5 @@ export class PaymentsController {
       student_id,
     });
     return { data };
-  }
-
-  /** Admin / Sub-admin: refund a payment */
-  @Post(':id/refund')
-  @Roles('ADMIN', 'SUB_ADMIN')
-  @Permissions('payments:refund')
-  refund(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: RefundPaymentDto,
-  ) {
-    return this.paymentsService.refund(id, dto);
   }
 }

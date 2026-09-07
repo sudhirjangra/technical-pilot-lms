@@ -59,9 +59,16 @@ describe('TestsService', () => {
     const mongoService = {
       getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
       saveAttempt: jest.fn().mockResolvedValue(undefined),
+      isConnected: jest.fn().mockReturnValue(true),
     };
 
-    const service = new TestsService(supabase as any, mongoService as any);
+    const attemptMigrationService = {
+      migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
+      migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
+      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+    };
+
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
 
     await expect(service.findAttemptForStudent('attempt-1', 'student-1')).resolves.toEqual(
       expect.objectContaining({
@@ -114,9 +121,16 @@ describe('TestsService', () => {
     const mongoService = {
       getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
       saveAttempt: jest.fn().mockResolvedValue(undefined),
+      isConnected: jest.fn().mockReturnValue(true),
     };
 
-    const service = new TestsService(supabase as any, mongoService as any);
+    const attemptMigrationService = {
+      migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
+      migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
+      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+    };
+
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
 
     await expect(service.findAttemptForStudent('attempt-1', 'student-2', 'ADMIN')).resolves.toEqual(
       expect.objectContaining({
@@ -156,9 +170,16 @@ describe('TestsService', () => {
     const mongoService = {
       getAttemptByAttemptId: jest.fn().mockResolvedValue(mongoDoc),
       saveAttempt: jest.fn().mockResolvedValue(undefined),
+      isConnected: jest.fn().mockReturnValue(true),
     };
 
-    const service = new TestsService(supabase as any, mongoService as any);
+    const attemptMigrationService = {
+      migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
+      migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
+      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+    };
+
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
     const result = await service.findAttemptForStudent('attempt-mongo-1', 'student-1');
 
     expect(result).toEqual(
@@ -172,4 +193,87 @@ describe('TestsService', () => {
     );
     expect(supabase.from).not.toHaveBeenCalled();
   });
+
+  it('should prevent Student A from reading Student B test attempt in MongoDB', async () => {
+    const supabase = { from: jest.fn() };
+    const mongoDoc = {
+      attempt_id: 'attempt-mongo-2',
+      assessment_id: 'test-1',
+      assessment_type: 'test' as const,
+      student_id: 'student-b',
+      started_at: '2026-01-01T00:00:00.000Z',
+      completed_at: '2026-01-01T00:10:00.000Z',
+      score: 75,
+      max_score: 100,
+      percentage: 75,
+      passed: true,
+      time_spent_seconds: 500,
+      correct_count: 7,
+      total_count: 10,
+      avg_time_per_question: 50,
+      topic_breakdown: [],
+      question_review: [],
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    const mongoService = {
+      getAttemptByAttemptId: jest.fn().mockResolvedValue(mongoDoc),
+    };
+
+    const attemptMigrationService = {};
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
+
+    await expect(service.findAttemptForStudent('attempt-mongo-2', 'student-a')).rejects.toThrow('Access denied');
+  });
+
+  it('should prevent Student A from reading Student B test attempt in Supabase fallback', async () => {
+    const supabase = {
+      from: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            id: 'attempt-supa-2',
+            test_id: 'test-1',
+            student_id: 'student-b',
+          },
+          error: null,
+        }),
+      })),
+    };
+
+    const mongoService = {
+      getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
+    };
+
+    const attemptMigrationService = {};
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
+
+    await expect(service.findAttemptForStudent('attempt-supa-2', 'student-a')).rejects.toThrow('Access denied');
+  });
+
+  it('should throw NotFoundException when test attempt does not exist anywhere', async () => {
+    const supabase = {
+      from: jest.fn(() => ({
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      })),
+    };
+
+    const mongoService = {
+      getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
+    };
+
+    const attemptMigrationService = {};
+    const service = new TestsService(supabase as any, mongoService as any, attemptMigrationService as any);
+
+    await expect(service.findAttemptForStudent('non-existent-attempt', 'student-a')).rejects.toThrow('Attempt not found');
+  });
 });
+
+

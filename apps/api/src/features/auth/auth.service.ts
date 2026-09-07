@@ -122,28 +122,7 @@ export class AuthService {
     return { access_token, refresh_token };
   }
 
-  private validateDateOfBirth(dobString?: string) {
-    if (!dobString) return;
-    const birthDate = new Date(dobString);
-    if (isNaN(birthDate.getTime())) {
-      throw new BadRequestException('Invalid date of birth format');
-    }
-    const today = new Date();
-    if (birthDate >= today) {
-      throw new BadRequestException('Date of birth cannot be in the future or today');
-    }
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    if (age < 15) {
-      throw new BadRequestException('You must be at least 15 years old to register');
-    }
-  }
-
   async register(dto: CreateUserDto): Promise<RegisterUserInterface> {
-    this.validateDateOfBirth(dto.date_of_birth);
     let authUser = await this.getUserByEmail(dto.email);
 
     if (authUser) {
@@ -201,7 +180,6 @@ export class AuthService {
         email: dto.email,
         role: 'student',
         full_name: dto.full_name,
-        date_of_birth: dto.date_of_birth,
         phone: dto.phone,
       },
       { onConflict: 'id' },
@@ -364,7 +342,6 @@ export class AuthService {
           full_name: dto.name,
           avatar_url: dto.image,
           phone: null,
-          date_of_birth: null,
         },
         { onConflict: 'id' },
       );
@@ -469,12 +446,10 @@ export class AuthService {
   }
 
   async completeProfile(userId: string, dto: CompleteProfileDto): Promise<void> {
-    this.validateDateOfBirth(dto.date_of_birth);
     const { error } = await this.supabase
       .from('profiles')
       .update({
         full_name: dto.full_name,
-        date_of_birth: dto.date_of_birth,
         phone: dto.phone,
       })
       .eq('id', userId);
@@ -953,7 +928,6 @@ export class AuthService {
           full_name: dto.name,
           avatar_url: dto.avatar_url,
           phone: null,
-          date_of_birth: null,
         },
         { onConflict: 'id' },
       );

@@ -9,7 +9,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createHmac } from 'crypto';
-import { CreateOrderDto, RefundPaymentDto, VerifyPaymentDto } from './dto';
+import { CreateOrderDto, VerifyPaymentDto } from './dto';
 
 @Injectable()
 export class PaymentsService {
@@ -290,84 +290,5 @@ export class PaymentsService {
       .order('created_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
     return data;
-  }
-
-  /** Admin: refund a payment */
-  async refund(paymentId: string, dto: RefundPaymentDto) {
-    const { data: payment, error } = await this.supabase
-      .from('payments')
-      .select('*')
-      .eq('id', paymentId)
-      .eq('status', 'completed')
-      .single();
-    if (error || !payment)
-      throw new NotFoundException('Completed payment not found');
-
-    const refundAmount = dto.amount ?? payment.amount;
-
-    // Call Razorpay refund API if credentials and payment id are valid
-    if (
-      this.razorpayKeyId &&
-      this.razorpayKeySecret &&
-      payment.razorpay_payment_id &&
-      !payment.razorpay_payment_id.startsWith('mock_')
-    ) {
-      try {
-        const res = await fetch(
-          `https://api.razorpay.com/v1/payments/${payment.razorpay_payment_id}/refund`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Basic ${Buffer.from(`${this.razorpayKeyId}:${this.razorpayKeySecret}`).toString('base64')}`,
-            },
-            body: JSON.stringify({
-              amount: Math.round(refundAmount * 100),
-              notes: { reason: dto.reason },
-            }),
-          },
-        );
-
-        if (!res.ok) {
-          const err = (await res.json().catch(() => ({}))) as Record<string, any>;
-          const desc = err?.error?.description;
-          if (this.config.get('NODE_ENV') === 'production') {
-            throw new BadRequestException(desc ?? 'Refund failed with payment gateway');
-          } else {
-            console.warn('Razorpay refund failed in non-production:', desc ?? err);
-          }
-        }
-      } catch (err) {
-        if (err instanceof BadRequestException) throw err;
-        if (this.config.get('NODE_ENV') === 'production') {
-          throw new BadRequestException('Failed to communicate with payment gateway');
-        } else {
-          console.warn('Razorpay gateway refund error in non-production:', err);
-        }
-      }
-    }
-
-    // Update payment status
-    const { error: updateError } = await this.supabase
-      .from('payments')
-      .update({
-        status: 'refunded',
-        refund_reason: dto.reason,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', paymentId);
-
-    if (updateError) {
-      throw new BadRequestException(updateError.message);
-    }
-
-    // Expire enrollment
-    await this.supabase
-      .from('enrollments')
-      .update({ status: 'expired' })
-      .eq('student_id', payment.student_id)
-      .eq('course_id', payment.course_id);
-
-    return { message: 'Payment refunded, enrollment expired' };
   }
 }

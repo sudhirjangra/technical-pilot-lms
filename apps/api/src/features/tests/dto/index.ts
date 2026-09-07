@@ -51,7 +51,7 @@ export class CreateTestDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(0)
   max_attempts?: number;
 }
 
@@ -78,7 +78,7 @@ export class UpdateTestDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(0)
   max_attempts?: number;
 }
 

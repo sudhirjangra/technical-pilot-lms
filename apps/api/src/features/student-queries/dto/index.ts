@@ -1,4 +1,29 @@
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
+
+export class CreateContactQueryDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  name: string;
+
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(10)
+  @MaxLength(20)
+  phone: string;
+
+  @IsString()
+  @MinLength(5)
+  @MaxLength(5000)
+  message: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  subject?: string;
+}
 
 export class CreateQueryDto {
   @IsString()

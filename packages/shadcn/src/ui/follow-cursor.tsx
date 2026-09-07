@@ -17,6 +17,14 @@ const FollowCursor: React.FC<FollowCursorProps> = ({ color = '#323232a6' }) => {
     const prefersReducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     );
+    const isTouchOrCoarse =
+      window.matchMedia('(pointer: coarse)').matches ||
+      ('ontouchstart' in window && navigator.maxTouchPoints > 0) ||
+      (window.matchMedia('(hover: none)').matches && !window.matchMedia('(hover: hover)').matches);
+
+    if (isTouchOrCoarse) {
+      return;
+    }
 
     class Dot {
       position: { x: number; y: number };

@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 export class CreateOrderDto {
   @IsUUID()
@@ -14,14 +14,4 @@ export class VerifyPaymentDto {
 
   @IsString()
   razorpay_signature: string;
-}
-
-export class RefundPaymentDto {
-  @IsString()
-  reason: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  amount?: number;
 }

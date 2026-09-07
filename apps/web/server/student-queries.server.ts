@@ -25,6 +25,40 @@ const QuerySchema = z.object({
 
 export type StudentQuery = z.infer<typeof QuerySchema>;
 
+const ContactSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Enter a valid email address'),
+  phone: z
+    .string()
+    .min(10, 'Mobile number must be at least 10 digits')
+    .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid mobile number (e.g. +919876543210)'),
+  message: z.string().min(5, 'Message must be at least 5 characters'),
+  subject: z.string().optional(),
+});
+
+export type ContactInput = z.infer<typeof ContactSchema>;
+
+
+export async function submitContactForm(input: ContactInput) {
+  const [error, data] = await safeFetch(z.any(), '/student-queries/contact', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify(input),
+  });
+  if (error) {
+    const msg = typeof error === 'string' ? error : (error as any)?.message || 'Failed to submit inquiry';
+    return { error: msg };
+  }
+  return {
+    success: true,
+    message: data?.message || 'Inquiry submitted successfully',
+    queryNumber: data?.query_number,
+  };
+}
+
 async function headers() {
   const session = await auth();
   return {

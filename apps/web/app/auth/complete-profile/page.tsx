@@ -13,7 +13,7 @@ export default async function CompleteProfilePage() {
   if (!session?.user) redirect('/auth/sign-in');
 
   const user = session.user;
-  const isProfileComplete = user.full_name && user.date_of_birth && user.phone;
+  const isProfileComplete = user.full_name && user.phone;
 
   if (isProfileComplete) {
     redirect('/dashboard');
@@ -23,7 +23,6 @@ export default async function CompleteProfilePage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
       <CompleteProfileForm initialData={{
         full_name: user.full_name ?? '',
-        date_of_birth: user.date_of_birth ?? '',
         phone: user.phone ?? '',
       }} />
     </div>

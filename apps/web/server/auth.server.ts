@@ -64,7 +64,6 @@ export const authorizeSignIn = async (
     email: user.email,
     role: user.role,
     full_name: user.full_name,
-    date_of_birth: user.date_of_birth,
     phone: user.phone,
     avatar_url: user.avatar_url,
     is_active: user.is_active,
@@ -104,7 +103,6 @@ export const authorizeGoogleSignIn = async (
     email: user.email,
     role: user.role,
     full_name: user.full_name,
-    date_of_birth: user.date_of_birth,
     phone: user.phone,
     avatar_url: user.avatar_url ?? googleUser.image,
     is_active: user.is_active,
@@ -271,7 +269,6 @@ export const completeProfile = safeAction
       user: {
         ...session.user,
         full_name: parsedInput.full_name,
-        date_of_birth: parsedInput.date_of_birth,
         phone: parsedInput.phone,
       },
     });
@@ -511,7 +508,6 @@ export const confirmEmail = safeAction
         email: user.email,
         role: user.role,
         full_name: user.full_name ?? '',
-        date_of_birth: user.date_of_birth ?? '',
         phone: user.phone ?? '',
         avatar_url: user.avatar_url ?? '',
         redirectTo: targetUrl,

@@ -190,7 +190,15 @@ export class AssignmentsController {
     return { message: 'Attempt allowance assigned successfully', data };
   }
 
+  @Roles('ADMIN')
+  @Post('admin/migrate-attempts')
+  async migrateAttempts(@Body() dto?: { limit?: number; offset?: number }) {
+    const data = await this.assignmentsService.migrateAllAttempts(dto);
+    return { message: 'Attempt migration processed', data };
+  }
+
   // ── End admin analytics routes ────────────────────────────────────────────
+
 
   @Get('student/attempts/:attemptId')
   async getStudentAttemptDetail(

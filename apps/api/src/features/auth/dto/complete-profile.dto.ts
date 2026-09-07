@@ -1,15 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsString, Matches, MinLength } from 'class-validator';
+import { IsString, Matches, MinLength } from 'class-validator';
 
 export class CompleteProfileDto {
   @ApiProperty()
   @IsString()
   @MinLength(2)
   full_name: string;
-
-  @ApiProperty({ format: 'date' })
-  @IsDateString()
-  date_of_birth: string;
 
   @ApiProperty()
   @IsString()

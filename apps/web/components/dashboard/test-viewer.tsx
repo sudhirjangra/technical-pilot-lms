@@ -289,7 +289,7 @@ function InstructionsScreen({
             <span className="text-[11px] font-medium text-muted-foreground">Attempts</span>
             <span className="text-lg font-bold tabular-nums text-foreground">
               {isInfiniteAttempts
-                ? `${attemptsUsed} (Unlimited)`
+                ? `${attemptsUsed} used`
                 : `${attemptsUsed} / ${maxAttempts}`}
             </span>
           </CardContent>
@@ -328,8 +328,8 @@ function InstructionsScreen({
               <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
               <span>
                 {isInfiniteAttempts
-                  ? 'Unlimited attempts are permitted for this assessment.'
-                  : `You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`}
+                  ? `Unlimited attempts are permitted for this assessment (${attemptsUsed} tried so far).`
+                  : `You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining (${attemptsUsed} of ${maxAttempts} used).`}
               </span>
             </li>
           </ul>

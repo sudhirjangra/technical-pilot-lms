@@ -32,23 +32,69 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
 
 - [x] **TP-ARCH-001 - MongoDB for assignment/test attempt history**
   - Configured MongoDB connection module (`MongoModule` & `MongoService`) with connection pooling, lifecycle management, and index initialization (`attempt_id`, `student_id`, `assessment_id`, `created_at`).
-  - Updated `AssignmentsService` and `TestsService` `submitAttempt` to create unique attempt documents in MongoDB storing complete history (student info, course/lesson context, attempt number, score, max score, percentage, passed, total time, topic breakdown, question reviews) and maintain lightweight references in Supabase.
-  - Updated `getAssignmentAttemptDetail` and `getAttemptDetail` to retrieve detailed history from MongoDB as the primary store with fallback to Supabase.
-  - Added unit test suites verifying MongoDB persistence, retrieval, and fallback mechanisms.
+  - Resolved MongoDB upsert operation by strictly isolating `$setOnInsert` (`created_at`) from `$set` (document body & `updated_at`).
+  - Updated `AssignmentsService` and `TestsService` `submitAttempt` to freeze complete, self-contained attempt snapshots in MongoDB (storing full question text, options arrays with `id`, `text`, `isCorrect`, `isSelected`, student selections `selectedOptionIds`/`selectedOptionTexts`, correct options `correctOptionIds`/`correctOptionTexts`, points, explanations, scoring, and topic breakdown) so attempt history is completely immune to subsequent edits or deletions of questions/tests in Supabase.
+  - Updated `getAssignmentAttemptDetail`, `getAttemptDetail`, `findAttemptForStudent`, and `getMyAttempts` across both services to prioritize MongoDB attempt snapshots as the authoritative store with fallback to Supabase for legacy records.
+  - Added and verified unit test suites ([mongodb.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/common/modules/mongodb.service.spec.ts), [assignments.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.spec.ts), and [tests.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.spec.ts)) with 11/11 tests passing and 0 TypeScript compilation errors.
 - [x] **TP-DOUBT-001 through TP-DOUBT-004 - Course-based doubt sessions, targeting, and unified communications**
   - **TP-DOUBT-001**: Merged doubt sessions, notifications, and student query ticket management into a unified admin communications navigation workflow with cross-linking tabs.
   - **TP-DOUBT-002**: Added full targeting capabilities to doubt slots (`all`, `course`, and `student` modes) across backend DTOs, service methods, and frontend admin setup.
   - **TP-DOUBT-003**: Enforced course-based and 1-on-1 student access rules in `getUpcomingSlots` (active course enrollment filtering and 1-on-1 matching) and `bookSlot` authorization guards (blocking unauthorized bookings with `ForbiddenException`).
   - **TP-DOUBT-004**: Resolved admin slot creation by validating schedules, storing targeting references (`target_type`, `course_id`, `student_id`), providing meeting link inputs, and automatically dispatching targeted in-app notifications to eligible students upon slot creation.
+  - **Schema & Hydration**: Created database migration `016_doubt_slots_targeting.sql` and implemented application-layer hydration (`hydrateSlots`) in `DoubtSessionsService` to eliminate any runtime dependence on PostgREST schema cache foreign-key embedding.
   - **Validation Performed**: Unit test suite `doubt-sessions.service.spec.ts` (8/8 passing tests covering targeting, notifications, course access filtering, and authorization guards) and clean TypeScript typechecks across `apps/api` and `apps/web`.
+
+- [x] **TP-ADMIN-001 - Remove revenue from admin dashboard**
+  - Removed Revenue card from Admin Dashboard (`AdminDashboardClient`) and balanced the metrics grid to 4 core student/course stats.
+  - Preserved full payments audit logs and normal student purchases.
+  - **Files Changed**: [admin-dashboard-client.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/admin/admin-dashboard-client.tsx).
+
+- [x] **TP-UI-001 - Remove touch-device green cursor dot**
+  - Updated `FollowCursor` in `@repo/shadcn` to detect touch/coarse devices (`pointer: coarse`, `hover: none`, and `maxTouchPoints > 0`) and bypass canvas dot initialization on touch screens while preserving the desktop cursor trail.
+  - **Files Changed**: [follow-cursor.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/packages/shadcn/src/ui/follow-cursor.tsx).
+
+- [x] **TP-PAY-001 & TP-PAY-002 - Remove refund option and money-deduction functions**
+  - Removed `POST /payments/:id/refund` route and handler from `PaymentsController` and `PaymentsService`.
+  - Removed `RefundPaymentDto` and revoked `payments:refund` permission from API and web permission groups.
+  - Removed `refundPayment` server action and all refund manager UI dialog buttons and controls from `PaymentDetailDialog`.
+  - Verified normal order creation, payment signature verification, webhook processing, and enrollment activation are untouched.
+  - **Files Changed**: [payments.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/payments/payments.controller.ts), [payments.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/payments/payments.service.ts), [dto/index.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/payments/dto/index.ts), [permissions/dto/index.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts), [permission-groups.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts), [payments.server.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/server/admin/payments.server.ts), [payment-detail-dialog.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/admin/payment-detail-dialog.tsx).
+
+- [x] **TP-ATT-001 & TP-ATT-002 - Unlimited attempts and attempt display**
+  - Updated `CreateTestDto`, `UpdateTestDto`, `CreateAssignmentDto`, and `UpdateAssignmentDto` to permit `max_attempts = 0` (unlimited).
+  - Enhanced student assessment attempt display in `test-viewer.tsx` to clearly distinguish between unlimited attempts (showing `{attemptsUsed} used`) and limited attempts (showing `{attemptsUsed} / {maxAttempts}` with remaining attempts), without displaying `0` or `infinity` as total limits.
+  - **Files Changed**: [tests/dto/index.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/dto/index.ts), [assignments/dto/index.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/dto/index.ts), [test-viewer.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/dashboard/test-viewer.tsx).
+
+- [x] **TP-STUDENT-002 - Remove DOB entirely**
+  - Completely removed Date of Birth from `SignUpForm`, `CompleteProfileForm`, user types (`UserSchema`, NextAuth `User`), `auth.ts`, `jwtCallback`, `sessionCallback`, `middleware.ts`, student profile view, backend auth DTOs (`CreateUserDto`, `CompleteProfileDto`, `GoogleSignInResponseDto`), and backend services (`AuthService`, `UsersService`, `AnalyticsService`).
+  - **Files Changed**: [sign-up.form.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/auth/form/sign-up.form.tsx), [complete-profile.form.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/auth/form/complete-profile.form.tsx), [complete-profile/page.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/app/auth/complete-profile/page.tsx), [profile/page.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/app/profile/page.tsx), [auth.type.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/types/auth.type.ts), [user.type.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/types/user.type.ts), [type.d.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/types/type.d.ts), [auth.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/auth.ts), [jwt-callback.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/lib/auth/jwt-callback.ts), [session-callback.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/lib/auth/session-callback.ts), [middleware.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/middleware.ts), [auth.server.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/server/auth.server.ts), [create-user.dto.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/auth/dto/create-user.dto.ts), [complete-profile.dto.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/auth/dto/complete-profile.dto.ts), [google-signin.dto.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/auth/dto/google-signin.dto.ts), [auth.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/auth/auth.service.ts), [users.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/users/users.service.ts), [analytics.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/analytics/analytics.service.ts).
+
+- [x] **TP-SUPPORT-001 & TP-SUPPORT-002 - Contact Us link and Contact form**
+  - Added public contact endpoint `POST /student-queries/contact` with `CreateContactQueryDto` (name, email, phone, message, subject) and admin notifications in `StudentQueriesService`.
+  - Created migration `017_contact_queries_support.sql` allowing nullable `student_id` for guest inquiries.
+  - Created public `/contact` page and responsive `ContactForm` component with validation and success ticket feedback.
+  - Added Contact Support / Contact Us links to sign-in and sign-up pages usable before authentication.
+  - **Files Changed**: [student-queries.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/student-queries/student-queries.controller.ts), [student-queries.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/student-queries/student-queries.service.ts), [student-queries/dto/index.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/student-queries/dto/index.ts), [017_contact_queries_support.sql](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/packages/supabase/migrations/017_contact_queries_support.sql), [student-queries.server.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/server/student-queries.server.ts), [contact/page.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/app/contact/page.tsx), [contact-form.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/contact/contact-form.tsx), [sign-in.form.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/auth/form/sign-in.form.tsx), [sign-up.form.tsx](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/web/components/auth/form/sign-up.form.tsx).
+
+- [x] **TP-IMPORT-001 - Flexible two-to-four option imports**
+  - Verified `question-import.util.ts` cleanly accepts questions with 2, 3, or 4 options when option fields C/D are empty/omitted and maps only options with values while preserving answer keys.
+  - Added unit test suite `question-import.util.spec.ts` (4/4 passing tests).
+  - **Files Changed**: [question-import.util.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/common/utils/question-import.util.spec.ts).
+
+- [x] **TP-ARCH-004 - Attempt-history API and fetching**
+  - Exposed student attempt detail endpoints `GET /assignments/student/attempts/:attemptId` and `GET /tests/student/attempts/:attemptId` with strict student ownership guards (`findAttemptForStudent`).
+  - Standardized attempt lookup flow in `AssignmentsService` and `TestsService`: retrieves authoritative snapshot document from MongoDB, validates student ownership (throws `ForbiddenException` if mismatched), falls back gracefully to Supabase with automatic lazy MongoDB caching, and throws `NotFoundException` when attempt ID is nonexistent.
+  - Verified response format compatibility across student test viewer, attempts history, and admin analytics screens (`id`, `assignment_id`/`test_id`, `student_id`, `student_name`, `student_email`, `score`, `max_score`, `maxScore`, `percentage`, `passed`, `time_spent_seconds`, `totalTimeSeconds`, `correctCount`, `totalCount`, `avgTimePerQuestion`, `topicBreakdown`, `questionReview`).
+  - Added comprehensive ownership enforcement, invalid attempt, and fallback unit tests to `assignments.service.spec.ts` and `tests.service.spec.ts` (34/34 tests passing across all active API test suites).
+  - **Files Changed**: [assignments.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [assignments.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.controller.ts), [assignments.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.spec.ts), [tests.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [tests.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.controller.ts), [tests.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.spec.ts).
 
 ## Immediate Next Step
 
-- [ ] **TP-ARCH-003 - Attempt-history migration and data integrity**
-  - Inspect the existing Supabase attempt schemas and identify every field consumed by frontend, backend, reports, and student dashboards before defining the MongoDB schema.
-  - Define a mapping that preserves all required information and migrate existing submitted attempts where applicable.
-  - Maintain a reliable mapping between legacy Supabase records and MongoDB records. Handle missing or incomplete historical data without crashing.
-  - Acceptance: historical attempts remain accessible, each has a valid reference, new submissions use MongoDB, no duplicate records are created, results remain accurate, and failed migration records are identifiable and safely handled.
+- [ ] **TP-ARCH-005 - Remove manual-grading data dependencies**
+  - Identify every database field, API path, service, background operation, and frontend path related to manual grading.
+  - Remove or update logic that resets marks after submission, resets scores to zero, changes a passed test to incorrect, overwrites calculated marks, or depends on manual-grading status for display.
+  - Make the MongoDB attempt result authoritative for submitted results. Supabase reference rows must not contain conflicting score/status values that override it.
+  - Acceptance: no manual-grading dependency remains in submission, marks are not reset, passed tests remain passed, statuses match the actual result, and stale Supabase values cannot overwrite MongoDB results.
 
 ## New Requirements Queue
 
@@ -56,7 +102,8 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 ### Attempt History and Grading
 
-- [ ] **TP-ARCH-004 - Attempt-history API and fetching**
+- [x] **TP-ARCH-004 - Attempt-history API and fetching**
+
   - Use the Supabase attempt ID to fetch the corresponding MongoDB attempt. Keep the API response compatible with existing student and admin screens.
   - Handle missing IDs, invalid references, unavailable MongoDB records, and mismatched ownership with safe understandable responses.
   - Prevent Student A from reading Student B's attempt history. Preserve behavior after multiple submissions and do not return incorrect scores.
@@ -78,12 +125,12 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
   - Do not allow any manual action to overwrite a calculated score. A completed or passed test must never show zero merely because a manual-grading path previously ran.
   - Acceptance: manual grading is absent from frontend and backend, submitted marks remain correct, assignment/test status matches stored results, and existing attempts are not corrupted.
 
-- [ ] **TP-ATT-001 - Unlimited attempts**
+- [x] **TP-ATT-001 - Unlimited attempts**
   - Treat configured `attempts = 0` as unlimited. A value greater than zero permits only that many attempts.
   - Enforce the rule in the backend; reopening or refreshing must not bypass a positive limit; preserve all attempt history.
   - Acceptance: zero allows unlimited attempts, three allows three, server enforcement is authoritative, and existing history remains intact.
 
-- [ ] **TP-ATT-002 - Attempt display**
+- [x] **TP-ATT-002 - Attempt display**
   - When unlimited, show only attempts used/tried. Do not display `0`, infinity, or `0 remaining` as a total limit.
   - When limited, show configured limit and meaningful used/remaining information.
 
@@ -119,13 +166,13 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 - [ ] **TP-MKT-004 - Marketing data**
   - Store responses and remarks so admins can review them and target relevant campaigns. Do not interpret non-purchase as proof the student has never studied the course.
 
-- [ ] **TP-ADMIN-001 - Remove revenue from admin dashboard**
+- [x] **TP-ADMIN-001 - Remove revenue from admin dashboard**
   - Remove revenue cards and related dashboard metrics only. Do not remove unrelated payment functionality, payment records, or normal student purchases.
 
-- [ ] **TP-SUPPORT-001 - Contact Us link**
+- [x] **TP-SUPPORT-001 - Contact Us link**
   - Add a Contact Us/Support link to login and signup screens. It must be usable before authentication.
 
-- [ ] **TP-SUPPORT-002 - Contact form**
+- [x] **TP-SUPPORT-002 - Contact form**
   - Collect name, email, mobile number, and query/message without requiring login. Add validation and clear success/error feedback.
 
 - [x] **TP-DOUBT-001 - Merge notification and doubt-session management**
@@ -150,7 +197,7 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
   - Assign every student a unique student ID generated using their email and mobile number. Use the student ID as the primary student identifier throughout the portal instead of email.
   - Preserve existing student data and update references carefully. Do not make an unsafe identity migration or break existing enrollments, attempts, payments, or progress.
 
-- [ ] **TP-STUDENT-002 - Remove DOB**
+- [x] **TP-STUDENT-002 - Remove DOB**
   - Remove date of birth entirely from signup, student profiles, admin views, backend DTO/service handling, schemas, and other student forms.
   - Do not continue collecting DOB through hidden fields or compatibility-only form fields.
 
@@ -160,10 +207,10 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 ### Payment Safety
 
-- [ ] **TP-PAY-001 - Remove refund option**
+- [x] **TP-PAY-001 - Remove refund option**
   - Remove refund buttons, actions, backend endpoints, and services from admin payments. Do not merely hide the controls.
 
-- [ ] **TP-PAY-002 - Remove admin money-deduction functions**
+- [x] **TP-PAY-002 - Remove admin money-deduction functions**
   - Remove or disable every admin-side operation that could deduct money from the admin's Razorpay account, including refunds, reversals, transfers, payouts, and similar operations.
   - Verify direct API requests cannot trigger those operations. Normal student order creation, payment processing, signature verification, and enrollment activation must continue working.
 
@@ -176,7 +223,7 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
   - Revoke access for all students, prevent enrolled and non-enrolled users from opening/viewing archived content, show a dimmed course tile with Archived status, and enforce restrictions in backend/API as well as UI.
   - Preserve historical enrollment, payment, progress, and attempt data.
 
-- [ ] **TP-IMPORT-001 - Flexible two-to-four option imports**
+- [x] **TP-IMPORT-001 - Flexible two-to-four option imports**
   - If option fields A/B/C/D contain empty values, accept the question and map only options with values. Support two, three, and four options.
   - Preserve correct-answer mapping and do not reject a question solely because optional option fields are empty.
 
@@ -193,7 +240,7 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 - [ ] **TP-DESC-003 - Course details display**
   - Show the course description on the course details page before enrollment, in the area where Enroll Now information is shown.
 
-- [ ] **TP-UI-001 - Remove touch-device green cursor dot**
+- [x] **TP-UI-001 - Remove touch-device green cursor dot**
   - Remove the green cursor dot on touch/mobile devices while retaining desktop cursor behavior if it is part of the existing experience.
 
 ### Course Expiry and Subscriptions

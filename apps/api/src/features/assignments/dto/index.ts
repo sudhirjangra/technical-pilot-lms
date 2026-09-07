@@ -71,7 +71,7 @@ export class CreateAssignmentDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(0)
   max_attempts?: number;
 }
 
@@ -118,7 +118,7 @@ export class UpdateAssignmentDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()
-  @Min(1)
+  @Min(0)
   max_attempts?: number;
 }
 
