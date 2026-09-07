@@ -9,7 +9,6 @@ import {
   type StudentDetail,
   type StudentEnrollment,
   getAttemptDetail,
-  gradeAttemptAnswers,
   toggleStudentActive,
   updateEnrollmentStatus,
 } from '@/server/admin/students.server';
@@ -209,10 +208,6 @@ export function StudentDetailClient({
   const [attemptType, setAttemptType] = useState<'assignment' | 'test'>(
     'assignment',
   );
-  const [gradingState, setGradingState] = useState<
-    Record<string, boolean | null>
-  >({});
-  const [gradingSaving, setGradingSaving] = useState(false);
   const [attemptFilter, setAttemptFilter] = useState<
     'all' | 'test' | 'assignment'
   >('all');
@@ -304,37 +299,8 @@ export function StudentDetailClient({
     setAttemptType(type);
     setAttemptDialog(true);
     setAttemptDetail(null);
-    setGradingState({});
     const detail = await getAttemptDetail(attemptId, type);
     setAttemptDetail(detail);
-  };
-
-  const handleGrade = async () => {
-    if (!attemptDetail) return;
-    const grades = Object.entries(gradingState)
-      .filter(([, v]) => v !== null)
-      .map(([questionId, isCorrect]) => ({
-        questionId,
-        isCorrect: isCorrect!,
-      }));
-    if (grades.length === 0) {
-      toast.error('No grades to submit');
-      return;
-    }
-    setGradingSaving(true);
-    const result = await gradeAttemptAnswers(
-      attemptDetail.id,
-      attemptType,
-      grades,
-    );
-    setGradingSaving(false);
-    if (result.error) {
-      toast.error('Failed to save grades');
-      return;
-    }
-    toast.success('Grades saved');
-    setAttemptDialog(false);
-    router.refresh();
   };
 
   /* ── Render ───────────────────────────────────────────────────── */
@@ -365,7 +331,7 @@ export function StudentDetailClient({
           <DialogHeader>
             <DialogTitle>Attempt Detail</DialogTitle>
             <DialogDescription>
-              Review answers and grade text questions.
+              Review student submission answers.
             </DialogDescription>
           </DialogHeader>
 
@@ -412,7 +378,6 @@ export function StudentDetailClient({
                 const hasAnswer = isText
                   ? !!q.textAnswer?.trim()
                   : selectedTexts.length > 0;
-                const grade = gradingState[q.questionId];
                 return (
                   <Card key={q.questionId} className="gap-2 p-3">
                     <div className="flex flex-wrap items-start gap-2">
@@ -433,14 +398,6 @@ export function StudentDetailClient({
                       {q.isCorrect === false && (
                         <Badge variant="destructive" className="text-[10px]">
                           Incorrect
-                        </Badge>
-                      )}
-                      {q.isCorrect === null && (
-                        <Badge
-                          variant="outline"
-                          className="border-amber-400 text-[10px] text-amber-600"
-                        >
-                          Needs grading
                         </Badge>
                       )}
                       {q.timeSpentSeconds != null && (
@@ -518,61 +475,9 @@ export function StudentDetailClient({
                       </details>
                     )}
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs font-medium">Grade:</span>
-                      <Button
-                        size="sm"
-                        variant={grade === true ? 'default' : 'outline'}
-                        className="h-7 text-xs"
-                        onClick={() =>
-                          setGradingState((s) => ({
-                            ...s,
-                            [q.questionId]: true,
-                          }))
-                        }
-                      >
-                        Correct
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={grade === false ? 'destructive' : 'outline'}
-                        className="h-7 text-xs"
-                        onClick={() =>
-                          setGradingState((s) => ({
-                            ...s,
-                            [q.questionId]: false,
-                          }))
-                        }
-                      >
-                        Incorrect
-                      </Button>
-                    </div>
                   </Card>
                 );
               })}
-
-              {!!attemptDetail.questionReview?.length && (
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-muted-foreground text-xs">
-                    Saving grades recalculates the score and updates the lesson, chapter and
-                    course status for this student.
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={handleGrade}
-                    disabled={gradingSaving}
-                  >
-                    {gradingSaving ? (
-                      <>
-                        <OrbitalSpinner className="mr-2 size-3" />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save Grades'
-                    )}
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>

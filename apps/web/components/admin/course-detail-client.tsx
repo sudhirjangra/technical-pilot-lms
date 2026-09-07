@@ -1026,7 +1026,7 @@ export function CourseDetailClient({
           <div className="md:col-span-2">
             <label className="text-sm font-medium">
               Expected answer{' '}
-              <span className="text-muted-foreground font-normal">(case-insensitive match — leave blank for manual grading)</span>
+              <span className="text-muted-foreground font-normal">(case-insensitive match — leave blank to auto-award points)</span>
             </label>
             <Input
               value={questionDraft.correct_text_answer}

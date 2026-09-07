@@ -201,10 +201,12 @@ export class AttemptMigrationService {
         : calculatedMaxScore;
 
     const calculatedScore = questionReview.reduce((acc, q) => acc + q.pointsEarned, 0);
-    const score =
+    // Prefer the larger of Supabase and calculated scores to avoid stale 0 from un-graded submissions
+    const supabaseScore =
       attempt.score !== null && attempt.score !== undefined
         ? Number(attempt.score)
-        : calculatedScore;
+        : 0;
+    const score = Math.max(supabaseScore, calculatedScore);
 
     const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
     const passed = percentage >= passingPct;

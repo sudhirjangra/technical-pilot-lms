@@ -463,7 +463,14 @@ export class AssignmentsService {
         const expected = q.correct_text_answer ? normalize(q.correct_text_answer as string) : null;
         const given = answer?.textAnswer ? normalize(answer.textAnswer) : null;
         if (!expected) {
-          isCorrect = null; // no expected answer set → manually graded
+          // No expected answer configured – auto-award points if student submitted any text
+          if (given) {
+            isCorrect = true;
+            pointsEarned = points;
+            correctCount++;
+          } else {
+            isCorrect = false;
+          }
         } else if (given) {
           isCorrect = given === expected;
           if (isCorrect) { pointsEarned = points; correctCount++; }
@@ -642,6 +649,15 @@ export class AssignmentsService {
       }
     }
 
+    if (assignmentRel?.lesson_id) {
+      await this.syncLessonCompletion(
+        assignmentRel.lesson_id,
+        studentId,
+        attempt.assignment_id,
+        passingPercent,
+      );
+    }
+
     return {
       score: totalScore,
       maxScore,
@@ -712,10 +728,12 @@ export class AssignmentsService {
       const chapter = lesson?.chapters;
       const course = chapter?.courses;
       const passingPct = assignment?.passing_score_percent ?? 60;
+      const score = mongo?.score ?? a.score;
+      const max_score = mongo?.max_score ?? a.max_score;
       const percentage =
-        a.max_score && a.max_score > 0
-          ? Math.round(((a.score ?? 0) / a.max_score) * 100)
-          : mongo?.percentage ?? null;
+        mongo?.percentage ?? (max_score && max_score > 0
+          ? Math.round(((score ?? 0) / max_score) * 100)
+          : null);
       return {
         id: a.id,
         type: 'assignment' as const,
@@ -725,11 +743,11 @@ export class AssignmentsService {
         courseTitle: course?.title ?? mongo?.course_title ?? 'Unknown course',
         started_at: a.started_at ?? mongo?.started_at,
         completed_at: a.completed_at ?? mongo?.completed_at,
-        score: a.score ?? mongo?.score,
-        max_score: a.max_score ?? mongo?.max_score,
+        score,
+        max_score,
         time_spent_seconds: a.time_spent_seconds ?? mongo?.time_spent_seconds,
         percentage,
-        passed: percentage !== null ? percentage >= passingPct : (mongo?.passed ?? null),
+        passed: mongo?.passed ?? (percentage !== null ? percentage >= passingPct : null),
       };
     });
   }
@@ -1005,74 +1023,9 @@ export class AssignmentsService {
     });
   }
 
-  async gradeAttemptAnswers(attemptId: string, grades: { questionId: string; isCorrect: boolean }[]) {
-
-    for (const grade of grades) {
-      const { error } = await this.supabase
-        .from('assignment_answers')
-        .update({ is_correct: grade.isCorrect })
-        .eq('attempt_id', attemptId)
-        .eq('question_id', grade.questionId);
-
-      if (error) throw new BadRequestException(error.message);
-    }
-
-    const { data: attempt } = await this.supabase
-      .from('assignment_attempts')
-      .select('assignment_id, student_id, max_score')
-      .eq('id', attemptId)
-      .single();
-
-    if (!attempt) throw new NotFoundException('Attempt not found');
-
-    const { data: assignment } = await this.supabase
-      .from('assignments')
-      .select('id, lesson_id, passing_score_percent')
-      .eq('id', attempt.assignment_id)
-      .single();
-
-    const { data: questions } = await this.supabase
-      .from('questions')
-      .select('id, points')
-      .eq('assignment_id', attempt.assignment_id);
-
-    const { data: answers } = await this.supabase
-      .from('assignment_answers')
-      .select('question_id, is_correct')
-      .eq('attempt_id', attemptId);
-
-    const pointsMap = new Map((questions ?? []).map((q) => [q.id, q.points ?? 1]));
-    const calculatedMaxScore = (questions ?? []).reduce((sum, q) => sum + (q.points ?? 1), 0);
-    const maxScore = attempt.max_score ?? calculatedMaxScore;
-    const totalScore = (answers ?? [])
-      .filter((a) => a.is_correct === true)
-      .reduce((sum, a) => sum + (pointsMap.get(a.question_id) ?? 1), 0);
-
-    const { data: updatedAttempt } = await this.supabase
-      .from('assignment_attempts')
-      .update({ score: totalScore, max_score: maxScore })
-      .eq('id', attemptId)
-      .select()
-      .single();
-
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    const passed = percentage >= (assignment?.passing_score_percent ?? 60);
-
-    if (assignment?.lesson_id) {
-      await this.syncLessonCompletion(
-        assignment.lesson_id,
-        attempt.student_id,
-        assignment.id,
-        assignment.passing_score_percent ?? 60,
-      );
-    }
-
-    return { ...updatedAttempt, percentage, passed };
-  }
-
   /**
-   * Manual grading can flip an attempt between pass and fail, so lesson progress and
-   * course enrollment status must be recomputed from the student's best attempt.
+   * Recompute lesson completion status from the student's best attempt after
+   * any score recalculation.
    */
   private async syncLessonCompletion(
     lessonId: string,

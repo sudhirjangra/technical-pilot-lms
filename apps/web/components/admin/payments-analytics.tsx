@@ -68,9 +68,6 @@ export function PaymentsAnalytics({
       if (p.status === 'completed') {
         completedRevenue += amt;
         completedCount++;
-      } else if (p.status === 'refunded') {
-        refundedRevenue += amt;
-        refundedCount++;
       } else if (p.status === 'pending') {
         pendingRevenue += amt;
         pendingCount++;
@@ -79,20 +76,20 @@ export function PaymentsAnalytics({
       }
     }
 
-    const netRevenue = completedRevenue - refundedRevenue;
-    const attemptedCount = completedCount + failedCount + refundedCount;
+    const netRevenue = completedRevenue;
+    const attemptedCount = completedCount + failedCount;
     const successRate = attemptedCount > 0 ? (completedCount / attemptedCount) * 100 : 0;
     const averageOrderValue = completedCount > 0 ? Math.round(completedRevenue / completedCount) : 0;
 
     return {
       completedRevenue,
       netRevenue,
-      refundedRevenue,
+      refundedRevenue: 0,
       pendingRevenue,
       completedCount,
       pendingCount,
       failedCount,
-      refundedCount,
+      refundedCount: 0,
       totalCount: payments.length,
       successRate,
       averageOrderValue,
@@ -201,13 +198,6 @@ export function PaymentsAnalytics({
         color: STATUS_COLORS.pending,
       },
       {
-        status: 'Refunded',
-        key: 'refunded',
-        count: metrics.refundedCount,
-        amount: metrics.refundedRevenue,
-        color: STATUS_COLORS.refunded,
-      },
-      {
         status: 'Failed',
         key: 'failed',
         count: metrics.failedCount,
@@ -220,7 +210,7 @@ export function PaymentsAnalytics({
   return (
     <div className="space-y-4">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 sm:gap-3">
         {/* Gross Revenue */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
           <CardContent className="p-3 sm:p-4">
@@ -256,7 +246,7 @@ export function PaymentsAnalytics({
               </span>
             </div>
             <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
-              After ₹{metrics.refundedRevenue.toLocaleString('en-IN')} refunds
+              Total collections
             </p>
           </CardContent>
         </Card>
@@ -276,7 +266,7 @@ export function PaymentsAnalytics({
               </span>
             </div>
             <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
-              {metrics.completedCount} of {metrics.completedCount + metrics.failedCount + metrics.refundedCount}
+              {metrics.completedCount} of {metrics.completedCount + metrics.failedCount}
             </p>
           </CardContent>
         </Card>
@@ -315,26 +305,6 @@ export function PaymentsAnalytics({
             </div>
             <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
               {metrics.pendingCount} awaiting
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Refunds */}
-        <Card className="border-border/60 bg-card/60 backdrop-blur-sm">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] sm:text-xs font-medium truncate">Refunds</span>
-              <div className="rounded-full bg-rose-500/10 p-1 sm:p-1.5 text-rose-500 shrink-0">
-                <RotateCcw className="size-3 sm:size-3.5" />
-              </div>
-            </div>
-            <div className="mt-1.5 sm:mt-2 flex items-baseline gap-1">
-              <span className="text-base font-bold sm:text-xl">
-                ₹{metrics.refundedRevenue.toLocaleString('en-IN')}
-              </span>
-            </div>
-            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-[11px]">
-              {metrics.refundedCount} transactions
             </p>
           </CardContent>
         </Card>

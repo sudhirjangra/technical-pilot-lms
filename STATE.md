@@ -88,13 +88,35 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - Added comprehensive ownership enforcement, invalid attempt, and fallback unit tests to `assignments.service.spec.ts` and `tests.service.spec.ts` (34/34 tests passing across all active API test suites).
   - **Files Changed**: [assignments.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [assignments.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.controller.ts), [assignments.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.spec.ts), [tests.service.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [tests.controller.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.controller.ts), [tests.service.spec.ts](file:///C:/Users/sudjangr/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.spec.ts).
 
+- [x] **TP-ARCH-005 - Remove manual-grading data dependencies**
+  - Removed manual-grading pending status (`isCorrect = null`) from text question evaluation in `AssignmentsService` and `TestsService` `submitAttempt`, auto-awarding points when text is submitted without a predefined answer key.
+  - Made MongoDB the authoritative source in `getMyAttempts` across both assignments and tests, preventing Supabase reference values (like score `0` or un-graded status) from overwriting MongoDB score, percentage, and passed states.
+  - Updated `gradeAttemptAnswers` in both `AssignmentsService` and `TestsService` to synchronize recalculated question reviews, topic breakdowns, and scores into the authoritative MongoDB attempt document alongside Supabase.
+  - Updated `AttemptMigrationService` to prioritize calculated non-zero scores over stale `0` scores in legacy Supabase attempts.
+  - Replaced manual grading UI copy in `test-viewer.tsx` and `course-detail-client.tsx`.
+  - **Files Changed**: [assignments.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [tests.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [attempt-migration.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/common/services/attempt-migration.service.ts), [test-viewer.tsx](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/dashboard/test-viewer.tsx), [course-detail-client.tsx](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/admin/course-detail-client.tsx).
+
+- [x] **TP-ARCH-006 - Submission and attempt-history consistency**
+  - Ensured deterministic submission consistency in `AssignmentsService` and `TestsService`: verified attempt completion guard preventing duplicate submission calls, synchronized MongoDB complete snapshots, Supabase attempt reference updates, and immediate assessment and lesson completion progress status sync via `syncLessonCompletion`.
+  - Added unit test suite in `assignments.service.spec.ts` verifying atomic submission flow: single attempt creation, MongoDB document generation, score persistence, and immediate lesson completion status.
+  - **Files Changed**: [assignments.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [tests.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [assignments.service.spec.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.spec.ts).
+
+- [x] **TP-ARCH-002 - Remove manual grading entirely**
+  - Removed manual-grading controls, actions, state, and badges from the web application (in `student-detail-client.tsx`, removed `gradingState`, `handleGrade`, "Needs grading" badge, Grade action buttons, and "Save Grades" footer).
+  - Removed manual-grading server actions `gradeAttemptAnswers`, `gradeAssignmentAttempt`, and `gradeTestAttempt` from `students.server.ts`, `assignments.server.ts`, and `tests.server.ts`.
+  - Removed manual-grading endpoints `PATCH /assignments/attempts/:attemptId/grade` and `PATCH /tests/attempts/:attemptId/grade` from `assignments.controller.ts` and `tests.controller.ts`.
+  - Removed `gradeAttemptAnswers` methods from `AssignmentsService` and `TestsService`.
+  - Removed `GradeAttemptDto` and `GradeItemDto` classes from assignments and tests DTO modules.
+  - Removed `assignments:grade` and `tests:grade` permission slugs from `ALL_PERMISSIONS` and frontend `permission-groups.ts`.
+  - Verified calculated marks remain authoritative and immutable via unit test suites and typechecks.
+  - **Files Changed**: [student-detail-client.tsx](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/admin/student-detail-client.tsx), [students.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/students.server.ts), [assignments.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/assignments.server.ts), [tests.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/tests.server.ts), [assignments.controller.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.controller.ts), [tests.controller.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.controller.ts), [assignments.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [tests.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/dto/index.ts), [dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/dto/index.ts), [permissions/dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts), [permission-groups.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts).
+
 ## Immediate Next Step
 
-- [ ] **TP-ARCH-005 - Remove manual-grading data dependencies**
-  - Identify every database field, API path, service, background operation, and frontend path related to manual grading.
-  - Remove or update logic that resets marks after submission, resets scores to zero, changes a passed test to incorrect, overwrites calculated marks, or depends on manual-grading status for display.
-  - Make the MongoDB attempt result authoritative for submitted results. Supabase reference rows must not contain conflicting score/status values that override it.
-  - Acceptance: no manual-grading dependency remains in submission, marks are not reset, passed tests remain passed, statuses match the actual result, and stale Supabase values cannot overwrite MongoDB results.
+- [ ] **TP-ANALYSIS-001 - Question categorization**
+  - Questions must support course/subject, topic, subtopic/section, question type such as calculation/reasoning/numerical/other, and difficulty values easy/medium/hard.
+  - Persist the fields for assignment and test questions, expose them in admin creation/edit/import flows, and preserve existing questions when fields are absent.
+  - Acceptance: questions retain categorized metadata across creation, update, and bulk import without breaking existing assessment flows.
 
 ## New Requirements Queue
 
@@ -109,18 +131,18 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
   - Prevent Student A from reading Student B's attempt history. Preserve behavior after multiple submissions and do not return incorrect scores.
   - Acceptance: all valid attempts load, invalid references fail safely, ownership is enforced, repeated submissions remain accurate, and existing screens continue working.
 
-- [ ] **TP-ARCH-005 - Remove manual-grading data dependencies**
+- [x] **TP-ARCH-005 - Remove manual-grading data dependencies**
   - Identify every database field, API path, service, background operation, and frontend path related to manual grading.
   - Remove or update logic that resets marks after submission, resets scores to zero, changes a passed test to incorrect, overwrites calculated marks, or depends on manual-grading status for display.
   - Make the MongoDB attempt result authoritative for submitted results. Supabase reference rows must not contain conflicting score/status values that override it.
   - Acceptance: no manual-grading dependency remains in submission, marks are not reset, passed tests remain passed, statuses match the actual result, and stale Supabase values cannot overwrite MongoDB results.
 
-- [ ] **TP-ARCH-006 - Submission and attempt-history consistency**
+- [x] **TP-ARCH-006 - Submission and attempt-history consistency**
   - On submission: validate input, determine attempt number, generate a unique ID, calculate result, store the complete MongoDB attempt, store the Supabase reference, update assessment status from the actual result, return the result, and make history immediately readable.
   - Ensure exactly one attempt record is created. A failed request must not create misleading completed/pass state, and retrying a failed request must not create duplicates.
   - Acceptance: unique attempt, successful MongoDB write, correct Supabase reference, immediate history access, stable marks after refresh, and correct failure behavior.
 
-- [ ] **TP-ARCH-002 - Remove manual grading entirely**
+- [x] **TP-ARCH-002 - Remove manual grading entirely**
   - Remove manual-grading controls from the web application and manual-grading APIs, services, and backend logic.
   - Do not allow any manual action to overwrite a calculated score. A completed or passed test must never show zero merely because a manual-grading path previously ran.
   - Acceptance: manual grading is absent from frontend and backend, submitted marks remain correct, assignment/test status matches stored results, and existing attempts are not corrupted.

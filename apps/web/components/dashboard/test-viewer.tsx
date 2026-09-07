@@ -880,7 +880,7 @@ function ResultsScreen({
                     {review.isCorrect === true
                       ? `+${review.pointsEarned} pts`
                       : review.isCorrect === null
-                        ? 'Manual grading'
+                        ? 'Pending'
                         : `0 / ${review.points} pts`}
                   </Badge>
                 </div>

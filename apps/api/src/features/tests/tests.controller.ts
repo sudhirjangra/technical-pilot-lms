@@ -15,7 +15,6 @@ import type { FastifyRequest } from 'fastify';
 import {
   CreateTestDto,
   CreateTestQuestionDto,
-  GradeAttemptDto,
   ReorderTestQuestionsDto,
   SaveAnswerDto,
   SubmitTestAttemptDto,
@@ -173,17 +172,6 @@ export class TestsController {
   async getAttemptDetail(@Param('attemptId', ParseUUIDPipe) attemptId: string) {
     const data = await this.testsService.getAttemptDetail(attemptId);
     return { message: 'Attempt detail fetched', data };
-  }
-
-  @Roles('ADMIN', 'SUB_ADMIN')
-  @Permissions('tests:grade')
-  @Patch('attempts/:attemptId/grade')
-  async gradeAttempt(
-    @Param('attemptId', ParseUUIDPipe) attemptId: string,
-    @Body() dto: GradeAttemptDto,
-  ) {
-    const data = await this.testsService.gradeAttemptAnswers(attemptId, dto.grades);
-    return { message: 'Grades applied', data };
   }
 
   @Roles('ADMIN', 'SUB_ADMIN')

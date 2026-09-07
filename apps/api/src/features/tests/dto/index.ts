@@ -266,21 +266,3 @@ export class SaveAnswerDto {
   @Min(0)
   timeSpentSeconds: number;
 }
-
-export class GradeItemDto {
-  @ApiProperty()
-  @IsUUID()
-  questionId: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  isCorrect: boolean;
-}
-
-export class GradeAttemptDto {
-  @ApiProperty({ type: [GradeItemDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => GradeItemDto)
-  grades: GradeItemDto[];
-}

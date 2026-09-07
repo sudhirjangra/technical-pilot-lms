@@ -77,11 +77,6 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         description: 'Create and update flight assignments and guidelines.',
       },
       {
-        slug: 'assignments:grade',
-        label: 'Grade Assignments',
-        description: 'Evaluate written responses and assign scores / feedback.',
-      },
-      {
         slug: 'tests:read',
         label: 'View Tests & Questions',
         description: 'Browse assessment test blueprints and question banks.',
@@ -90,11 +85,6 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         slug: 'tests:write',
         label: 'Manage Test Bank',
         description: 'Create, update, and bulk-import MCQ / MSQ questions.',
-      },
-      {
-        slug: 'tests:grade',
-        label: 'Grade Tests & Overrides',
-        description: 'Manually review test results and grant extra attempts.',
       },
     ],
   },

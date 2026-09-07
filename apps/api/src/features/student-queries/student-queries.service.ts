@@ -14,12 +14,17 @@ function formatQueryRecord(row: any) {
   if (!row) return row;
   const meta = (row.metadata as Record<string, any>) || {};
   const queryNumber = meta.query_number || `Q-${row.id.slice(0, 6).toUpperCase()}`;
-  const student = row.profiles || {
-    id: row.student_id ?? null,
-    full_name: meta.guest_name || 'Guest Inquirer',
-    email: meta.guest_email || 'No email provided',
-    phone: meta.guest_phone || null,
-  };
+  const student = row.profiles
+    ? {
+        ...row.profiles,
+        phone: meta.guest_phone || row.profiles.phone || null,
+      }
+    : {
+        id: row.student_id ?? null,
+        full_name: meta.guest_name || 'Guest Inquirer',
+        email: meta.guest_email || 'No email provided',
+        phone: meta.guest_phone || null,
+      };
   return {
     ...row,
     query_number: queryNumber,
@@ -141,7 +146,7 @@ export class StudentQueriesService {
     let query = this.supabase
       .from('student_queries')
       .select(
-        '*, profiles!student_queries_student_id_fkey(id, full_name, email)',
+        '*, profiles!student_queries_student_id_fkey(id, full_name, email, phone)',
       )
       .order('created_at', { ascending: false });
 
@@ -156,7 +161,7 @@ export class StudentQueriesService {
     const { data, error } = await this.supabase
       .from('student_queries')
       .select(
-        '*, profiles!student_queries_student_id_fkey(id, full_name, email)',
+        '*, profiles!student_queries_student_id_fkey(id, full_name, email, phone)',
       )
       .eq('id', id)
       .single();
@@ -362,14 +367,16 @@ export class StudentQueriesService {
       .single();
     if (error) throw new BadRequestException(error.message);
 
-    // Send notification to the student
-    await this.notificationsService.send(
-      existing.student_id,
-      `Reply to: ${existing.subject}`,
-      adminReply,
-      'query_reply',
-      { query_id: id },
-    );
+    // Send notification to the student (skip for guest queries with no student_id)
+    if (existing.student_id) {
+      await this.notificationsService.send(
+        existing.student_id,
+        `Reply to: ${existing.subject}`,
+        adminReply,
+        'query_reply',
+        { query_id: id },
+      );
+    }
 
     return data;
   }

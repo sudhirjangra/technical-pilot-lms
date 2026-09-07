@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qJI0tzRQUcnho50QtT9kf9bpLUTmjgGGkiDo4Xmi0YQ7FA3w50C4b4b2hG6vOe5
+\restrict 6fN1zg3l2j6s6y3fZYzxIgVl9AurtwbSIUAbGLuDSRuAgoZsKOlrYnmxriOxnhZ
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-1.pgdg24.04+2)
@@ -264,22 +264,6 @@ CREATE TABLE public.assignment_attempts (
 
 
 --
--- Name: assignment_submissions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.assignment_submissions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    assignment_id uuid NOT NULL,
-    student_id uuid NOT NULL,
-    file_path text NOT NULL,
-    submitted_at timestamp with time zone DEFAULT now() NOT NULL,
-    score integer,
-    feedback text,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: assignments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -436,6 +420,10 @@ CREATE TABLE public.doubt_slots (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     topic character varying(200),
     description text,
+    meeting_link text,
+    target_type text DEFAULT 'all'::text,
+    course_id uuid,
+    student_id uuid,
     CONSTRAINT doubt_slots_status_check CHECK ((status = ANY (ARRAY['available'::text, 'full'::text, 'cancelled'::text])))
 );
 
@@ -545,8 +533,7 @@ CREATE TABLE public.profiles (
     avatar_url text,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    date_of_birth date
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -625,7 +612,7 @@ COMMENT ON COLUMN public.questions.correct_text_answer IS 'Expected answer for q
 
 CREATE TABLE public.student_queries (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    student_id uuid NOT NULL,
+    student_id uuid,
     subject text NOT NULL,
     body text NOT NULL,
     status text DEFAULT 'open'::text NOT NULL,
@@ -773,7 +760,6 @@ CREATE TABLE public.video_sessions (
 --
 
 COPY public.assessment_attempt_grants (id, student_id, assignment_id, test_id, extra_attempts, granted_by, created_at, updated_at) FROM stdin;
-fe6bb0ce-0cfe-4264-a2db-0721d15d61ef	53724601-1ad3-4d8a-8c5d-1822d5edff37	\N	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	1	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-04 10:46:51.157463+00	2026-09-04 10:46:51.157463+00
 \.
 
 
@@ -798,16 +784,7 @@ COPY public.assignment_answers (id, attempt_id, question_id, text_answer, is_cor
 --
 
 COPY public.assignment_attempts (id, assignment_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, created_at, updated_at) FROM stdin;
-dc1503c5-89cf-4281-9a61-2b182b87abad	604ce706-9cad-41e1-ada6-5d8c0f491b1d	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	2026-09-03 16:12:55.261+00	2026-09-03 16:13:33.182+00	1	13	38	2026-09-03 16:12:55.340441+00	2026-09-03 16:12:55.340441+00
-2c4beebf-853d-4961-919e-ee6f56b0419a	fa60ed95-9f3f-439d-8995-2035c2a4be66	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	2026-09-03 16:14:39.223+00	2026-09-03 16:15:39.764+00	10	10	61	2026-09-03 16:14:39.315643+00	2026-09-03 16:14:39.315643+00
-\.
-
-
---
--- Data for Name: assignment_submissions; Type: TABLE DATA; Schema: public; Owner: -
---
-
-COPY public.assignment_submissions (id, assignment_id, student_id, file_path, submitted_at, score, feedback, updated_at) FROM stdin;
+e44c4d89-32a3-4e1b-96d4-c115b83df3c7	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-07 09:53:05.277+00	2026-09-07 09:53:25.762+00	9	11	20	2026-09-07 09:53:05.624575+00	2026-09-07 09:53:05.624575+00
 \.
 
 
@@ -816,8 +793,8 @@ COPY public.assignment_submissions (id, assignment_id, student_id, file_path, su
 --
 
 COPY public.assignments (id, lesson_id, title, instructions, max_score, created_at, updated_at, time_limit_seconds, passing_score_percent, max_attempts, due_days_after_start) FROM stdin;
-604ce706-9cad-41e1-ada6-5d8c0f491b1d	4cd21b04-b3b7-4b55-86c0-36cebaa76f01	AS-1	Don't cheat.	20	2026-09-03 09:59:43.787753+00	2026-09-03 09:59:43.787753+00	60	80	1	1
-fa60ed95-9f3f-439d-8995-2035c2a4be66	53c2db7f-75ce-4542-96dd-1b7b44be6e86	AS-2 [MATH]	Don't cheat	20	2026-09-03 10:02:13.048184+00	2026-09-03 10:02:53.31761+00	120	60	1	1
+6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	b7304d3b-6618-4cd4-b52f-8d8ce583244a	Assignment 01	No cheating	100	2026-09-05 11:19:14.20073+00	2026-09-05 11:19:14.20073+00	120	75	1	1
+4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	c4884aea-3279-4c09-a05a-82ad980e3ae0	Nav-Assignment	Don't use AI	100	2026-09-06 13:02:50.093251+00	2026-09-06 13:02:50.093251+00	1200	75	1	30
 \.
 
 
@@ -834,7 +811,9 @@ COPY public.audit_logs (id, user_id, action, resource_type, resource_id, ip_addr
 --
 
 COPY public.categories (id, name, slug, description, thumbnail_url, sort_order, is_active) FROM stdin;
-dd5d5f94-26a6-4264-b86f-191a6dfe50a3	Development Testing	development-testing	This category is just for testing purpose only.	\N	0	t
+98a0f515-69db-4557-b50b-e948af329998	USPC	uspc-2026	This is test category	\N	1	t
+9c950693-2835-4088-8fdb-ae651820e3c0	Navigation	navigation-2026-2027	\N	\N	2	t
+615e7731-be3c-49d1-bf65-fcb6a4b92a42	SSC	ssc-2026	\N	\N	2	t
 \.
 
 
@@ -843,13 +822,21 @@ dd5d5f94-26a6-4264-b86f-191a6dfe50a3	Development Testing	development-testing	Thi
 --
 
 COPY public.chapter_starts (id, student_id, chapter_id, started_at, created_at) FROM stdin;
-14ed38e4-3ac6-4a21-937a-3e65e7e7bf7b	53724601-1ad3-4d8a-8c5d-1822d5edff37	5ee29af4-ba07-4e95-88f5-1d6877973ff4	2026-09-03 13:53:13.536316+00	2026-09-03 13:53:13.536316+00
-3c056493-e557-4d7f-98ae-bba1b2373ddb	53724601-1ad3-4d8a-8c5d-1822d5edff37	2ab14217-d33b-4773-b853-f6e5ffac0a89	2026-09-03 13:53:15.568716+00	2026-09-03 13:53:15.568716+00
-962694b2-e2a2-4e32-9553-f8fbad494364	53724601-1ad3-4d8a-8c5d-1822d5edff37	b14f7b45-a07b-428f-a418-b2f00e7e9287	2026-09-03 13:53:17.821136+00	2026-09-03 13:53:17.821136+00
-9e642767-d8fa-4a50-a843-b243646e4d58	53724601-1ad3-4d8a-8c5d-1822d5edff37	383bdb3b-e935-4498-9712-2757b1d99a6e	2026-09-03 13:53:19.872042+00	2026-09-03 13:53:19.872042+00
-a68f4008-b419-4ad6-8c1d-5896411f1388	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	5ee29af4-ba07-4e95-88f5-1d6877973ff4	2026-09-03 16:08:53.28333+00	2026-09-03 16:08:53.28333+00
-4705ef1f-e4ce-407b-a6e7-5a8518793f0b	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	2ab14217-d33b-4773-b853-f6e5ffac0a89	2026-09-03 16:11:07.626226+00	2026-09-03 16:11:07.626226+00
-9968bae1-00d3-4c6a-a275-37332439a262	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	b14f7b45-a07b-428f-a418-b2f00e7e9287	2026-09-03 16:12:47.896534+00	2026-09-03 16:12:47.896534+00
+51be0764-dbc7-43c6-aee8-448bc83cafaa	282b8c30-e2aa-4696-b153-76d7450e168a	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-05 11:23:17.689685+00	2026-09-05 11:23:17.689685+00
+be2ef41a-a4f1-4fa1-afa0-e880b2cf3c5a	282b8c30-e2aa-4696-b153-76d7450e168a	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-05 11:23:49.409895+00	2026-09-05 11:23:49.409895+00
+f255575c-4935-446d-8815-a4ea249cfad2	282b8c30-e2aa-4696-b153-76d7450e168a	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-05 11:34:45.745034+00	2026-09-05 11:34:45.745034+00
+d5c61686-461b-46d5-a506-48147bd955c6	b2dee688-c16e-440c-8580-ded0d2be8732	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-05 13:38:16.553247+00	2026-09-05 13:38:16.553247+00
+679ae356-ddbc-49ff-b32d-a950a25ae7cc	b2dee688-c16e-440c-8580-ded0d2be8732	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-05 13:39:47.305326+00	2026-09-05 13:39:47.305326+00
+b1f2132c-8115-4ef4-a052-3cd1b8c8924e	b2dee688-c16e-440c-8580-ded0d2be8732	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-05 13:53:01.402017+00	2026-09-05 13:53:01.402017+00
+32fded0d-2401-423e-a3ea-974d04e91f3e	357e5c5e-a846-4a20-8c3b-67c23f280dbd	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-05 14:19:27.611889+00	2026-09-05 14:19:27.611889+00
+d04dd3a7-8950-46ee-aaa6-7c7d9a1295cf	357e5c5e-a846-4a20-8c3b-67c23f280dbd	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-05 14:20:04.081024+00	2026-09-05 14:20:04.081024+00
+14312f1f-55c7-4def-8aa9-408002d9dbfe	e30e15fe-0f2d-4b6c-85d6-1e0e09b0b4d6	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-05 15:35:57.48411+00	2026-09-05 15:35:57.48411+00
+8816d3be-dcd2-4b4c-badb-ed1f1ca4deaa	e30e15fe-0f2d-4b6c-85d6-1e0e09b0b4d6	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-05 15:36:22.438011+00	2026-09-05 15:36:22.438011+00
+9ab6076d-2e63-4dcc-92f6-1b277e4aabf0	e30e15fe-0f2d-4b6c-85d6-1e0e09b0b4d6	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-05 15:38:32.053868+00	2026-09-05 15:38:32.053868+00
+d062b435-db4e-4efb-b679-d35ffc691a43	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-06 10:57:44.86843+00	2026-09-06 10:57:44.86843+00
+f8186eb7-09b9-435a-8314-4f6c7e403a96	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-06 10:59:58.357671+00	2026-09-06 10:59:58.357671+00
+d02c036f-8dd7-4264-8f29-f64b91173fb4	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	ab7ae40b-4edb-47e4-8203-7f9670e7736f	2026-09-06 13:11:45.805213+00	2026-09-06 13:11:45.805213+00
+7749bc14-1731-4a12-880d-02025d05b723	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	2026-09-06 13:12:11.505328+00	2026-09-06 13:12:11.505328+00
 \.
 
 
@@ -858,10 +845,11 @@ a68f4008-b419-4ad6-8c1d-5896411f1388	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	5ee29a
 --
 
 COPY public.chapters (id, course_id, title, description, sort_order, is_published, created_at, updated_at) FROM stdin;
-5ee29af4-ba07-4e95-88f5-1d6877973ff4	b69ccb15-7251-4c6e-90da-36457df1e69d	Introduction	This is introduction session	1	t	2026-09-03 07:32:52.552738+00	2026-09-03 07:32:52.552738+00
-2ab14217-d33b-4773-b853-f6e5ffac0a89	b69ccb15-7251-4c6e-90da-36457df1e69d	Phase-1	Getting started	2	t	2026-09-03 07:33:16.402576+00	2026-09-03 07:33:16.402576+00
-383bdb3b-e935-4498-9712-2757b1d99a6e	b69ccb15-7251-4c6e-90da-36457df1e69d	Final	Let's close it up	4	t	2026-09-03 07:38:27.125569+00	2026-09-03 07:38:27.125569+00
-b14f7b45-a07b-428f-a418-b2f00e7e9287	b69ccb15-7251-4c6e-90da-36457df1e69d	Assignments	Quality all the assignments	3	t	2026-09-03 07:38:11.755918+00	2026-09-03 10:03:15.641868+00
+629fe62d-64a0-40c6-b2cc-46a5eff84c85	b8434539-78f9-4e76-b6a7-d002cc006640	Introduction Session	This is introduction session	1	t	2026-09-05 11:05:56.157265+00	2026-09-05 11:05:56.157265+00
+d57a0791-d98b-43ec-b40c-dcc68959488f	b8434539-78f9-4e76-b6a7-d002cc006640	Core learning	\N	2	t	2026-09-05 11:06:07.857746+00	2026-09-05 11:06:07.857746+00
+e4d45eb4-e03e-43e2-a580-59a376fdabca	b8434539-78f9-4e76-b6a7-d002cc006640	Assignments	A test description is a clear statement that explains what a specific test checks, how it works, and what result it expects to get.Key ElementsObjective: What the test is trying to prove or check.Input/Action: The steps or data used to run the test.Expected Result: The exact outcome that should happen if the test passes.According to a consensus on The Club by the Ministry of Testing, a test acts as a check to see if a product or system meets its required conditions. Good descriptions read like simple sentences using words like "should" or "must" to define expected behavior. [1] (https://guilhermesimoes.github.io/blog/writing-good-test-descriptions), [2] (https://club.ministryoftesting.com/t/what-are-the-definitions-of-a-test/82197)If you'd like, let me know:Is this a software test description, an educational test, or something else?What system or feature are you trying to describe?I can help you write a clear test description.	3	t	2026-09-05 11:06:15.924807+00	2026-09-05 11:07:01.750837+00
+ab7ae40b-4edb-47e4-8203-7f9670e7736f	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	Chapter-1	\N	1	t	2026-09-06 12:54:12.724149+00	2026-09-06 12:54:12.724149+00
+8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	Videos Sessions	\N	2	t	2026-09-06 12:56:24.972356+00	2026-09-06 12:56:24.972356+00
 \.
 
 
@@ -870,7 +858,9 @@ b14f7b45-a07b-428f-a418-b2f00e7e9287	b69ccb15-7251-4c6e-90da-36457df1e69d	Assign
 --
 
 COPY public.courses (id, category_id, title, slug, description, thumbnail_url, price, discount_price, status, created_by, published_at, created_at, updated_at) FROM stdin;
-b69ccb15-7251-4c6e-90da-36457df1e69d	dd5d5f94-26a6-4264-b86f-191a6dfe50a3	Dev Test 1	dev-test-1	Course Summary\n\nThis course covers basic mathematics in a simple and easy-to-understand way. Students will learn addition, subtraction, multiplication, division, numbers, and basic problem-solving skills through simple questions and practice.	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/b69ccb15-7251-4c6e-90da-36457df1e69d/thumbnail.jpeg	2999.00	499.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-03 10:05:20.081+00	2026-09-03 07:31:38.522145+00	2026-09-03 10:07:29.350047+00
+b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testing-Phase-I	testing-phase-i	This is test course\nGive feedback	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/b8434539-78f9-4e76-b6a7-d002cc006640/thumbnail.jpeg?v=1788606290508	999.00	499.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-05 11:02:50.183+00	2026-09-05 11:02:32.770246+00	2026-09-05 11:04:57.719774+00
+2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	615e7731-be3c-49d1-bf65-fcb6a4b92a42	Demo-Course-1	demo-course-1	Common Types of DemosProduct Demos: Sales presentations showing software or hardware features to potential buyers. They can be live, pre-recorded videos, or interactive trials.Teaching Demos: Trial lessons where teachers showcase their classroom skills to a hiring committee.Music & Gaming Demos: Sample recordings of songs or trial versions of video games meant to give users a taste of the final release.	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d/thumbnail.jpeg?v=1788690365117	24999.00	19999.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 10:23:46.144+00	2026-09-06 10:23:21.75475+00	2026-09-06 10:26:08.08569+00
+17f620f4-ff2a-4c63-b63b-f9bc920c99ca	9c950693-2835-4088-8fdb-ae651820e3c0	Navigation-Part-I	navigation-part-i	\N	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/17f620f4-ff2a-4c63-b63b-f9bc920c99ca/thumbnail.jpeg?v=1788699209389	20000.00	15000.00	archived	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 13:10:48.927+00	2026-09-06 12:52:19.604544+00	2026-09-06 13:18:17.510154+00
 \.
 
 
@@ -879,13 +869,12 @@ b69ccb15-7251-4c6e-90da-36457df1e69d	dd5d5f94-26a6-4264-b86f-191a6dfe50a3	Dev Te
 --
 
 COPY public.devices (id, user_id, device_fingerprint, device_name, platform, last_active_at, created_at) FROM stdin;
-a11adf79-9092-455b-9b01-9fa6fed8bcde	f6099598-9bbe-4bed-97db-160f33287eff	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImY2MDk5NTk4LTliYmUtNGJlZC05N2RiLTE2MGYzMzI4N2VmZiIsImVtYWlsIjoibW9oYW44MTkudHBAZ21haWwuY29tIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODg0MzM5MjksImV4cCI6MTc5MTAyNTkyOX0.tbi8xe5d4xFirwXnIVvnB_rY8etiRvJPGyx841halYA	web	web	2026-09-03 11:12:09.207741+00	2026-09-03 11:12:09.207741+00
-f5a1163a-b0f4-441f-aa79-ab60cceb0499	53724601-1ad3-4d8a-8c5d-1822d5edff37	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzNzI0NjAxLTFhZDMtNGQ4YS04YzVkLTE4MjJkNWVkZmYzNyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODQ0MTU0NywiZXhwIjoxNzkxMDMzNTQ3fQ.4NfVeLcDLTaRqGSWnNUfeVpRTZxYSBQ_13jwYDbv2CQ	unknown	web	2026-09-03 13:19:07.665765+00	2026-09-03 13:19:07.665765+00
-6cf785d8-68f5-42c2-b8d7-d61a85fd438b	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODQ1MTUxMSwiZXhwIjoxNzkxMDQzNTExfQ.0n9lgztj6AIgcLO-xA8kJ9cAHDyk-8XKzmaMrL64tCA	unknown	web	2026-09-03 16:05:11.52863+00	2026-09-03 16:05:11.52863+00
-8e84b6c7-bd1e-4022-8da7-c3bcfa1012fd	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjI4ZDI2YTZlLTA5Y2EtNGI2OS04MzQ0LWYzYmZlYjNmNzI3ZiIsImVtYWlsIjoiYmFidW1hYW5AYXRvbWljbWFpbC5pbyIsInJvbGUiOiJzdHVkZW50IiwiaWF0IjoxNzg4NDUxNjcwLCJleHAiOjE3OTEwNDM2NzB9.wgSdOaZaQozSrSjpCeSACn1Kexhxd45RaxLj95kWmxM	unknown	web	2026-09-03 16:07:50.543081+00	2026-09-03 16:07:50.543081+00
-bbeb0249-0736-4b9d-9d8d-d8aa1eacad0c	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODUxMjQ1MywiZXhwIjoxNzkxMTA0NDUzfQ.XT0idXtso02jgC4m0-xq-kZ_0aXZ6YnVHE_28JzJs4Y	unknown	web	2026-09-04 09:00:53.339977+00	2026-09-04 09:00:53.339977+00
-b8478d38-5c6d-4b3a-8c3d-e0a3ab5fdcbe	53724601-1ad3-4d8a-8c5d-1822d5edff37	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzNzI0NjAxLTFhZDMtNGQ4YS04YzVkLTE4MjJkNWVkZmYzNyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODUxNDU1OSwiZXhwIjoxNzkxMTA2NTU5fQ.zw3SjRw2CKyg-r2BcmtkhMbuJM9CZ7AAFopmnClbsBw	unknown	web	2026-09-04 09:35:59.112296+00	2026-09-04 09:35:59.112296+00
-7343ee8c-c25e-4d32-8502-6fbda72a5dc0	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODU4NTY2OCwiZXhwIjoxNzkxMTc3NjY4fQ.U8UzQwMhCiyTSgA0X2tKdYPylKr15Sy_Fo8rf0lWtJ0	string	web	2026-09-05 05:21:09.050387+00	2026-09-05 05:21:09.050387+00
+0a9aed9b-9791-4cbf-8442-88d0206b785c	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc3MjQzMSwiZXhwIjoxNzkxMzY0NDMxfQ.WgJEjE622C-XJNeZ_6DwlJooilIbE2gEUMWrhr065Hc	unknown	web	2026-09-07 09:13:51.904716+00	2026-09-07 09:13:51.904716+00
+1341c88f-57d7-4c51-8f01-fd396eb490d9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODc3MzA2NCwiZXhwIjoxNzkxMzY1MDY0fQ.cRhkDTHk3r1elwd3TpyvSmhml1aYRkXFZAx_NkEjj1s	unknown	web	2026-09-07 09:24:24.193116+00	2026-09-07 09:24:24.193116+00
+d35ef743-40bc-4e1a-ba7a-9ebdf5e16c23	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc3NDgzNywiZXhwIjoxNzkxMzY2ODM3fQ._SD_ZCtgXAS0-1lq8vLHw33CAoqcyGtW-iUh5iEGeBM	unknown	web	2026-09-07 09:53:57.365071+00	2026-09-07 09:53:57.365071+00
+d16c4ca5-9ee3-4a59-a70f-d65a81414acd	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODc4OTAzOCwiZXhwIjoxNzkxMzgxMDM4fQ.Gr9g9sjaAXegJBHpMo_SHJgFAJG2it5pDUrtr5qCFas	unknown	web	2026-09-07 13:50:38.935223+00	2026-09-07 13:50:38.935223+00
+e597c909-2c2a-4d50-9ab9-f0cf7362b61f	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc5MDM3MiwiZXhwIjoxNzkxMzgyMzcyfQ.P64qfuv1livX_MHG4hrkKw3obhtvHqBx64I86ZhX6bw	unknown	web	2026-09-07 14:12:52.605638+00	2026-09-07 14:12:52.605638+00
+036be48c-f42b-4308-834a-05af5bfa6405	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc5MDY4MywiZXhwIjoxNzkxMzgyNjgzfQ.r3GRPpgG5Z5G5RcDq2ts1g_-Fddy9IW0FwUruFEQdfA	unknown	web	2026-09-07 14:18:03.751681+00	2026-09-07 14:18:03.751681+00
 \.
 
 
@@ -894,7 +883,6 @@ b8478d38-5c6d-4b3a-8c3d-e0a3ab5fdcbe	53724601-1ad3-4d8a-8c5d-1822d5edff37	eyJhbG
 --
 
 COPY public.doubt_bookings (id, slot_id, student_id, status, booked_at, cancelled_at, meeting_link, updated_at) FROM stdin;
-674e638f-0f1e-4db9-a6b5-f0124b23aa7a	02ec45e2-6931-4e42-a906-9abf0cc4735e	53724601-1ad3-4d8a-8c5d-1822d5edff37	confirmed	2026-09-03 11:17:17.288011+00	\N	\N	2026-09-03 11:17:17.288011+00
 \.
 
 
@@ -902,8 +890,7 @@ COPY public.doubt_bookings (id, slot_id, student_id, status, booked_at, cancelle
 -- Data for Name: doubt_slots; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_minutes, max_bookings, current_bookings, status, updated_at, created_at, topic, description) FROM stdin;
-02ec45e2-6931-4e42-a906-9abf0cc4735e	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-03	17:00:00	17:30:00	30	1	1	full	2026-09-03 11:17:17.398514+00	2026-09-03 11:17:10.577103+00	Assignment Douts	\N
+COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_minutes, max_bookings, current_bookings, status, updated_at, created_at, topic, description, meeting_link, target_type, course_id, student_id) FROM stdin;
 \.
 
 
@@ -912,8 +899,9 @@ COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_mi
 --
 
 COPY public.enrollments (id, student_id, course_id, enrolled_at, status, completed_at, updated_at) FROM stdin;
-5a629ff9-9dce-478f-b13b-408472de4642	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	2026-09-03 13:13:47.55808+00	active	\N	2026-09-03 13:13:47.55808+00
-03891c45-456e-4610-a87f-25806a43916c	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	b69ccb15-7251-4c6e-90da-36457df1e69d	2026-09-03 16:08:43.679176+00	active	\N	2026-09-03 16:08:43.679176+00
+4c4d6bed-f7f2-472b-9e35-2d515db672c9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-06 13:11:36.47+00	active	\N	2026-09-06 13:11:36.521672+00
+00ad86c8-e707-4924-887c-a29a6c8b2e23	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	2026-09-06 15:14:25.803+00	active	\N	2026-09-06 15:14:25.857478+00
+cb016fd4-e073-46c0-9647-c78fa4b451f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-06 10:53:20.714+00	active	\N	2026-09-07 09:23:05.961003+00
 \.
 
 
@@ -922,12 +910,15 @@ COPY public.enrollments (id, student_id, course_id, enrolled_at, status, complet
 --
 
 COPY public.lessons (id, chapter_id, title, description, lesson_type, sort_order, is_published, duration_seconds, created_at, updated_at) FROM stdin;
-334a41eb-b540-4424-a28d-4fb47c2043da	5ee29af4-ba07-4e95-88f5-1d6877973ff4	Introduction	About the intructor	pdf	1	t	\N	2026-09-03 07:39:09.696307+00	2026-09-03 07:39:09.696307+00
-5b5960b7-5f17-4bbe-a039-86f1ac52f214	2ab14217-d33b-4773-b853-f6e5ffac0a89	Index Video	Look what we are going to learn	video	1	t	\N	2026-09-03 07:40:48.101724+00	2026-09-03 07:46:33.923298+00
-057fb8c7-9935-43f3-aac2-8ae3f2a85beb	2ab14217-d33b-4773-b853-f6e5ffac0a89	Index Video Notes	\N	pdf	2	t	\N	2026-09-03 09:57:07.643709+00	2026-09-03 09:57:07.643709+00
-4cd21b04-b3b7-4b55-86c0-36cebaa76f01	b14f7b45-a07b-428f-a418-b2f00e7e9287	AS-1	\N	assignment	1	t	\N	2026-09-03 09:57:26.695625+00	2026-09-03 09:57:26.695625+00
-53c2db7f-75ce-4542-96dd-1b7b44be6e86	b14f7b45-a07b-428f-a418-b2f00e7e9287	AS-2	\N	assignment	2	t	\N	2026-09-03 10:01:50.373506+00	2026-09-03 10:01:50.373506+00
-1bac1f4d-ffe8-4f31-aeea-aaf1230d7ae1	383bdb3b-e935-4498-9712-2757b1d99a6e	Final Exam	Don't cheat	test	1	t	\N	2026-09-03 10:04:12.493971+00	2026-09-03 10:04:12.493971+00
+57777e9a-c3e8-448d-a691-75adca51cd93	629fe62d-64a0-40c6-b2cc-46a5eff84c85	Introduction	\N	pdf	1	t	\N	2026-09-05 11:07:33.233983+00	2026-09-05 11:07:33.233983+00
+597ccd87-b524-4446-a648-e397ab4fffaf	d57a0791-d98b-43ec-b40c-dcc68959488f	Video-2	\N	video	2	t	\N	2026-09-05 11:09:23.64506+00	2026-09-05 11:10:15.789711+00
+4827d058-7606-4146-bea2-bc391b05a85c	d57a0791-d98b-43ec-b40c-dcc68959488f	Video-1	\N	video	1	t	\N	2026-09-05 11:08:04.785731+00	2026-09-05 11:10:15.805647+00
+e82d3a0d-ff5b-4551-a376-1777f9f98c72	e4d45eb4-e03e-43e2-a580-59a376fdabca	Final Test	\N	test	1	t	\N	2026-09-05 11:16:52.33653+00	2026-09-05 11:16:52.33653+00
+b7304d3b-6618-4cd4-b52f-8d8ce583244a	d57a0791-d98b-43ec-b40c-dcc68959488f	Assignment 01	\N	assignment	3	t	\N	2026-09-05 11:18:55.182407+00	2026-09-05 11:18:55.182407+00
+6df80b8e-e552-4834-95a4-2c7c400435cb	ab7ae40b-4edb-47e4-8203-7f9670e7736f	Introduction to Navigations	\N	pdf	1	t	\N	2026-09-06 12:56:01.008202+00	2026-09-06 12:56:01.008202+00
+adaf23e3-ad60-417b-98b7-b63e7d9efe7c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1 Notes	Navigation Notes	pdf	2	t	\N	2026-09-06 12:58:13.736713+00	2026-09-06 12:58:13.736713+00
+decf63f1-f42d-48a4-b0cd-9d0f05971a7a	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1	<p>MacKenzie Scott has set a new milestone in her philanthropy to historically Black colleges and universities (HBCUs), with her latest donations taking her total giving to the institutions to more than $1 billion. The former wife of Amazon founder <a target="_blank" rel="noopener noreferrer nofollow" class="text-primary underline hover:text-primary/80 cursor-pointer" href="https://timesofindia.indiatimes.com/topic/jeff-bezos">Jeff Bezos</a>, who sold about half of her Amazon stake in 2020, has given tens of millions of dollar</p>	video	1	t	\N	2026-09-06 12:57:21.700265+00	2026-09-06 12:59:50.759978+00
+c4884aea-3279-4c09-a05a-82ad980e3ae0	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	Nav-Assignment	\N	assignment	3	t	\N	2026-09-06 13:00:17.108453+00	2026-09-06 13:00:17.108453+00
 \.
 
 
@@ -936,10 +927,14 @@ COPY public.lessons (id, chapter_id, title, description, lesson_type, sort_order
 --
 
 COPY public.notifications (id, recipient_id, type, title, body, metadata, is_read, created_at) FROM stdin;
-87e13bbf-e700-443c-a1c3-b7db4ae31c78	53724601-1ad3-4d8a-8c5d-1822d5edff37	query_reply	Reply to: Not able to purchase a course.	Money follows my brother.	{"query_id": "c82e95f9-0687-4478-ace4-35ed4934d6db"}	t	2026-09-03 11:18:37.209002+00
-6681b246-3216-480b-bd7b-01214b6745e2	53724601-1ad3-4d8a-8c5d-1822d5edff37	query_reply	Reply to: Extra attempt request: Final Exam	Approved	{"query_id": "8ca9405b-5dbd-4b01-a44f-b3a88cd1ac2a"}	t	2026-09-04 10:45:56.101162+00
-0841d6eb-efcb-4045-aac8-ceadc5c7b11f	53724601-1ad3-4d8a-8c5d-1822d5edff37	query_reply	Reply to: Extra attempt request: Final Exam	Approved	{"query_id": "8ca9405b-5dbd-4b01-a44f-b3a88cd1ac2a"}	t	2026-09-04 10:46:14.223973+00
-849e8d40-47f6-4cca-8e90-59239c8b63d7	53724601-1ad3-4d8a-8c5d-1822d5edff37	query_reply	Reply to: Extra attempt request: Final Exam	1	{"query_id": "db6c4c7f-26df-47f4-b273-a118b293fcd8"}	t	2026-09-04 10:46:51.465931+00
+0fb5a064-e81e-4dd1-a9a2-3a86343a8abc	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	query_reply	Reply to: This is a test message	Hello.!	{"query_id": "97e95d70-81b1-409d-8a75-c176181ded23"}	t	2026-09-06 12:35:17.966434+00
+26de0a41-5ec0-435a-9d11-00792db7a9e1	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	query_reply	Reply to: Extra attempt request: Assignment 01	Approved. You have been granted 1 additional attempt.	{"query_id": "2a797c15-d7e6-4611-a837-a1902456a5df"}	t	2026-09-06 12:34:53.692829+00
+53dec21c-cdc9-40b7-85fc-26fac7239056	c7412dd5-8f70-4716-aa60-ac597baf36d7	extra_attempt_request	Extra Attempt Request #Q-30317	Student requested an extra attempt for Assignment 01.	{"query_id": "2a797c15-d7e6-4611-a837-a1902456a5df", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c", "query_number": "Q-30317"}	t	2026-09-06 11:20:14.436264+00
+cb9a8b2e-9f9c-4bd1-b865-eeb14ad3b5fd	c7412dd5-8f70-4716-aa60-ac597baf36d7	student_query	New Student Query #Q-63994	Student: This is a test message	{"query_id": "97e95d70-81b1-409d-8a75-c176181ded23", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c", "query_number": "Q-63994"}	t	2026-09-06 11:39:24.069831+00
+80335092-1eaa-4270-8a95-a2f6cbad470d	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	doubt_session	Doubt Session: Testing-Phase-I (Chatper-1)	A doubt clearing session for "Testing-Phase-I" is scheduled on 2026-09-07 at 15:35. Book your slot now!	{}	t	2026-09-07 10:05:13.152155+00
+e2611fa2-88e2-480a-a994-11a8fc33dcc1	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-07 at 15:35 (Chatper-1).	{"slot_id": "3292e001-7e4d-4f46-acfd-4c6b40b5cb0e", "booking_id": "6666de76-4c92-4a92-94cd-93b616e1eb0d", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	t	2026-09-07 10:06:08.967681+00
+7496c737-bd66-4d34-93f9-de91394b6a01	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-07 at 15:35 (Chatper-1).	{"slot_id": "3292e001-7e4d-4f46-acfd-4c6b40b5cb0e", "booking_id": "abca2c02-8380-44d6-a600-d196fe3c1503", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	t	2026-09-07 10:05:46.041944+00
+b35f386b-d818-4068-8afc-ac952549cfa8	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-87645	New Student (9898898998): Why my access is blocked.?	{"email": "hello@hello.com", "phone": "9898898998", "query_id": "352f4584-0a9f-45e6-a099-09c30f4fd59c", "query_number": "Q-87645"}	t	2026-09-07 14:12:43.816825+00
 \.
 
 
@@ -948,12 +943,9 @@ COPY public.notifications (id, recipient_id, type, title, body, metadata, is_rea
 --
 
 COPY public.payments (id, student_id, course_id, amount, discount_amount, razorpay_order_id, razorpay_payment_id, razorpay_signature, status, refund_reason, invoice_number, created_at, updated_at) FROM stdin;
-390e2028-ec7d-4ade-b739-5ff60f5376e8	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXWdHZHazpYayP	\N	\N	pending	\N	INV-1788430056472-O5CLZY	2026-09-03 10:07:36.520916+00	2026-09-03 10:07:36.520916+00
-01f3c714-36a2-4280-9c8a-7e6582222878	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXWdbpi5exbVcB	pay_TXWdppsX1odjCu	2d28c09c5d0c321847516fbe9886f957e4b8da826fe80d4770503b60abb9e1bf	completed	\N	INV-1788430074938-AO06CG	2026-09-03 10:07:54.995892+00	2026-09-03 10:08:28.118322+00
-22ec5d9d-88cd-41fc-90f3-b8f71199cf3f	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXWfLbAp3RLyjL	pay_TXWfjADi0HYicc	885c2eddb3e500531c588b7f82d8af94223339930d29f6359435080864b94e6d	completed	\N	INV-1788430173670-75NPZP	2026-09-03 10:09:33.717371+00	2026-09-03 10:10:14.737037+00
-13ecf003-c59a-426c-9cda-1305a8b206bc	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXZmgP9IM8Xsg9	\N	\N	pending	\N	INV-1788441155174-301C4S	2026-09-03 13:12:35.239777+00	2026-09-03 13:12:35.239777+00
-2a72f27b-7ae3-4e0b-8cab-c6ed05ee39ad	53724601-1ad3-4d8a-8c5d-1822d5edff37	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXZnJxJTSfFHux	pay_TXZnfBloZEpWf1	a1466cd8414791bc37e75684d9bfe4b66d28f9f571a580ee04df328e81b91964	completed	\N	INV-1788441191391-5Y2UR8	2026-09-03 13:13:11.596954+00	2026-09-03 13:13:47.398281+00
-51cc5c61-529a-43e6-8326-a6413e7d45fa	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	b69ccb15-7251-4c6e-90da-36457df1e69d	499.00	2500.00	order_TXcmBmiiSRluIF	pay_TXcmQaqzolsiJ6	6dad1d4fe51401a85b0b85705b4840c88a8e371c55b26627b728d355cdf7c211	completed	\N	INV-1788451691971-HLX1ZF	2026-09-03 16:08:12.020535+00	2026-09-03 16:08:43.563102+00
+bf7ac66d-2940-4abe-9b95-27765f7eafa9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TYj0BiGHLmzXfH	pay_TYj0ayBHx69qro	d6813872c04bc29f000d97d3c561bf5afac23727d0adbdacd8d7a9e852dc89cf	completed	\N	INV-1788691956904-6EYR58	2026-09-06 10:52:36.966269+00	2026-09-06 10:53:20.646935+00
+b00a848a-1768-4e2a-a930-6b12337a8f95	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TYlMamX8voCK7b	pay_TYlMhpGuSePsA5	8be0d1c77fd0222a028da552263cb1aca428563ac518ecc4fabc16273549f554	completed	\N	INV-1788700272695-Z49TVZ	2026-09-06 13:11:12.756489+00	2026-09-06 13:11:36.418874+00
+e9971116-c49a-478b-bbd1-fabdb58a9f12	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	19999.00	5000.00	order_TYnS9Io2uafwbY	pay_TYnSQE8FLS9CK9	0459707bef6989b5b1faaea56d61e453c24b3f4d3a459c7d17cf5d0102b3d0fe	completed	\N	INV-1788707631553-RQXKUH	2026-09-06 15:13:51.621626+00	2026-09-06 15:14:25.701038+00
 \.
 
 
@@ -962,8 +954,9 @@ COPY public.payments (id, student_id, course_id, amount, discount_amount, razorp
 --
 
 COPY public.pdf_notes (id, lesson_id, file_path, file_size_bytes, page_count, created_at, updated_at) FROM stdin;
-c5361f32-7393-4482-bcc9-ced12dc26e32	334a41eb-b540-4424-a28d-4fb47c2043da	dev-test-1/introduction/introduction.pdf	13264	\N	2026-09-03 13:56:33.370429+00	2026-09-03 13:56:33.370429+00
-ae18e524-be54-44dc-948a-47b76767ebb4	057fb8c7-9935-43f3-aac2-8ae3f2a85beb	dev-test-1/phase-1/index-video-notes.pdf	13264	\N	2026-09-03 13:56:43.136004+00	2026-09-03 13:56:43.136004+00
+37c5b8ad-9a4f-4ee2-aead-8f6f67b87cf5	57777e9a-c3e8-448d-a691-75adca51cd93	testing-phase-i/introduction-session/introduction.pdf	13264	\N	2026-09-05 11:07:34.8372+00	2026-09-05 11:07:34.8372+00
+36dfe604-e3a6-4be5-a013-b23a97112479	6df80b8e-e552-4834-95a4-2c7c400435cb	navigation-part-i/chapter-1/introduction-to-navigations.pdf	160436	\N	2026-09-06 12:56:04.501963+00	2026-09-06 12:56:04.501963+00
+d7b4efd4-f647-481d-97f7-208ea66e74aa	adaf23e3-ad60-417b-98b7-b63e7d9efe7c	navigation-part-i/videos-sessions/nav-vid-1-notes.pdf	18810	\N	2026-09-06 12:58:16.559872+00	2026-09-06 12:58:16.559872+00
 \.
 
 
@@ -971,11 +964,9 @@ ae18e524-be54-44dc-948a-47b76767ebb4	057fb8c7-9935-43f3-aac2-8ae3f2a85beb	dev-te
 -- Data for Name: profiles; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at, date_of_birth) FROM stdin;
-f6099598-9bbe-4bed-97db-160f33287eff	mohan819.tp@gmail.com	student	Mohan	1111111111	https://lh3.googleusercontent.com/a/ACg8ocJbq4bwrWsjaBn_HPrZk1KTYdsZr-LkD2EPcAFL4PO1N_yQLQ=s96-c	t	2026-09-03 11:12:06.289157+00	2026-09-04 16:03:09.137858+00	2001-01-01
-c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-08-23 13:13:05.178081+00	2001-01-01
-53724601-1ad3-4d8a-8c5d-1822d5edff37	luck28kudida@atomicmail.io	student	Student	9898878700	\N	t	2026-09-03 07:18:58.7243+00	2026-09-03 07:18:58.90874+00	2001-01-01
-28d26a6e-09ca-4b69-8344-f3bfeb3f727f	babumaan@atomicmail.io	student	Babbu Maan	9890879098	\N	t	2026-09-03 16:07:06.626196+00	2026-09-03 16:07:06.815097+00	2001-01-01
+COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at) FROM stdin;
+c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-09-05 14:26:40.013197+00
+53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	luck28kudida@atomicmail.io	student	Student	9898656598	\N	t	2026-09-06 10:24:24.756663+00	2026-09-06 12:05:15.334094+00
 \.
 
 
@@ -984,16 +975,12 @@ c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LM
 --
 
 COPY public.progress (id, student_id, lesson_id, status, progress_percent, last_position_seconds, completed_at, updated_at) FROM stdin;
-1aa40d39-8f71-4162-9d96-4855b022f517	53724601-1ad3-4d8a-8c5d-1822d5edff37	5b5960b7-5f17-4bbe-a039-86f1ac52f214	completed	100	10	2026-09-03 10:35:53.454+00	2026-09-03 10:35:53.502861+00
-831af19a-1246-434f-8bcb-f4f8e651923e	53724601-1ad3-4d8a-8c5d-1822d5edff37	057fb8c7-9935-43f3-aac2-8ae3f2a85beb	completed	100	0	2026-09-03 10:38:19.66+00	2026-09-03 10:38:19.749888+00
-f9c77d6b-ed82-4812-9022-72aaa4652f6d	53724601-1ad3-4d8a-8c5d-1822d5edff37	53c2db7f-75ce-4542-96dd-1b7b44be6e86	completed	100	0	2026-09-03 10:45:49.498+00	2026-09-03 10:45:49.555677+00
-c236f36d-c158-42bb-8f1e-027b9bd47fb3	53724601-1ad3-4d8a-8c5d-1822d5edff37	4cd21b04-b3b7-4b55-86c0-36cebaa76f01	completed	100	0	2026-09-03 10:58:30.812+00	2026-09-03 10:58:30.864339+00
-e1b6ea81-1a31-4d6c-885e-44a7aaf842be	53724601-1ad3-4d8a-8c5d-1822d5edff37	1bac1f4d-ffe8-4f31-aeea-aaf1230d7ae1	in_progress	0	0	\N	2026-09-03 13:06:44.431921+00
-638ab752-e89c-4236-86bb-47699b885340	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	334a41eb-b540-4424-a28d-4fb47c2043da	completed	100	0	2026-09-03 16:09:16.892+00	2026-09-03 16:09:16.954533+00
-895ce180-2779-47fd-a572-85004be3ae3f	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	5b5960b7-5f17-4bbe-a039-86f1ac52f214	completed	100	11	2026-09-03 16:12:26.788+00	2026-09-03 16:12:26.855779+00
-58bfae13-d379-4517-9892-b355a1f99cc4	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	057fb8c7-9935-43f3-aac2-8ae3f2a85beb	completed	100	0	2026-09-03 16:12:39.596+00	2026-09-03 16:12:39.714345+00
-e9a24548-d813-4175-b321-30d9ef09d7bb	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	53c2db7f-75ce-4542-96dd-1b7b44be6e86	completed	100	0	2026-09-03 16:15:41.581+00	2026-09-03 16:15:41.737698+00
-8737a009-5a8a-4e15-8d18-515543f8db89	53724601-1ad3-4d8a-8c5d-1822d5edff37	334a41eb-b540-4424-a28d-4fb47c2043da	completed	100	0	2026-09-03 10:31:40.523+00	2026-09-03 10:31:40.750162+00
+c974554e-93c6-4bd2-a6e9-67b198800ab1	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	6df80b8e-e552-4834-95a4-2c7c400435cb	completed	100	0	2026-09-06 13:11:54.961+00	2026-09-06 13:11:55.012235+00
+0cb33985-b339-4d32-8abd-57712be35eca	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	completed	100	4	2026-09-06 13:18:56.838+00	2026-09-06 13:41:53.624837+00
+76f89fc0-755a-44da-abcd-85ccbf0f5c61	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-07 09:53:29.851+00	2026-09-07 09:53:30.038043+00
+6f3bc546-b7c7-40b5-9628-e300394caf08	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-06 10:59:20.88+00	2026-09-06 10:59:20.966065+00
+87e5f941-f466-4e1b-96f0-34d9bd5e9d74	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-06 11:03:28.904+00	2026-09-06 11:03:28.953505+00
+a0db5de0-affd-4667-bba6-a7e3100d3f0b	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-06 11:03:57.501+00	2026-09-06 11:03:57.537539+00
 \.
 
 
@@ -1002,122 +989,98 @@ e9a24548-d813-4175-b321-30d9ef09d7bb	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	53c2db
 --
 
 COPY public.question_options (id, question_id, option_text, is_correct, sort_order, created_at, updated_at) FROM stdin;
-3067d2c5-2151-40ba-8b3c-64526e0d1785	aea5fab9-9e44-4811-a371-c17299a3e606	Earth	f	1	2026-09-03 10:00:09.442374+00	2026-09-03 10:00:09.442374+00
-e59b6c20-a4c6-4cf6-92fd-e5e06b4ab3c8	aea5fab9-9e44-4811-a371-c17299a3e606	Mars	t	2	2026-09-03 10:00:09.442374+00	2026-09-03 10:00:09.442374+00
-2a65bba3-80bc-493b-9eab-3f492381f36f	aea5fab9-9e44-4811-a371-c17299a3e606	Jupiter	f	3	2026-09-03 10:00:09.442374+00	2026-09-03 10:00:09.442374+00
-b1e02357-1341-4536-85cd-861bf68d8642	aea5fab9-9e44-4811-a371-c17299a3e606	Venus	f	4	2026-09-03 10:00:09.442374+00	2026-09-03 10:00:09.442374+00
-a0ff7d12-fb26-4244-92f4-20cc0988bf26	1398a651-d743-4ccd-804a-a62dfbd97c57	Red	t	1	2026-09-03 10:00:09.74453+00	2026-09-03 10:00:09.74453+00
-5a5d2258-fa1e-4415-83d6-7fe3473012b5	1398a651-d743-4ccd-804a-a62dfbd97c57	Blue	t	2	2026-09-03 10:00:09.74453+00	2026-09-03 10:00:09.74453+00
-257fa75c-05ce-4b6b-9f4e-4051a097773b	1398a651-d743-4ccd-804a-a62dfbd97c57	Yellow	t	3	2026-09-03 10:00:09.74453+00	2026-09-03 10:00:09.74453+00
-3d69a595-853f-40ba-89fd-f61e2ae8b576	1398a651-d743-4ccd-804a-a62dfbd97c57	Green	f	4	2026-09-03 10:00:09.74453+00	2026-09-03 10:00:09.74453+00
-bf2c4d03-870b-4af6-bf7a-4e3951b764bc	2ed73770-908c-4276-9d20-9a21d0e0ec67	William Shakespeare	t	1	2026-09-03 10:00:10.233306+00	2026-09-03 10:00:10.233306+00
-b9308a63-06bb-4fe4-96c2-77ed72096095	2ed73770-908c-4276-9d20-9a21d0e0ec67	Charles Dickens	f	2	2026-09-03 10:00:10.233306+00	2026-09-03 10:00:10.233306+00
-6010af7f-2aa0-4531-81ab-41f907ff8ea0	2ed73770-908c-4276-9d20-9a21d0e0ec67	Mark Twain	f	3	2026-09-03 10:00:10.233306+00	2026-09-03 10:00:10.233306+00
-64655673-9db9-41b9-ab63-74485f6c3f16	2ed73770-908c-4276-9d20-9a21d0e0ec67	Leo Tolstoy	f	4	2026-09-03 10:00:10.233306+00	2026-09-03 10:00:10.233306+00
-2f1a02c9-c961-4db8-80d2-0f5eef40e6ac	ee83c331-5351-49ef-9941-eabe4befcffe	Dolphin	t	1	2026-09-03 10:00:10.57411+00	2026-09-03 10:00:10.57411+00
-216c8d45-5bbd-4c58-bf96-0d9872688613	ee83c331-5351-49ef-9941-eabe4befcffe	Whale	t	2	2026-09-03 10:00:10.57411+00	2026-09-03 10:00:10.57411+00
-4725ce4c-8d0d-4866-8a60-169eeb8b0214	ee83c331-5351-49ef-9941-eabe4befcffe	Shark	f	3	2026-09-03 10:00:10.57411+00	2026-09-03 10:00:10.57411+00
-73ee9696-6a77-4ade-ae17-e59a207901de	ee83c331-5351-49ef-9941-eabe4befcffe	Bat	t	4	2026-09-03 10:00:10.57411+00	2026-09-03 10:00:10.57411+00
-6be9d4ed-514d-4b49-a340-409df021330b	0d7da159-99ba-4947-9913-4c7b211a4768	Atlantic Ocean	f	1	2026-09-03 10:00:11.098161+00	2026-09-03 10:00:11.098161+00
-e3220c22-44b1-4460-806b-9b64d2e7432a	0d7da159-99ba-4947-9913-4c7b211a4768	Indian Ocean	f	2	2026-09-03 10:00:11.098161+00	2026-09-03 10:00:11.098161+00
-2c363ff5-f2a4-4a5f-87c9-6e18f576e170	0d7da159-99ba-4947-9913-4c7b211a4768	Pacific Ocean	t	3	2026-09-03 10:00:11.098161+00	2026-09-03 10:00:11.098161+00
-21ae4fe6-3235-446f-a03d-e25e6a7ef2ea	0d7da159-99ba-4947-9913-4c7b211a4768	Arctic Ocean	f	4	2026-09-03 10:00:11.098161+00	2026-09-03 10:00:11.098161+00
-a96da89e-1995-4ed2-b587-820af17d72d3	9bfd6548-3317-40f9-b932-9224298f67eb	12	t	1	2026-09-03 10:00:11.597672+00	2026-09-03 10:00:11.597672+00
-746f59c9-11c4-40cd-aeb2-6ddf7b35a8a8	9bfd6548-3317-40f9-b932-9224298f67eb	17	f	2	2026-09-03 10:00:11.597672+00	2026-09-03 10:00:11.597672+00
-8a9377d0-b188-4d99-9c56-8cd94c1f7356	9bfd6548-3317-40f9-b932-9224298f67eb	24	t	3	2026-09-03 10:00:11.597672+00	2026-09-03 10:00:11.597672+00
-d2002b6b-d5db-43e7-95de-04fb346c902d	9bfd6548-3317-40f9-b932-9224298f67eb	30	t	4	2026-09-03 10:00:11.597672+00	2026-09-03 10:00:11.597672+00
-c753ceb2-0e73-49cc-8c83-4bc6027e2ddd	577342ac-0921-4a70-af69-51dd51c16cc5	Carbon dioxide	f	1	2026-09-03 10:00:12.104352+00	2026-09-03 10:00:12.104352+00
-d3afe42c-4b81-4202-aa4a-f506fda51831	577342ac-0921-4a70-af69-51dd51c16cc5	Oxygen	t	2	2026-09-03 10:00:12.104352+00	2026-09-03 10:00:12.104352+00
-1ef41e80-98cb-4895-827b-f43036ce8f20	577342ac-0921-4a70-af69-51dd51c16cc5	Nitrogen	f	3	2026-09-03 10:00:12.104352+00	2026-09-03 10:00:12.104352+00
-9192e759-76ec-468e-9476-0ed78ac44eba	577342ac-0921-4a70-af69-51dd51c16cc5	Hydrogen	f	4	2026-09-03 10:00:12.104352+00	2026-09-03 10:00:12.104352+00
-658a0d0a-7158-45b8-b899-4711787bd4cc	a2ad7818-86a4-4427-964e-7aaa7c982fc1	6	f	1	2026-09-03 10:02:57.027917+00	2026-09-03 10:02:57.027917+00
-2db18292-2c0c-423a-8509-453c47ff83e1	a2ad7818-86a4-4427-964e-7aaa7c982fc1	7	f	2	2026-09-03 10:02:57.027917+00	2026-09-03 10:02:57.027917+00
-7f458630-4f5e-4182-a550-818db001e218	a2ad7818-86a4-4427-964e-7aaa7c982fc1	8	t	3	2026-09-03 10:02:57.027917+00	2026-09-03 10:02:57.027917+00
-02715643-185b-451b-a998-c2d45e645e4c	a2ad7818-86a4-4427-964e-7aaa7c982fc1	9	f	4	2026-09-03 10:02:57.027917+00	2026-09-03 10:02:57.027917+00
-a652798f-36bc-458e-8f8f-95f38f08bfe5	688be0e9-e7c6-4225-b961-9d6558dafee8	5	f	1	2026-09-03 10:02:57.357756+00	2026-09-03 10:02:57.357756+00
-5e3b96ae-4b27-43d7-9ab9-14d589a87617	688be0e9-e7c6-4225-b961-9d6558dafee8	6	t	2	2026-09-03 10:02:57.357756+00	2026-09-03 10:02:57.357756+00
-584daa4a-c509-4448-bbf7-22a36d6b8731	688be0e9-e7c6-4225-b961-9d6558dafee8	7	f	3	2026-09-03 10:02:57.357756+00	2026-09-03 10:02:57.357756+00
-4f38b746-220a-4f1f-9f22-9c459e6717f0	688be0e9-e7c6-4225-b961-9d6558dafee8	8	f	4	2026-09-03 10:02:57.357756+00	2026-09-03 10:02:57.357756+00
-d38b9cf5-e449-406c-b301-bc44b379aeb4	5de2753f-bca2-4fc0-bcc6-991b9b5317ca	10	f	1	2026-09-03 10:02:57.674476+00	2026-09-03 10:02:57.674476+00
-e8fb152a-0dff-441d-b240-cbae5e7fd818	5de2753f-bca2-4fc0-bcc6-991b9b5317ca	12	t	2	2026-09-03 10:02:57.674476+00	2026-09-03 10:02:57.674476+00
-8e2492b9-7f08-4074-8868-30018c42e3d7	5de2753f-bca2-4fc0-bcc6-991b9b5317ca	14	f	3	2026-09-03 10:02:57.674476+00	2026-09-03 10:02:57.674476+00
-2c6bd051-e9af-4783-8b94-5d42fae09a58	5de2753f-bca2-4fc0-bcc6-991b9b5317ca	16	f	4	2026-09-03 10:02:57.674476+00	2026-09-03 10:02:57.674476+00
-47a233bc-a2a9-4910-a341-4e456c554ab3	229afdbe-64c4-4843-b794-02f80c5de2da	2	f	1	2026-09-03 10:02:58.014577+00	2026-09-03 10:02:58.014577+00
-44524eee-1d32-4ad0-8bcc-6164b491a0fa	229afdbe-64c4-4843-b794-02f80c5de2da	3	f	2	2026-09-03 10:02:58.014577+00	2026-09-03 10:02:58.014577+00
-bbdce7c0-553d-4e9d-9227-4ea0e6ebff27	229afdbe-64c4-4843-b794-02f80c5de2da	4	t	3	2026-09-03 10:02:58.014577+00	2026-09-03 10:02:58.014577+00
-65cf1464-2e69-4ccc-acf7-7353187ea933	229afdbe-64c4-4843-b794-02f80c5de2da	5	f	4	2026-09-03 10:02:58.014577+00	2026-09-03 10:02:58.014577+00
-047cd70d-f57d-4bef-949b-bcf6d168755d	32048560-1e98-4079-b0f5-79cd3cb887ea	2	t	1	2026-09-03 10:02:58.771836+00	2026-09-03 10:02:58.771836+00
-24f19573-f4e0-4cbe-9b70-b1d2624e7dfe	32048560-1e98-4079-b0f5-79cd3cb887ea	5	f	2	2026-09-03 10:02:58.771836+00	2026-09-03 10:02:58.771836+00
-1f0fb9a1-e63e-46b6-b3e0-5c4b44051e61	32048560-1e98-4079-b0f5-79cd3cb887ea	8	t	3	2026-09-03 10:02:58.771836+00	2026-09-03 10:02:58.771836+00
-d2bd37f1-72c6-4d94-9ff7-463fb8a00418	32048560-1e98-4079-b0f5-79cd3cb887ea	11	f	4	2026-09-03 10:02:58.771836+00	2026-09-03 10:02:58.771836+00
-3aa474cc-fc41-4b1a-ac2e-b2a935459e4b	248133bc-ddcd-4877-be32-4335e8127b5c	4	f	1	2026-09-03 10:02:59.335704+00	2026-09-03 10:02:59.335704+00
-2e6974b1-7b45-441d-99de-cc9ff37ec9ae	248133bc-ddcd-4877-be32-4335e8127b5c	5	f	2	2026-09-03 10:02:59.335704+00	2026-09-03 10:02:59.335704+00
-7154111d-775b-46c5-bbe0-32af0f907800	248133bc-ddcd-4877-be32-4335e8127b5c	6	t	3	2026-09-03 10:02:59.335704+00	2026-09-03 10:02:59.335704+00
-d1c88723-1de4-473f-a34d-ad8a804264dc	248133bc-ddcd-4877-be32-4335e8127b5c	7	f	4	2026-09-03 10:02:59.335704+00	2026-09-03 10:02:59.335704+00
-3216b32f-d9a1-4d16-99a9-ce06d41d88fa	f606e7e2-272d-42e3-a62c-f6c0f2f4cfd7	10	f	1	2026-09-03 10:04:45.980459+00	2026-09-03 10:04:45.980459+00
-f8453014-4b26-4955-af40-8cd1d8b2563b	f606e7e2-272d-42e3-a62c-f6c0f2f4cfd7	11	f	2	2026-09-03 10:04:45.980459+00	2026-09-03 10:04:45.980459+00
-0f585f4d-15ba-4bcf-aad7-070e96790b73	f606e7e2-272d-42e3-a62c-f6c0f2f4cfd7	12	t	3	2026-09-03 10:04:45.980459+00	2026-09-03 10:04:45.980459+00
-bf443366-b219-44e9-8a1e-a484f52844fd	f606e7e2-272d-42e3-a62c-f6c0f2f4cfd7	13	f	4	2026-09-03 10:04:45.980459+00	2026-09-03 10:04:45.980459+00
-125997e5-7bb8-40e1-9661-0606c8492429	546dc101-fd21-4957-b3b5-be211bc0fa85	7	f	1	2026-09-03 10:04:46.294223+00	2026-09-03 10:04:46.294223+00
-e37d4366-42b4-499b-91ce-0b0962e9162b	546dc101-fd21-4957-b3b5-be211bc0fa85	8	f	2	2026-09-03 10:04:46.294223+00	2026-09-03 10:04:46.294223+00
-b4dff906-0afd-48c5-85a6-eeea7032cfa6	546dc101-fd21-4957-b3b5-be211bc0fa85	9	t	3	2026-09-03 10:04:46.294223+00	2026-09-03 10:04:46.294223+00
-11d1a839-bed5-4334-9ac2-ba3be76efd56	546dc101-fd21-4957-b3b5-be211bc0fa85	10	f	4	2026-09-03 10:04:46.294223+00	2026-09-03 10:04:46.294223+00
-f41de920-e9dc-4620-9395-376dcff4bc31	c52b4d37-5873-4955-9f45-d09289520f74	10	f	1	2026-09-03 10:04:46.609103+00	2026-09-03 10:04:46.609103+00
-fe5ae987-0f03-4324-847f-2057d8bf67ce	c52b4d37-5873-4955-9f45-d09289520f74	12	t	2	2026-09-03 10:04:46.609103+00	2026-09-03 10:04:46.609103+00
-0a93509a-5eba-4ec9-ba2e-8a959f55c1ec	c52b4d37-5873-4955-9f45-d09289520f74	14	f	3	2026-09-03 10:04:46.609103+00	2026-09-03 10:04:46.609103+00
-eb13ca28-261f-44a6-a7e3-4bbb726a1926	c52b4d37-5873-4955-9f45-d09289520f74	16	f	4	2026-09-03 10:04:46.609103+00	2026-09-03 10:04:46.609103+00
-d36f4bef-01f5-4e61-83d3-47f0dfb46ca8	aca23b43-a16f-4ffa-83a4-85ead9c45283	4	f	1	2026-09-03 10:04:46.928733+00	2026-09-03 10:04:46.928733+00
-ef1c4074-742f-4a5b-9e82-6e3a746f2f5d	aca23b43-a16f-4ffa-83a4-85ead9c45283	5	t	2	2026-09-03 10:04:46.928733+00	2026-09-03 10:04:46.928733+00
-c18b5acc-413d-479e-80b2-c032abba3261	aca23b43-a16f-4ffa-83a4-85ead9c45283	6	f	3	2026-09-03 10:04:46.928733+00	2026-09-03 10:04:46.928733+00
-aba3c3f4-02d5-4052-99ff-f0d8fc38ef0b	aca23b43-a16f-4ffa-83a4-85ead9c45283	8	f	4	2026-09-03 10:04:46.928733+00	2026-09-03 10:04:46.928733+00
-6f8730f9-0c8d-4134-ae30-0c38a1fe7a37	b4935fd9-5023-48c1-8353-f01d91773605	20	f	1	2026-09-03 10:04:47.693209+00	2026-09-03 10:04:47.693209+00
-7e87b91e-2d2c-4081-aeea-163226ef8dc0	b4935fd9-5023-48c1-8353-f01d91773605	25	t	2	2026-09-03 10:04:47.693209+00	2026-09-03 10:04:47.693209+00
-d24e4879-dbb9-42a6-8cca-094b02c7f186	b4935fd9-5023-48c1-8353-f01d91773605	30	f	3	2026-09-03 10:04:47.693209+00	2026-09-03 10:04:47.693209+00
-850d96ce-4cf0-448f-bd4d-b73a003f565c	b4935fd9-5023-48c1-8353-f01d91773605	35	f	4	2026-09-03 10:04:47.693209+00	2026-09-03 10:04:47.693209+00
-5c82044c-7bbc-4fec-a8a9-73fc8193d387	053401b6-102d-4e5b-aecd-ca70daa4a1cc	4	t	1	2026-09-03 10:04:48.230352+00	2026-09-03 10:04:48.230352+00
-cf8b112e-6a12-4b7c-beef-81f37ad23da8	053401b6-102d-4e5b-aecd-ca70daa4a1cc	7	f	2	2026-09-03 10:04:48.230352+00	2026-09-03 10:04:48.230352+00
-24d84ffd-8542-49a9-bba6-84efa9c6d00f	053401b6-102d-4e5b-aecd-ca70daa4a1cc	10	t	3	2026-09-03 10:04:48.230352+00	2026-09-03 10:04:48.230352+00
-e97dabdd-7ad1-4806-952d-1b48d71ff0af	053401b6-102d-4e5b-aecd-ca70daa4a1cc	13	f	4	2026-09-03 10:04:48.230352+00	2026-09-03 10:04:48.230352+00
-3c54e632-059a-4d8e-9522-8603c3e069b6	319b0b73-4da9-46b3-a405-17f9b53b9214	20	f	1	2026-09-03 10:04:48.534593+00	2026-09-03 10:04:48.534593+00
-68161ab8-d130-429b-8954-43adf7e66910	319b0b73-4da9-46b3-a405-17f9b53b9214	25	t	2	2026-09-03 10:04:48.534593+00	2026-09-03 10:04:48.534593+00
-317dff52-6386-414e-8433-f912336bfd68	319b0b73-4da9-46b3-a405-17f9b53b9214	30	f	3	2026-09-03 10:04:48.534593+00	2026-09-03 10:04:48.534593+00
-ac371d61-31b5-418f-94b5-a16346aac3ff	319b0b73-4da9-46b3-a405-17f9b53b9214	35	f	4	2026-09-03 10:04:48.534593+00	2026-09-03 10:04:48.534593+00
-55970999-daff-4d3c-be30-116f0071ead6	f830a89f-b422-45c0-ab0b-0065f5be046a	16	f	1	2026-09-03 10:04:48.850567+00	2026-09-03 10:04:48.850567+00
-a90268fd-9985-4536-a15d-a87c0b5ce5e7	f830a89f-b422-45c0-ab0b-0065f5be046a	17	f	2	2026-09-03 10:04:48.850567+00	2026-09-03 10:04:48.850567+00
-89f0bc45-102e-4af9-9698-3b8ea74948fe	f830a89f-b422-45c0-ab0b-0065f5be046a	18	t	3	2026-09-03 10:04:48.850567+00	2026-09-03 10:04:48.850567+00
-f344db97-586c-4005-a648-d8ce40d32f8d	f830a89f-b422-45c0-ab0b-0065f5be046a	19	f	4	2026-09-03 10:04:48.850567+00	2026-09-03 10:04:48.850567+00
-d7e2f4d5-c12a-401e-9f35-5545e6888807	51ad3e29-5c74-485b-affb-36d30fc487ac	7	f	1	2026-09-03 10:04:49.442503+00	2026-09-03 10:04:49.442503+00
-543fb623-2172-49e4-87e9-02939c025472	51ad3e29-5c74-485b-affb-36d30fc487ac	8	f	2	2026-09-03 10:04:49.442503+00	2026-09-03 10:04:49.442503+00
-308e1bbf-da94-4223-91f6-2c266e45f0a3	51ad3e29-5c74-485b-affb-36d30fc487ac	9	t	3	2026-09-03 10:04:49.442503+00	2026-09-03 10:04:49.442503+00
-6fc29da9-a1c9-4950-b039-c2f00505a877	51ad3e29-5c74-485b-affb-36d30fc487ac	10	f	4	2026-09-03 10:04:49.442503+00	2026-09-03 10:04:49.442503+00
-08d098b2-6c13-4faa-b4a7-795130a70ec4	489e7145-dd22-44b9-8e96-cc7cfaa59268	3	t	1	2026-09-03 10:04:50.008015+00	2026-09-03 10:04:50.008015+00
-607188b0-34dc-4e47-b608-05747d468d13	489e7145-dd22-44b9-8e96-cc7cfaa59268	6	f	2	2026-09-03 10:04:50.008015+00	2026-09-03 10:04:50.008015+00
-3a297573-c895-4fc6-8230-8d4766bda1b5	489e7145-dd22-44b9-8e96-cc7cfaa59268	9	t	3	2026-09-03 10:04:50.008015+00	2026-09-03 10:04:50.008015+00
-3f525bf8-8e50-4fe4-93b4-08f9831bb834	489e7145-dd22-44b9-8e96-cc7cfaa59268	12	f	4	2026-09-03 10:04:50.008015+00	2026-09-03 10:04:50.008015+00
-d57c5a1b-ecd3-435c-ba14-00f0f5527df5	9468f037-cea9-415a-89e0-7316dfe640b0	20	f	1	2026-09-03 10:04:50.322643+00	2026-09-03 10:04:50.322643+00
-ff363a47-0fdf-4214-bd12-548edace03aa	9468f037-cea9-415a-89e0-7316dfe640b0	25	t	2	2026-09-03 10:04:50.322643+00	2026-09-03 10:04:50.322643+00
-acf4faa1-52e7-4aac-9ef3-a2cc89611303	9468f037-cea9-415a-89e0-7316dfe640b0	30	f	3	2026-09-03 10:04:50.322643+00	2026-09-03 10:04:50.322643+00
-6be60e58-87d7-4580-8fa3-b48474062a68	9468f037-cea9-415a-89e0-7316dfe640b0	35	f	4	2026-09-03 10:04:50.322643+00	2026-09-03 10:04:50.322643+00
-142be33d-375e-488b-acea-8c5910dafd71	2caad995-85aa-4682-b19c-699cb807df0f	18	f	1	2026-09-03 10:04:51.162656+00	2026-09-03 10:04:51.162656+00
-efa2b0c2-8917-41f1-9287-4409fc6e29ec	2caad995-85aa-4682-b19c-699cb807df0f	19	f	2	2026-09-03 10:04:51.162656+00	2026-09-03 10:04:51.162656+00
-9904ab5f-dde7-4ee6-8594-35fd2a8f8ad8	2caad995-85aa-4682-b19c-699cb807df0f	20	t	3	2026-09-03 10:04:51.162656+00	2026-09-03 10:04:51.162656+00
-f20275cf-155c-437f-9a3e-539353691cf1	2caad995-85aa-4682-b19c-699cb807df0f	21	f	4	2026-09-03 10:04:51.162656+00	2026-09-03 10:04:51.162656+00
-5806f74d-cd6a-4450-897c-43c6f847cbc9	f59745bb-da32-42f4-9290-a957fca9e7ac	12	f	1	2026-09-03 10:04:50.641236+00	2026-09-03 10:04:50.641236+00
-2140bbdd-5723-4ce6-a828-46995bcdfd2e	f59745bb-da32-42f4-9290-a957fca9e7ac	14	t	2	2026-09-03 10:04:50.641236+00	2026-09-03 10:04:50.641236+00
-0d808e95-664b-4137-8ba8-cdd680de4078	f59745bb-da32-42f4-9290-a957fca9e7ac	16	f	3	2026-09-03 10:04:50.641236+00	2026-09-03 10:04:50.641236+00
-d672c9f0-60d8-41bd-91aa-4de8d5a045d4	f59745bb-da32-42f4-9290-a957fca9e7ac	18	f	4	2026-09-03 10:04:50.641236+00	2026-09-03 10:04:50.641236+00
-0a322b2a-f51f-4e87-a502-90353712b8f2	92e236cc-2ec9-4048-84ce-eb16758b8653	12	f	1	2026-09-03 10:04:51.666497+00	2026-09-03 10:04:51.666497+00
-37e8d359-8a1c-4e7e-b289-b708d53b71ee	92e236cc-2ec9-4048-84ce-eb16758b8653	18	t	2	2026-09-03 10:04:51.666497+00	2026-09-03 10:04:51.666497+00
-6338192b-c87a-425e-b67a-72cc5bb284d7	92e236cc-2ec9-4048-84ce-eb16758b8653	15	f	3	2026-09-03 10:04:51.666497+00	2026-09-03 10:04:51.666497+00
-84caf120-4db3-4324-ba7f-998b1cdf50da	92e236cc-2ec9-4048-84ce-eb16758b8653	10	f	4	2026-09-03 10:04:51.666497+00	2026-09-03 10:04:51.666497+00
-7377b3a2-1a4c-4dc1-a314-93db8f497de0	6e815844-2d32-4ffe-aec8-2657945fab3c	2	f	1	2026-09-03 10:04:52.52389+00	2026-09-03 10:04:52.52389+00
-fd0a1463-67e7-4a82-bee6-2aaa0b331abc	6e815844-2d32-4ffe-aec8-2657945fab3c	4	f	2	2026-09-03 10:04:52.52389+00	2026-09-03 10:04:52.52389+00
-8734905a-d737-40d0-a46b-1b6c4fae57ae	6e815844-2d32-4ffe-aec8-2657945fab3c	5	t	3	2026-09-03 10:04:52.52389+00	2026-09-03 10:04:52.52389+00
-17f7707d-38e2-4f6d-88a4-805d31ab4879	6e815844-2d32-4ffe-aec8-2657945fab3c	6	f	4	2026-09-03 10:04:52.52389+00	2026-09-03 10:04:52.52389+00
-9c9f1b0a-f6db-41d1-bf63-2a6bf8972df7	ca985c56-dc6a-4ec2-a245-16c5dded4098	2	f	1	2026-09-03 10:04:52.208635+00	2026-09-03 10:04:52.208635+00
-2970fcc1-2294-422a-8d60-5a055dade1fc	ca985c56-dc6a-4ec2-a245-16c5dded4098	3	f	2	2026-09-03 10:04:52.208635+00	2026-09-03 10:04:52.208635+00
-623c231d-dc5c-4bd6-93d1-1778017b6fea	ca985c56-dc6a-4ec2-a245-16c5dded4098	4	t	3	2026-09-03 10:04:52.208635+00	2026-09-03 10:04:52.208635+00
-e268d66a-b68b-4a87-9a51-75b4ed3cf882	ca985c56-dc6a-4ec2-a245-16c5dded4098	5	f	4	2026-09-03 10:04:52.208635+00	2026-09-03 10:04:52.208635+00
+3c2dcade-e5d0-492c-ae9f-137504e2f5f6	cab5da0f-d2d6-48b5-96e4-8e7c12aa6b85	Atlantic Ocean	f	1	2026-09-05 11:19:22.715922+00	2026-09-05 11:19:22.715922+00
+833ff5f4-f8a2-4313-ae69-81a06227c377	cab5da0f-d2d6-48b5-96e4-8e7c12aa6b85	Indian Ocean	f	2	2026-09-05 11:19:22.715922+00	2026-09-05 11:19:22.715922+00
+d57ff595-756d-4b29-ad36-b337f54e3337	cab5da0f-d2d6-48b5-96e4-8e7c12aa6b85	Arctic Ocean	f	3	2026-09-05 11:19:22.715922+00	2026-09-05 11:19:22.715922+00
+76e4f992-b232-40da-9d86-c39676a8dc74	cab5da0f-d2d6-48b5-96e4-8e7c12aa6b85	Pacific Ocean	t	4	2026-09-05 11:19:22.715922+00	2026-09-05 11:19:22.715922+00
+e49d5f2d-89c9-4e09-89c2-95c0275c9de0	c7843572-832d-488b-9716-72da95e7a05f	Asia	t	1	2026-09-05 11:19:23.042927+00	2026-09-05 11:19:23.042927+00
+dc951b57-5492-4996-84cc-76a906aece35	c7843572-832d-488b-9716-72da95e7a05f	Africa	t	2	2026-09-05 11:19:23.042927+00	2026-09-05 11:19:23.042927+00
+3b612389-727c-4166-b66d-2f3e2f951158	c7843572-832d-488b-9716-72da95e7a05f	Europe	t	3	2026-09-05 11:19:23.042927+00	2026-09-05 11:19:23.042927+00
+c09536ee-4d84-47f0-bea6-d7399edc7ebb	c7843572-832d-488b-9716-72da95e7a05f	Amazon	f	4	2026-09-05 11:19:23.042927+00	2026-09-05 11:19:23.042927+00
+76ba5e4e-1ed7-407e-bf52-99dad811f47a	8a90113a-7744-491b-8ae8-587e3cf39b68	2	t	1	2026-09-05 11:19:23.558558+00	2026-09-05 11:19:23.558558+00
+76d85922-3007-442a-90a3-4749f5be50c1	8a90113a-7744-491b-8ae8-587e3cf39b68	5	f	2	2026-09-05 11:19:23.558558+00	2026-09-05 11:19:23.558558+00
+fb75cce3-38d9-4d7c-85dd-dd6aeb337c00	8a90113a-7744-491b-8ae8-587e3cf39b68	8	t	3	2026-09-05 11:19:23.558558+00	2026-09-05 11:19:23.558558+00
+4a6e7d1a-2f1c-4b89-838b-b2fb665bfcca	8a90113a-7744-491b-8ae8-587e3cf39b68	11	f	4	2026-09-05 11:19:23.558558+00	2026-09-05 11:19:23.558558+00
+d9a8c28c-51db-44c2-8fa7-65a213911ad4	ef3d7e2c-2442-411a-9755-4aeda126fa61	13	f	1	2026-09-05 11:19:23.884449+00	2026-09-05 11:19:23.884449+00
+de9b6d07-d1da-4783-b9cf-678bb511014d	ef3d7e2c-2442-411a-9755-4aeda126fa61	20	f	2	2026-09-05 11:19:23.884449+00	2026-09-05 11:19:23.884449+00
+ab259f7d-7d50-4120-a415-9ef80e1876a0	ef3d7e2c-2442-411a-9755-4aeda126fa61	30	t	3	2026-09-05 11:19:23.884449+00	2026-09-05 11:19:23.884449+00
+e6f01b1c-a651-4932-a457-1f207385503a	ef3d7e2c-2442-411a-9755-4aeda126fa61	40	f	4	2026-09-05 11:19:23.884449+00	2026-09-05 11:19:23.884449+00
+8e40afbd-5d6c-405a-b3ec-591692354180	18f8dec6-ee39-48e8-b86f-f72a16b8f164	Earth	f	1	2026-09-05 11:19:24.191238+00	2026-09-05 11:19:24.191238+00
+8ffee2ad-af24-44a0-a15d-abc6ba64eb47	18f8dec6-ee39-48e8-b86f-f72a16b8f164	Mars	t	2	2026-09-05 11:19:24.191238+00	2026-09-05 11:19:24.191238+00
+b767d507-d629-419e-ab37-8b06be8e291b	18f8dec6-ee39-48e8-b86f-f72a16b8f164	Jupiter	f	3	2026-09-05 11:19:24.191238+00	2026-09-05 11:19:24.191238+00
+7eb0ed35-86dd-4313-9d0f-18d2f5bb3ccb	18f8dec6-ee39-48e8-b86f-f72a16b8f164	Venus	f	4	2026-09-05 11:19:24.191238+00	2026-09-05 11:19:24.191238+00
+c29d229c-8470-4e5a-8bf8-cda297106f24	2de2a35a-0004-4a91-b9eb-063c19c2781c	Solid	t	1	2026-09-05 11:19:24.497518+00	2026-09-05 11:19:24.497518+00
+60b1ab2b-8505-44a1-b38f-f585c29f051a	2de2a35a-0004-4a91-b9eb-063c19c2781c	Liquid	t	2	2026-09-05 11:19:24.497518+00	2026-09-05 11:19:24.497518+00
+4c98a702-3420-4dd5-baca-bba3a79cba1d	2de2a35a-0004-4a91-b9eb-063c19c2781c	Gas	t	3	2026-09-05 11:19:24.497518+00	2026-09-05 11:19:24.497518+00
+073955f6-326a-4d2d-89ee-bd6c476d8d52	2de2a35a-0004-4a91-b9eb-063c19c2781c	Wood	f	4	2026-09-05 11:19:24.497518+00	2026-09-05 11:19:24.497518+00
+eacb5fe9-44e9-4043-a11e-d30f456c0eb4	f0e46421-2c0a-4350-9f36-1a6255379041	4	f	1	2026-09-05 11:19:25.155071+00	2026-09-05 11:19:25.155071+00
+bcb8291d-3613-4377-916f-86c971a4fd5c	f0e46421-2c0a-4350-9f36-1a6255379041	6	f	2	2026-09-05 11:19:25.155071+00	2026-09-05 11:19:25.155071+00
+80a2fbf6-6d40-4b42-89df-56b06e2aea85	f0e46421-2c0a-4350-9f36-1a6255379041	8	t	3	2026-09-05 11:19:25.155071+00	2026-09-05 11:19:25.155071+00
+52038280-7ab0-4cba-b167-0d2074177b17	f0e46421-2c0a-4350-9f36-1a6255379041	10	f	4	2026-09-05 11:19:25.155071+00	2026-09-05 11:19:25.155071+00
+794985b6-f885-4cd5-85c8-6951dbc97ab9	9a43bb41-73b9-4d00-908f-ab712619510a	Delhi	f	1	2026-09-05 11:19:51.643581+00	2026-09-05 11:19:51.643581+00
+a5fae483-5697-4d16-8ec5-cfaa423316d9	9a43bb41-73b9-4d00-908f-ab712619510a	New York	f	2	2026-09-05 11:19:51.643581+00	2026-09-05 11:19:51.643581+00
+310f04cd-7842-48da-92fe-89d5d44b3c6a	9a43bb41-73b9-4d00-908f-ab712619510a	Paris	t	3	2026-09-05 11:19:51.643581+00	2026-09-05 11:19:51.643581+00
+46f222c2-4d33-42d0-af6f-588ab6822c90	9a43bb41-73b9-4d00-908f-ab712619510a	London	f	4	2026-09-05 11:19:51.643581+00	2026-09-05 11:19:51.643581+00
+67bdb87a-e317-43f9-bfbf-1186147b02bc	cb41b946-0a52-41fb-80b0-ad706821db26	Atlantic Ocean	f	1	2026-09-05 11:19:51.943193+00	2026-09-05 11:19:51.943193+00
+3114fbf4-7550-4ecd-8a11-75165186c6ab	cb41b946-0a52-41fb-80b0-ad706821db26	Indian Ocean	f	2	2026-09-05 11:19:51.943193+00	2026-09-05 11:19:51.943193+00
+57e2041b-8eee-465f-830a-5f502f80ca3e	cb41b946-0a52-41fb-80b0-ad706821db26	Arctic Ocean	f	3	2026-09-05 11:19:51.943193+00	2026-09-05 11:19:51.943193+00
+bb8cdedd-340b-4b02-bc23-06216af20d3b	cb41b946-0a52-41fb-80b0-ad706821db26	Pacific Ocean	t	4	2026-09-05 11:19:51.943193+00	2026-09-05 11:19:51.943193+00
+7a88457e-5a38-4ac0-8330-29edb72c72a9	1d587a56-6aa5-450c-b698-97c4cb693357	Asia	t	1	2026-09-05 11:19:52.221988+00	2026-09-05 11:19:52.221988+00
+87979854-c955-4216-8f71-ec85fc2ac4f6	1d587a56-6aa5-450c-b698-97c4cb693357	Africa	t	2	2026-09-05 11:19:52.221988+00	2026-09-05 11:19:52.221988+00
+c297b4e4-c508-4c9c-8844-99839b715c81	1d587a56-6aa5-450c-b698-97c4cb693357	Europe	t	3	2026-09-05 11:19:52.221988+00	2026-09-05 11:19:52.221988+00
+be52bdc4-c463-447d-b3b5-28939e43bbe5	1d587a56-6aa5-450c-b698-97c4cb693357	Amazon	f	4	2026-09-05 11:19:52.221988+00	2026-09-05 11:19:52.221988+00
+3ff8fd29-0b79-4d5b-9cbd-0f90e0d871e0	36c1b110-8246-406b-9f84-73cc155bb257	2	t	1	2026-09-05 11:19:52.67947+00	2026-09-05 11:19:52.67947+00
+94fb3284-0b43-411f-afd2-5d0438671464	36c1b110-8246-406b-9f84-73cc155bb257	5	f	2	2026-09-05 11:19:52.67947+00	2026-09-05 11:19:52.67947+00
+8b094773-697b-4a5c-abba-d58513199276	36c1b110-8246-406b-9f84-73cc155bb257	8	t	3	2026-09-05 11:19:52.67947+00	2026-09-05 11:19:52.67947+00
+de181b97-4303-4e18-bd95-232ac136f00b	36c1b110-8246-406b-9f84-73cc155bb257	11	f	4	2026-09-05 11:19:52.67947+00	2026-09-05 11:19:52.67947+00
+2cc4d7ce-7736-43ff-8ef1-7be56fd0f463	c8fe27d4-edb8-4627-bf9b-77095753bcd2	13	f	1	2026-09-05 11:19:52.960109+00	2026-09-05 11:19:52.960109+00
+e407e163-8362-4c24-b648-5cb027ab9c53	c8fe27d4-edb8-4627-bf9b-77095753bcd2	20	f	2	2026-09-05 11:19:52.960109+00	2026-09-05 11:19:52.960109+00
+08ae02c7-b33a-40f9-bbe0-bc6eed26909d	c8fe27d4-edb8-4627-bf9b-77095753bcd2	30	t	3	2026-09-05 11:19:52.960109+00	2026-09-05 11:19:52.960109+00
+46701023-677c-4b83-bd46-dd3a3d1d09b0	c8fe27d4-edb8-4627-bf9b-77095753bcd2	40	f	4	2026-09-05 11:19:52.960109+00	2026-09-05 11:19:52.960109+00
+56b60a60-4967-44ea-9ba0-1fe51e00f0bd	0865b103-4e8a-4cc2-acbf-026f7482e56b	Earth	f	1	2026-09-05 11:19:53.239855+00	2026-09-05 11:19:53.239855+00
+f6f1ad40-2d7d-4c48-a8b8-7e643e7c197e	0865b103-4e8a-4cc2-acbf-026f7482e56b	Mars	t	2	2026-09-05 11:19:53.239855+00	2026-09-05 11:19:53.239855+00
+f7b62f7d-77ce-469a-9e53-e20c6560e029	0865b103-4e8a-4cc2-acbf-026f7482e56b	Jupiter	f	3	2026-09-05 11:19:53.239855+00	2026-09-05 11:19:53.239855+00
+f8cc0a1b-b95d-4427-b193-7729443f045d	0865b103-4e8a-4cc2-acbf-026f7482e56b	Venus	f	4	2026-09-05 11:19:53.239855+00	2026-09-05 11:19:53.239855+00
+882c784c-45be-4335-9c2c-c45de3333081	ecb41a27-6f6e-4816-be2b-daf6059473af	Solid	t	1	2026-09-05 11:19:53.528827+00	2026-09-05 11:19:53.528827+00
+6b77ef7d-f5ea-4a1d-9925-64d053ae52a0	ecb41a27-6f6e-4816-be2b-daf6059473af	Liquid	t	2	2026-09-05 11:19:53.528827+00	2026-09-05 11:19:53.528827+00
+fbcd6965-516a-451e-a934-7b0970f1a3ef	ecb41a27-6f6e-4816-be2b-daf6059473af	Gas	t	3	2026-09-05 11:19:53.528827+00	2026-09-05 11:19:53.528827+00
+d18d5b56-7ab7-4a22-8277-16e50e4da28c	ecb41a27-6f6e-4816-be2b-daf6059473af	Wood	f	4	2026-09-05 11:19:53.528827+00	2026-09-05 11:19:53.528827+00
+8dba1997-3635-4535-9e34-68889b0cc717	c5255c53-96c3-4e7a-94ed-19e72a9cc636	4	f	1	2026-09-05 11:19:53.991798+00	2026-09-05 11:19:53.991798+00
+1204c8f8-4e03-43bf-897d-93328d23a9b4	c5255c53-96c3-4e7a-94ed-19e72a9cc636	6	f	2	2026-09-05 11:19:53.991798+00	2026-09-05 11:19:53.991798+00
+36483da6-e7ce-4f6c-b5de-3bb39b3424e2	c5255c53-96c3-4e7a-94ed-19e72a9cc636	8	t	3	2026-09-05 11:19:53.991798+00	2026-09-05 11:19:53.991798+00
+d6defa27-8adb-4ac7-a054-cc69c8a03a48	c5255c53-96c3-4e7a-94ed-19e72a9cc636	10	f	4	2026-09-05 11:19:53.991798+00	2026-09-05 11:19:53.991798+00
+ba28b9ed-74fd-4540-80ab-2aa8f1573a64	ded771fc-dc86-47d0-9492-72c60784f9d6	Delhi	f	1	2026-09-06 13:10:20.118954+00	2026-09-06 13:10:20.118954+00
+05452d28-a5b7-4c35-9651-b529719eb322	ded771fc-dc86-47d0-9492-72c60784f9d6	New York	f	2	2026-09-06 13:10:20.118954+00	2026-09-06 13:10:20.118954+00
+3bd5bbd1-496f-412f-9dd0-6820253ebb23	ded771fc-dc86-47d0-9492-72c60784f9d6	Paris	t	3	2026-09-06 13:10:20.118954+00	2026-09-06 13:10:20.118954+00
+4ee5c089-32be-4661-a4d9-ff7e6ebe38c0	ded771fc-dc86-47d0-9492-72c60784f9d6	London	f	4	2026-09-06 13:10:20.118954+00	2026-09-06 13:10:20.118954+00
+9af923d2-888f-4d25-bea6-da96ebd1cfcd	cf0f1f2d-3be6-4e49-a2cb-11209f655bfe	Atlantic Ocean	f	1	2026-09-06 13:10:20.448225+00	2026-09-06 13:10:20.448225+00
+d2736ece-cc65-4329-9a97-79bbe9aaed85	cf0f1f2d-3be6-4e49-a2cb-11209f655bfe	Indian Ocean	f	2	2026-09-06 13:10:20.448225+00	2026-09-06 13:10:20.448225+00
+91f0c49e-b5e2-40a6-ae04-a98725c70287	cf0f1f2d-3be6-4e49-a2cb-11209f655bfe	Arctic Ocean	f	3	2026-09-06 13:10:20.448225+00	2026-09-06 13:10:20.448225+00
+9c260cc0-0844-4d6c-ba76-92059f5160bc	cf0f1f2d-3be6-4e49-a2cb-11209f655bfe	Pacific Ocean	t	4	2026-09-06 13:10:20.448225+00	2026-09-06 13:10:20.448225+00
+bc83e07a-9607-48e4-9e48-153bb09916f6	d13c05b9-738a-4a13-8be2-520c223fd8c0	Asia	t	1	2026-09-06 13:10:20.84346+00	2026-09-06 13:10:20.84346+00
+7bce92ca-93e6-43f7-9a64-463922bf9785	d13c05b9-738a-4a13-8be2-520c223fd8c0	Africa	t	2	2026-09-06 13:10:20.84346+00	2026-09-06 13:10:20.84346+00
+18cb0828-c026-4b38-99de-82d0bc4f3d65	d13c05b9-738a-4a13-8be2-520c223fd8c0	Europe	t	3	2026-09-06 13:10:20.84346+00	2026-09-06 13:10:20.84346+00
+6c7d973e-7902-4f88-8de7-cb2affbf880e	d13c05b9-738a-4a13-8be2-520c223fd8c0	Amazon	f	4	2026-09-06 13:10:20.84346+00	2026-09-06 13:10:20.84346+00
+b8986d1c-bd0f-41e5-acc4-fd39e4c92073	652bae52-f35e-47f3-89e4-9a72f783b3d6	2	t	1	2026-09-06 13:10:21.395197+00	2026-09-06 13:10:21.395197+00
+42dd3779-fa0e-4c09-bdc4-d2cbed3c7f3a	652bae52-f35e-47f3-89e4-9a72f783b3d6	5	f	2	2026-09-06 13:10:21.395197+00	2026-09-06 13:10:21.395197+00
+3a734537-039a-49f8-b59b-c5f50d7ff1ed	652bae52-f35e-47f3-89e4-9a72f783b3d6	8	t	3	2026-09-06 13:10:21.395197+00	2026-09-06 13:10:21.395197+00
+17a2d86e-de7f-4270-a5cd-2c7b23c5748a	652bae52-f35e-47f3-89e4-9a72f783b3d6	11	f	4	2026-09-06 13:10:21.395197+00	2026-09-06 13:10:21.395197+00
+65c58ff5-1c69-4e8d-94f5-ddfa02d22325	5d77990d-36a9-4b0e-8495-953cb10c1e55	13	f	1	2026-09-06 13:10:21.751232+00	2026-09-06 13:10:21.751232+00
+3745d6fb-33a5-406d-9535-dce2a697c0bf	5d77990d-36a9-4b0e-8495-953cb10c1e55	20	f	2	2026-09-06 13:10:21.751232+00	2026-09-06 13:10:21.751232+00
+d3c64549-39cf-4e8e-8388-57a768efb760	5d77990d-36a9-4b0e-8495-953cb10c1e55	30	t	3	2026-09-06 13:10:21.751232+00	2026-09-06 13:10:21.751232+00
+fa3367dc-a9f0-445b-af26-99643a2ee7dd	5d77990d-36a9-4b0e-8495-953cb10c1e55	40	f	4	2026-09-06 13:10:21.751232+00	2026-09-06 13:10:21.751232+00
+28d7a85a-c4d8-4b04-af5a-75da6ce50964	43e2e992-3c52-4123-b593-df7f2cae4123	Earth	f	1	2026-09-06 13:10:22.051304+00	2026-09-06 13:10:22.051304+00
+d0da1494-017c-4471-832d-e15254db5b8f	43e2e992-3c52-4123-b593-df7f2cae4123	Mars	t	2	2026-09-06 13:10:22.051304+00	2026-09-06 13:10:22.051304+00
+44702a68-b837-47c2-b17b-439849680efb	43e2e992-3c52-4123-b593-df7f2cae4123	Jupiter	f	3	2026-09-06 13:10:22.051304+00	2026-09-06 13:10:22.051304+00
+6173a256-1d96-4a71-a8ac-f790cf526174	43e2e992-3c52-4123-b593-df7f2cae4123	Venus	f	4	2026-09-06 13:10:22.051304+00	2026-09-06 13:10:22.051304+00
+793d04a5-e313-4783-9b95-f6eadb83a45f	33a1d7c5-a5b9-4469-9279-3e561b009f4d	Solid	t	1	2026-09-06 13:10:22.561321+00	2026-09-06 13:10:22.561321+00
+ef1f4785-7abb-472b-a9e4-b9fe0b7ff2f9	33a1d7c5-a5b9-4469-9279-3e561b009f4d	Liquid	t	2	2026-09-06 13:10:22.561321+00	2026-09-06 13:10:22.561321+00
+b5ff7b30-65f9-41f5-b298-3ae7b9ef6d9a	33a1d7c5-a5b9-4469-9279-3e561b009f4d	Gas	t	3	2026-09-06 13:10:22.561321+00	2026-09-06 13:10:22.561321+00
+e20cb148-13b3-448f-8f75-374d93899387	33a1d7c5-a5b9-4469-9279-3e561b009f4d	Wood	f	4	2026-09-06 13:10:22.561321+00	2026-09-06 13:10:22.561321+00
+6482e867-32d9-40ed-b798-834cd2ac8e89	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	4	f	1	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
+fdc5a832-becb-49d1-8325-77a9bda2ba02	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	6	f	2	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
+691c9a9f-67dd-4cbc-9def-24532a001dec	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	8	t	3	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
+5949c23a-5609-4bda-b9e2-10e1a531e389	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	10	f	4	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
 \.
 
 
@@ -1126,51 +1089,35 @@ e268d66a-b68b-4a87-9a51-75b4ed3cf882	ca985c56-dc6a-4ec2-a245-16c5dded4098	5	f	4	
 --
 
 COPY public.questions (id, test_id, question_text, question_type, points, explanation, sort_order, created_at, updated_at, assignment_id, question_number, correct_text_answer, topic) FROM stdin;
-5de2753f-bca2-4fc0-bcc6-991b9b5317ca	\N	What is 6 × 2?	mcq	1	6 × 2 = 12.	3	2026-09-03 10:02:57.465384+00	2026-09-03 10:02:57.465384+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	3	\N	Multiplication
-229afdbe-64c4-4843-b794-02f80c5de2da	\N	What is 20 ÷ 5?	mcq	1	20 ÷ 5 = 4.	4	2026-09-03 10:02:57.78343+00	2026-09-03 10:02:57.78343+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	4	\N	Division
-4c20995b-a65e-43fd-8c3c-7bb8da845a5f	\N	What is 7 + 6?	text	1	7 + 6 = 13.	5	2026-09-03 10:02:58.125251+00	2026-09-03 10:02:58.125251+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	5	13	Addition
-d805e6a2-de60-46c9-9aaf-876c34c7bae6	\N	What is 15 - 7?	text	1	15 - 7 = 8.	6	2026-09-03 10:02:58.334122+00	2026-09-03 10:02:58.334122+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	6	8	Subtraction
-32048560-1e98-4079-b0f5-79cd3cb887ea	\N	Which of these numbers are even?	msq	1	2 and 8 are even numbers because they are divisible by 2.	7	2026-09-03 10:02:58.55479+00	2026-09-03 10:02:58.55479+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	7	\N	Numbers
-db837c56-8ac1-4d21-b451-9beeef6f6af7	\N	What is 3 × 5?	text	1	3 × 5 = 15.	8	2026-09-03 10:02:58.882626+00	2026-09-03 10:02:58.882626+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	8	15	Multiplication
-248133bc-ddcd-4877-be32-4335e8127b5c	\N	What is 18 ÷ 3?	mcq	1	18 ÷ 3 = 6.	9	2026-09-03 10:02:59.12634+00	2026-09-03 10:02:59.12634+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	9	\N	Division
-4ac5b110-47bf-4868-89f5-ac8c438b720f	\N	What is 9 + 10?	text	1	9 + 10 = 19.	10	2026-09-03 10:02:59.440673+00	2026-09-03 10:02:59.440673+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	10	19	Addition
-f606e7e2-272d-42e3-a62c-f6c0f2f4cfd7	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 7 + 5?	mcq	1	7 + 5 = 12.	1	2026-09-03 10:04:45.776129+00	2026-09-03 10:04:45.776129+00	\N	1	\N	Addition
-aea5fab9-9e44-4811-a371-c17299a3e606	\N	Which planet is known as the Red Planet?	mcq	1	Mars is called the Red Planet because of its reddish appearance caused by iron oxide on its surface.	1	2026-09-03 10:00:09.229183+00	2026-09-03 10:00:09.229183+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	1	\N	Science
-1398a651-d743-4ccd-804a-a62dfbd97c57	\N	Which of the following are primary colors?	msq	1	In the traditional RYB color model, red, blue, and yellow are primary colors.	2	2026-09-03 10:00:09.549294+00	2026-09-03 10:00:09.549294+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	2	\N	Art
-b0e6adc8-0582-4611-ab34-9051bdc4c37f	\N	What is 15 × 4?	text	2	15 multiplied by 4 equals 60.	3	2026-09-03 10:00:09.845052+00	2026-09-03 10:00:09.845052+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	3	60	Mathematics
-2ed73770-908c-4276-9d20-9a21d0e0ec67	\N	Who wrote the play Romeo and Juliet?	mcq	1	William Shakespeare wrote the famous tragedy Romeo and Juliet.	4	2026-09-03 10:00:10.038665+00	2026-09-03 10:00:10.038665+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	4	\N	Literature
-ee83c331-5351-49ef-9941-eabe4befcffe	\N	Which of these are mammals?	msq	1	Dolphins, whales, and bats are mammals. Sharks are fish.	5	2026-09-03 10:00:10.331654+00	2026-09-03 10:00:10.331654+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	5	\N	Biology
-76b5147d-51aa-4aed-855e-c4b0023a4261	\N	What is the chemical symbol for water?	text	2	Water is made up of two hydrogen atoms and one oxygen atom, giving it the formula H2O.	6	2026-09-03 10:00:10.68098+00	2026-09-03 10:00:10.68098+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	6	H2O	Chemistry
-0d7da159-99ba-4947-9913-4c7b211a4768	\N	Which is the largest ocean on Earth?	mcq	1	The Pacific Ocean is the largest and deepest ocean on Earth.	7	2026-09-03 10:00:10.870862+00	2026-09-03 10:00:10.870862+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	7	\N	Geography
-9bfd6548-3317-40f9-b932-9224298f67eb	\N	Which numbers are even?	msq	1	Even numbers are divisible by 2 without a remainder. 12, 24, and 30 are even.	8	2026-09-03 10:00:11.304034+00	2026-09-03 10:00:11.304034+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	8	\N	Mathematics
-577342ac-0921-4a70-af69-51dd51c16cc5	\N	What gas do humans primarily breathe in to survive?	mcq	1	Humans need oxygen for cellular respiration and energy production.	9	2026-09-03 10:00:11.863051+00	2026-09-03 10:00:11.863051+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	9	\N	Biology
-7f1f8226-2483-4187-ae76-a6f662eae25e	\N	What is the capital of India?	text	2	New Delhi is the capital city of India.	10	2026-09-03 10:00:12.340995+00	2026-09-03 10:00:12.340995+00	604ce706-9cad-41e1-ada6-5d8c0f491b1d	10	New Delhi	Geography
-a2ad7818-86a4-4427-964e-7aaa7c982fc1	\N	What is 5 + 3?	mcq	1	5 + 3 = 8.	1	2026-09-03 10:02:56.797575+00	2026-09-03 10:02:56.797575+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	1	\N	Addition
-688be0e9-e7c6-4225-b961-9d6558dafee8	\N	What is 10 - 4?	mcq	1	10 - 4 = 6.	2	2026-09-03 10:02:57.132806+00	2026-09-03 10:02:57.132806+00	fa60ed95-9f3f-439d-8995-2035c2a4be66	2	\N	Subtraction
-546dc101-fd21-4957-b3b5-be211bc0fa85	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 15 - 6?	mcq	1	15 - 6 = 9.	2	2026-09-03 10:04:46.087118+00	2026-09-03 10:04:46.087118+00	\N	2	\N	Subtraction
-c52b4d37-5873-4955-9f45-d09289520f74	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 4 × 3?	mcq	1	4 × 3 = 12.	3	2026-09-03 10:04:46.408637+00	2026-09-03 10:04:46.408637+00	\N	3	\N	Multiplication
-aca23b43-a16f-4ffa-83a4-85ead9c45283	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 20 ÷ 4?	mcq	1	20 ÷ 4 = 5.	4	2026-09-03 10:04:46.721954+00	2026-09-03 10:04:46.721954+00	\N	4	\N	Division
-21e093ac-1a04-493d-b250-d100456f5a1c	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 9 + 8?	text	1	9 + 8 = 17.	5	2026-09-03 10:04:47.029379+00	2026-09-03 10:04:47.029379+00	\N	5	17	Addition
-364aef29-db0d-489c-b22c-092845aaaa02	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 18 - 9?	text	1	18 - 9 = 9.	6	2026-09-03 10:04:47.246948+00	2026-09-03 10:04:47.246948+00	\N	6	9	Subtraction
-b4935fd9-5023-48c1-8353-f01d91773605	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 5 × 5?	mcq	1	5 × 5 = 25.	7	2026-09-03 10:04:47.456774+00	2026-09-03 10:04:47.456774+00	\N	7	\N	Multiplication
-450c6d0e-f1aa-4739-ad99-dd185b347152	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 36 ÷ 6?	text	1	36 ÷ 6 = 6.	8	2026-09-03 10:04:47.812766+00	2026-09-03 10:04:47.812766+00	\N	8	6	Division
-053401b6-102d-4e5b-aecd-ca70daa4a1cc	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	Which numbers are even?	msq	1	4 and 10 are even numbers.	9	2026-09-03 10:04:48.01125+00	2026-09-03 10:04:48.01125+00	\N	9	\N	Numbers
-319b0b73-4da9-46b3-a405-17f9b53b9214	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 10 + 15?	mcq	1	10 + 15 = 25.	10	2026-09-03 10:04:48.327165+00	2026-09-03 10:04:48.327165+00	\N	10	\N	Addition
-f830a89f-b422-45c0-ab0b-0065f5be046a	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 30 - 12?	mcq	1	30 - 12 = 18.	11	2026-09-03 10:04:48.641866+00	2026-09-03 10:04:48.641866+00	\N	11	\N	Subtraction
-8af996f9-0e06-488c-bb3a-a330cf7eb998	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 6 × 4?	text	1	6 × 4 = 24.	12	2026-09-03 10:04:48.98611+00	2026-09-03 10:04:48.98611+00	\N	12	24	Multiplication
-51ad3e29-5c74-485b-affb-36d30fc487ac	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 45 ÷ 5?	mcq	1	45 ÷ 5 = 9.	13	2026-09-03 10:04:49.224743+00	2026-09-03 10:04:49.224743+00	\N	13	\N	Division
-c4ff60df-b925-4b76-8f6b-a4761758bf10	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 25 + 25?	text	1	25 + 25 = 50.	14	2026-09-03 10:04:49.542714+00	2026-09-03 10:04:49.542714+00	\N	14	50	Addition
-489e7145-dd22-44b9-8e96-cc7cfaa59268	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	Which numbers are odd?	msq	1	3 and 9 are odd numbers.	15	2026-09-03 10:04:49.770365+00	2026-09-03 10:04:49.770365+00	\N	15	\N	Numbers
-9468f037-cea9-415a-89e0-7316dfe640b0	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 40 - 15?	mcq	1	40 - 15 = 25.	16	2026-09-03 10:04:50.116163+00	2026-09-03 10:04:50.116163+00	\N	16	\N	Subtraction
-f59745bb-da32-42f4-9290-a957fca9e7ac	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 7 × 2?	mcq	1	7 × 2 = 14.	17	2026-09-03 10:04:50.433954+00	2026-09-03 10:04:50.433954+00	\N	17	\N	Multiplication
-8736db98-8221-4678-9f9d-75e235ec2180	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 50 ÷ 10?	text	1	50 ÷ 10 = 5.	18	2026-09-03 10:04:50.759251+00	2026-09-03 10:04:50.759251+00	\N	18	5	Division
-2caad995-85aa-4682-b19c-699cb807df0f	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 11 + 9?	mcq	1	11 + 9 = 20.	19	2026-09-03 10:04:50.959622+00	2026-09-03 10:04:50.959622+00	\N	19	\N	Addition
-71856755-1079-4bbe-99ad-769ef7025f4d	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 27 - 7?	text	1	27 - 7 = 20.	20	2026-09-03 10:04:51.266237+00	2026-09-03 10:04:51.266237+00	\N	20	20	Subtraction
-92e236cc-2ec9-4048-84ce-eb16758b8653	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	Which number is greater?	mcq	1	18 is greater than 12, 15, and 10.	21	2026-09-03 10:04:51.472915+00	2026-09-03 10:04:51.472915+00	\N	21	\N	Numbers
-6f08f949-5f4a-45aa-82d0-87252b499fe7	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 3 × 8?	text	1	3 × 8 = 24.	22	2026-09-03 10:04:51.770609+00	2026-09-03 10:04:51.770609+00	\N	22	24	Multiplication
-ca985c56-dc6a-4ec2-a245-16c5dded4098	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 32 ÷ 8?	mcq	1	32 ÷ 8 = 4.	23	2026-09-03 10:04:52.011287+00	2026-09-03 10:04:52.011287+00	\N	23	\N	Division
-6e815844-2d32-4ffe-aec8-2657945fab3c	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is half of 10?	mcq	1	Half of 10 is 5.	24	2026-09-03 10:04:52.31208+00	2026-09-03 10:04:52.31208+00	\N	24	\N	Fractions
-bb5248cd-fcf5-4881-aefc-8e826b70ca09	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What is 100 - 50?	text	1	100 - 50 = 50.	25	2026-09-03 10:04:52.633904+00	2026-09-03 10:04:52.633904+00	\N	25	50	Subtraction
+cab5da0f-d2d6-48b5-96e4-8e7c12aa6b85	\N	Which is the largest ocean in the world?	mcq	1	The Pacific Ocean is the largest ocean on Earth.	2	2026-09-05 11:19:22.4887+00	2026-09-05 11:19:22.4887+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	2	\N	Geography
+c7843572-832d-488b-9716-72da95e7a05f	\N	Which of these are continents?	msq	1	Asia, Africa, and Europe are continents. The Amazon is a river and rainforest region.	3	2026-09-05 11:19:22.828343+00	2026-09-05 11:19:22.828343+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	3	\N	Geography
+b18e4b8e-c340-4254-be60-32aac90f0716	\N	What is 5 + 7?	text	2	5 + 7 = 12.	4	2026-09-05 11:19:23.147626+00	2026-09-05 11:19:23.147626+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	4	12	Mathematics
+8a90113a-7744-491b-8ae8-587e3cf39b68	\N	Which of these are even numbers?	msq	1	2 and 8 are even numbers because they are divisible by 2.	5	2026-09-05 11:19:23.348694+00	2026-09-05 11:19:23.348694+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	5	\N	Mathematics
+ef3d7e2c-2442-411a-9755-4aeda126fa61	\N	What is 10 × 3?	mcq	1	10 × 3 = 30.	6	2026-09-05 11:19:23.662675+00	2026-09-05 11:19:23.662675+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	6	\N	Mathematics
+18f8dec6-ee39-48e8-b86f-f72a16b8f164	\N	Which planet is known as the Red Planet?	mcq	1	Mars is called the Red Planet because of its reddish appearance.	7	2026-09-05 11:19:23.982133+00	2026-09-05 11:19:23.982133+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	7	\N	Science
+2de2a35a-0004-4a91-b9eb-063c19c2781c	\N	Which of these are states of matter?	msq	1	Solid, liquid, and gas are common states of matter. Wood is a material, not a state of matter.	8	2026-09-05 11:19:24.298986+00	2026-09-05 11:19:24.298986+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	8	\N	Science
+e407af5e-97bc-4e6c-8e86-88536f1e0fac	\N	What gas do humans need to breathe?	text	2	Humans need oxygen for respiration and energy production.	9	2026-09-05 11:19:24.604944+00	2026-09-05 11:19:24.604944+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	9	Oxygen	Science
+f0e46421-2c0a-4350-9f36-1a6255379041	\N	How many legs does a spider have?	mcq	1	A spider has eight legs.	10	2026-09-05 11:19:24.814295+00	2026-09-05 11:19:24.814295+00	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	10	\N	Science
+9a43bb41-73b9-4d00-908f-ab712619510a	bd505e3d-b811-4212-87a8-0521b4a42385	What is the capital of France?	mcq	1	Paris is the capital city of France.	1	2026-09-05 11:19:51.446732+00	2026-09-05 11:19:51.446732+00	\N	1	\N	Geography
+cb41b946-0a52-41fb-80b0-ad706821db26	bd505e3d-b811-4212-87a8-0521b4a42385	Which is the largest ocean in the world?	mcq	1	The Pacific Ocean is the largest ocean on Earth.	2	2026-09-05 11:19:51.747655+00	2026-09-05 11:19:51.747655+00	\N	2	\N	Geography
+1d587a56-6aa5-450c-b698-97c4cb693357	bd505e3d-b811-4212-87a8-0521b4a42385	Which of these are continents?	msq	1	Asia, Africa, and Europe are continents. The Amazon is a river and rainforest region.	3	2026-09-05 11:19:52.034499+00	2026-09-05 11:19:52.034499+00	\N	3	\N	Geography
+9ad2bf73-f76c-4efb-9be5-8fbd1c1ac36a	bd505e3d-b811-4212-87a8-0521b4a42385	What is 5 + 7?	text	2	5 + 7 = 12.	4	2026-09-05 11:19:52.311593+00	2026-09-05 11:19:52.311593+00	\N	4	12	Mathematics
+36c1b110-8246-406b-9f84-73cc155bb257	bd505e3d-b811-4212-87a8-0521b4a42385	Which of these are even numbers?	msq	1	2 and 8 are even numbers because they are divisible by 2.	5	2026-09-05 11:19:52.494624+00	2026-09-05 11:19:52.494624+00	\N	5	\N	Mathematics
+c8fe27d4-edb8-4627-bf9b-77095753bcd2	bd505e3d-b811-4212-87a8-0521b4a42385	What is 10 × 3?	mcq	1	10 × 3 = 30.	6	2026-09-05 11:19:52.768578+00	2026-09-05 11:19:52.768578+00	\N	6	\N	Mathematics
+0865b103-4e8a-4cc2-acbf-026f7482e56b	bd505e3d-b811-4212-87a8-0521b4a42385	Which planet is known as the Red Planet?	mcq	1	Mars is called the Red Planet because of its reddish appearance.	7	2026-09-05 11:19:53.052033+00	2026-09-05 11:19:53.052033+00	\N	7	\N	Science
+ecb41a27-6f6e-4816-be2b-daf6059473af	bd505e3d-b811-4212-87a8-0521b4a42385	Which of these are states of matter?	msq	1	Solid, liquid, and gas are common states of matter. Wood is a material, not a state of matter.	8	2026-09-05 11:19:53.338171+00	2026-09-05 11:19:53.338171+00	\N	8	\N	Science
+b46beaed-b02f-47fd-86d3-f592b4cde43e	bd505e3d-b811-4212-87a8-0521b4a42385	What gas do humans need to breathe?	text	2	Humans need oxygen for respiration and energy production.	9	2026-09-05 11:19:53.619073+00	2026-09-05 11:19:53.619073+00	\N	9	Oxygen	Science
+c5255c53-96c3-4e7a-94ed-19e72a9cc636	bd505e3d-b811-4212-87a8-0521b4a42385	How many legs does a spider have?	mcq	1	A spider has eight legs.	10	2026-09-05 11:19:53.803472+00	2026-09-05 11:19:53.803472+00	\N	10	\N	Science
+280bc8d8-bbc7-4ce2-aaf6-24ee254c193f	\N	What is 5 + 7?	text	2	5 + 7 = 12.	4	2026-09-06 13:10:20.952762+00	2026-09-06 13:10:20.952762+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	4	12	Mathematics
+ded771fc-dc86-47d0-9492-72c60784f9d6	\N	What is the capital of France?	mcq	1	Paris is the capital city of France.	1	2026-09-06 13:10:19.899469+00	2026-09-06 13:10:19.899469+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	1	\N	Geography
+cf0f1f2d-3be6-4e49-a2cb-11209f655bfe	\N	Which is the largest ocean in the world?	mcq	1	The Pacific Ocean is the largest ocean on Earth.	2	2026-09-06 13:10:20.224433+00	2026-09-06 13:10:20.224433+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	2	\N	Geography
+d13c05b9-738a-4a13-8be2-520c223fd8c0	\N	Which of these are continents?	msq	1	Asia, Africa, and Europe are continents. The Amazon is a river and rainforest region.	3	2026-09-06 13:10:20.598346+00	2026-09-06 13:10:20.598346+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	3	\N	Geography
+652bae52-f35e-47f3-89e4-9a72f783b3d6	\N	Which of these are even numbers?	msq	1	2 and 8 are even numbers because they are divisible by 2.	5	2026-09-06 13:10:21.194897+00	2026-09-06 13:10:21.194897+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	5	\N	Mathematics
+5d77990d-36a9-4b0e-8495-953cb10c1e55	\N	What is 10 × 3?	mcq	1	10 × 3 = 30.	6	2026-09-06 13:10:21.502225+00	2026-09-06 13:10:21.502225+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	6	\N	Mathematics
+43e2e992-3c52-4123-b593-df7f2cae4123	\N	Which planet is known as the Red Planet?	mcq	1	Mars is called the Red Planet because of its reddish appearance.	7	2026-09-06 13:10:21.854278+00	2026-09-06 13:10:21.854278+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	7	\N	Science
+33a1d7c5-a5b9-4469-9279-3e561b009f4d	\N	Which of these are states of matter?	msq	1	Solid, liquid, and gas are common states of matter. Wood is a material, not a state of matter.	8	2026-09-06 13:10:22.152758+00	2026-09-06 13:10:22.152758+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	8	\N	Science
+3153127c-d24d-4a58-8f8c-bc06650016ed	\N	What gas do humans need to breathe?	text	2	Humans need oxygen for respiration and energy production.	9	2026-09-06 13:10:22.668694+00	2026-09-06 13:10:22.668694+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	9	Oxygen	Science
+feb37145-7d85-42b6-b0f9-ab93dbecaeb8	\N	How many legs does a spider have?	mcq	1	A spider has eight legs.	10	2026-09-06 13:10:22.922853+00	2026-09-06 13:10:22.922853+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	10	\N	Science
 \.
 
 
@@ -1179,9 +1126,9 @@ bb5248cd-fcf5-4881-aefc-8e826b70ca09	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	What i
 --
 
 COPY public.student_queries (id, student_id, subject, body, status, admin_reply, replied_by, replied_at, created_at, updated_at, type, metadata) FROM stdin;
-c82e95f9-0687-4478-ace4-35ed4934d6db	53724601-1ad3-4d8a-8c5d-1822d5edff37	Not able to purchase a course.	How to bypass purchasing.	answered	Money follows my brother.	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-03 11:18:37.047+00	2026-09-03 11:18:15.379013+00	2026-09-03 11:18:37.095819+00	general	{}
-8ca9405b-5dbd-4b01-a44f-b3a88cd1ac2a	53724601-1ad3-4d8a-8c5d-1822d5edff37	Extra attempt request: Final Exam	All attempts have been used without a passing score. Requesting one additional attempt.	answered	Approved	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-04 10:46:14.033+00	2026-09-04 10:45:20.262114+00	2026-09-04 10:46:14.087271+00	extra_attempt_request	{"test_id": "24b1ad10-e1a9-413a-ac3a-eda72cd0d77a", "lesson_id": "1bac1f4d-ffe8-4f31-aeea-aaf1230d7ae1", "attempts_used": 2, "assessment_type": "test"}
-db6c4c7f-26df-47f4-b273-a118b293fcd8	53724601-1ad3-4d8a-8c5d-1822d5edff37	Extra attempt request: Final Exam	All attempts have been used without a passing score. Requesting one additional attempt.	answered	1	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-04 10:46:51.308+00	2026-09-04 10:46:30.788635+00	2026-09-04 10:46:51.365794+00	extra_attempt_request	{"test_id": "24b1ad10-e1a9-413a-ac3a-eda72cd0d77a", "lesson_id": "1bac1f4d-ffe8-4f31-aeea-aaf1230d7ae1", "attempts_used": 2, "assessment_type": "test"}
+2a797c15-d7e6-4611-a837-a1902456a5df	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	Extra attempt request: Assignment 01	All attempts have been used without a passing score. Requesting one additional attempt.	answered	Approved. You have been granted 1 additional attempt.	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 12:34:53.525+00	2026-09-06 11:20:14.091174+00	2026-09-06 12:34:53.57132+00	extra_attempt_request	{"lesson_id": "b7304d3b-6618-4cd4-b52f-8d8ce583244a", "query_number": "Q-30317", "assignment_id": "6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0", "attempts_used": 1, "assessment_type": "assignment"}
+97e95d70-81b1-409d-8a75-c176181ded23	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	This is a test message	Hi Sir.!	answered	Hello.!	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 12:35:17.795+00	2026-09-06 11:39:23.594407+00	2026-09-06 12:35:17.849268+00	general	{"query_number": "Q-63994"}
+352f4584-0a9f-45e6-a099-09c30f4fd59c	\N	Why my access is blocked.?	Please reply.	open	\N	\N	\N	2026-09-07 14:12:43.324645+00	2026-09-07 14:12:43.324645+00	contact_form	{"is_guest": true, "guest_name": "New Student", "guest_email": "hello@hello.com", "guest_phone": "9898898998", "query_number": "Q-87645"}
 \.
 
 
@@ -1214,8 +1161,6 @@ COPY public.test_answers (id, attempt_id, question_id, selected_option_id, text_
 --
 
 COPY public.test_attempts (id, test_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, created_at, updated_at) FROM stdin;
-163fc897-ac8a-4f45-b839-493eacc24f00	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	53724601-1ad3-4d8a-8c5d-1822d5edff37	2026-09-03 10:58:58.014+00	2026-09-03 11:01:04.185+00	0	25	126	2026-09-03 10:58:58.073044+00	2026-09-03 13:06:44.215961+00
-ace7139c-0892-4645-acf7-40c368584515	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	53724601-1ad3-4d8a-8c5d-1822d5edff37	2026-09-04 10:43:32.718+00	2026-09-04 10:44:31.28+00	9	25	59	2026-09-04 10:43:32.848624+00	2026-09-04 10:44:31.336723+00
 \.
 
 
@@ -1224,7 +1169,7 @@ ace7139c-0892-4645-acf7-40c368584515	24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	537246
 --
 
 COPY public.tests (id, lesson_id, title, time_limit_seconds, passing_score_percent, max_attempts, created_at, updated_at) FROM stdin;
-24b1ad10-e1a9-413a-ac3a-eda72cd0d77a	1bac1f4d-ffe8-4f31-aeea-aaf1230d7ae1	Final Exam	600	85	2	2026-09-03 10:04:35.868692+00	2026-09-03 10:04:35.868692+00
+bd505e3d-b811-4212-87a8-0521b4a42385	e82d3a0d-ff5b-4551-a376-1777f9f98c72	Final Test	120	75	1	2026-09-05 11:19:42.5594+00	2026-09-05 11:19:42.5594+00
 \.
 
 
@@ -1233,7 +1178,9 @@ COPY public.tests (id, lesson_id, title, time_limit_seconds, passing_score_perce
 --
 
 COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, thumbnail_url, created_at, updated_at) FROM stdin;
-d0783eaf-43bf-41c5-9b0b-161691a30672	5b5960b7-5f17-4bbe-a039-86f1ac52f214	10b50c878b1948c4a93558da19728113	\N	\N	2026-09-03 13:48:56.240769+00	2026-09-03 13:48:56.240769+00
+741b99de-5824-478c-97c0-d52c0c581b99	4827d058-7606-4146-bea2-bc391b05a85c	a958b263d5864763a7f567efde5f5221	\N	\N	2026-09-05 11:08:10.987783+00	2026-09-05 11:09:00.424894+00
+46680f36-d073-466b-b368-c06d3f8405fa	597ccd87-b524-4446-a648-e397ab4fffaf	fd778b64448b4afcb2100b794fd5fccc	\N	\N	2026-09-05 11:09:26.615899+00	2026-09-05 11:09:26.615899+00
+2d000a97-2088-42fb-9db2-d5c089d9bcf0	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	f192641d1e144c8580e13ac6084ccc6f	\N	\N	2026-09-06 12:57:27.327262+00	2026-09-06 12:57:27.327262+00
 \.
 
 
@@ -1242,8 +1189,9 @@ d0783eaf-43bf-41c5-9b0b-161691a30672	5b5960b7-5f17-4bbe-a039-86f1ac52f214	10b50c
 --
 
 COPY public.video_sessions (id, user_id, lesson_id, ip_address, user_agent, created_at, expires_at) FROM stdin;
-17757de1-493f-449a-8a23-aef4b794626f	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	5b5960b7-5f17-4bbe-a039-86f1ac52f214	35.171.22.115, 172.71.124.246, 10.30.142.240	node	2026-09-03 16:11:46.295237+00	2026-09-03 17:11:46.242+00
-bd8e2c4e-0a5a-4510-9211-ff0c09b231f1	28d26a6e-09ca-4b69-8344-f3bfeb3f727f	5b5960b7-5f17-4bbe-a039-86f1ac52f214	35.171.22.115, 172.71.124.246, 10.30.142.240	node	2026-09-03 16:11:55.04085+00	2026-09-03 17:11:54.998+00
+6a0ab20c-dcf4-4713-81cf-26e984f3bfe7	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,3.88.33.251, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:12:15.698765+00	2026-09-06 13:27:15.641+00
+c4b646e8-c5ab-4354-8dfa-0c50f333be86	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,54.87.240.41, 104.22.66.68, 10.24.8.245	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:12:38.108999+00	2026-09-06 13:27:38.048+00
+38fe9486-53cb-42ea-9e98-3b7488ce4614	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,3.88.33.251, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:18:51.467425+00	2026-09-06 13:33:51.401+00
 \.
 
 
@@ -1285,14 +1233,6 @@ ALTER TABLE ONLY public.assignment_answers
 
 ALTER TABLE ONLY public.assignment_attempts
     ADD CONSTRAINT assignment_attempts_pkey PRIMARY KEY (id);
-
-
---
--- Name: assignment_submissions assignment_submissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.assignment_submissions
-    ADD CONSTRAINT assignment_submissions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1635,20 +1575,6 @@ CREATE INDEX idx_assignment_attempts_student ON public.assignment_attempts USING
 
 
 --
--- Name: idx_assignment_submissions_assignment_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_assignment_submissions_assignment_id ON public.assignment_submissions USING btree (assignment_id);
-
-
---
--- Name: idx_assignment_submissions_student_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX idx_assignment_submissions_student_id ON public.assignment_submissions USING btree (student_id);
-
-
---
 -- Name: idx_assignments_lesson_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1761,6 +1687,13 @@ CREATE INDEX idx_doubt_bookings_student_id ON public.doubt_bookings USING btree 
 
 
 --
+-- Name: idx_doubt_slots_course_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_doubt_slots_course_id ON public.doubt_slots USING btree (course_id);
+
+
+--
 -- Name: idx_doubt_slots_created_by; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1779,6 +1712,20 @@ CREATE INDEX idx_doubt_slots_date ON public.doubt_slots USING btree (date);
 --
 
 CREATE INDEX idx_doubt_slots_status ON public.doubt_slots USING btree (status);
+
+
+--
+-- Name: idx_doubt_slots_student_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_doubt_slots_student_id ON public.doubt_slots USING btree (student_id);
+
+
+--
+-- Name: idx_doubt_slots_target_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_doubt_slots_target_type ON public.doubt_slots USING btree (target_type);
 
 
 --
@@ -1999,13 +1946,6 @@ CREATE INDEX video_sessions_user_id_lesson_id_expires_at_idx ON public.video_ses
 
 
 --
--- Name: assignment_submissions assignment_submissions_updated_at; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER assignment_submissions_updated_at BEFORE UPDATE ON public.assignment_submissions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-
---
 -- Name: assignments assignments_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2218,22 +2158,6 @@ ALTER TABLE ONLY public.assignment_attempts
 
 
 --
--- Name: assignment_submissions assignment_submissions_assignment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.assignment_submissions
-    ADD CONSTRAINT assignment_submissions_assignment_id_fkey FOREIGN KEY (assignment_id) REFERENCES public.assignments(id) ON DELETE CASCADE;
-
-
---
--- Name: assignment_submissions assignment_submissions_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.assignment_submissions
-    ADD CONSTRAINT assignment_submissions_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
-
-
---
 -- Name: assignments assignments_lesson_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2306,11 +2230,27 @@ ALTER TABLE ONLY public.doubt_bookings
 
 
 --
+-- Name: doubt_slots doubt_slots_course_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.doubt_slots
+    ADD CONSTRAINT doubt_slots_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE SET NULL;
+
+
+--
 -- Name: doubt_slots doubt_slots_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.doubt_slots
     ADD CONSTRAINT doubt_slots_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: doubt_slots doubt_slots_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.doubt_slots
+    ADD CONSTRAINT doubt_slots_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.profiles(id) ON DELETE SET NULL;
 
 
 --
@@ -2727,13 +2667,6 @@ CREATE POLICY "Admin reads all queries" ON public.student_queries FOR SELECT USI
 
 
 --
--- Name: assignment_submissions Admin reads all submissions; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Admin reads all submissions" ON public.assignment_submissions FOR SELECT USING ((public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role])));
-
-
---
 -- Name: test_answer_options Admin reads all test answer options; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2944,13 +2877,6 @@ CREATE POLICY "Students insert own queries" ON public.student_queries FOR INSERT
 
 
 --
--- Name: assignment_submissions Students insert own submissions; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Students insert own submissions" ON public.assignment_submissions FOR INSERT WITH CHECK ((auth.uid() = student_id));
-
-
---
 -- Name: assignment_answer_options Students manage own assignment answer options; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2979,13 +2905,6 @@ CREATE POLICY "Students manage own attempts" ON public.test_attempts USING ((aut
 --
 
 CREATE POLICY "Students manage own chapter starts" ON public.chapter_starts USING ((auth.uid() = student_id));
-
-
---
--- Name: assignment_submissions Students manage own submissions; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Students manage own submissions" ON public.assignment_submissions USING ((auth.uid() = student_id));
 
 
 --
@@ -3066,13 +2985,6 @@ CREATE POLICY "Students select own progress" ON public.progress FOR SELECT USING
 
 
 --
--- Name: assignment_submissions Students select own submissions; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Students select own submissions" ON public.assignment_submissions FOR SELECT USING ((auth.uid() = student_id));
-
-
---
 -- Name: test_answers Students update own answers; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3109,13 +3021,6 @@ CREATE POLICY "Students update own bookings" ON public.doubt_bookings FOR UPDATE
 --
 
 CREATE POLICY "Students update own progress" ON public.progress FOR UPDATE USING ((auth.uid() = student_id));
-
-
---
--- Name: assignment_submissions Students update own submissions; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY "Students update own submissions" ON public.assignment_submissions FOR UPDATE USING ((auth.uid() = student_id));
 
 
 --
@@ -3169,12 +3074,6 @@ ALTER TABLE public.assignment_answers ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.assignment_attempts ENABLE ROW LEVEL SECURITY;
-
---
--- Name: assignment_submissions; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.assignment_submissions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: assignments; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3427,5 +3326,5 @@ ALTER TABLE public.video_sessions ENABLE ROW LEVEL SECURITY;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qJI0tzRQUcnho50QtT9kf9bpLUTmjgGGkiDo4Xmi0YQ7FA3w50C4b4b2hG6vOe5
+\unrestrict 6fN1zg3l2j6s6y3fZYzxIgVl9AurtwbSIUAbGLuDSRuAgoZsKOlrYnmxriOxnhZ
 

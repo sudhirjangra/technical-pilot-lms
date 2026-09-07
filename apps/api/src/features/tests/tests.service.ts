@@ -471,7 +471,14 @@ export class TestsService {
         const expected = q.correct_text_answer ? normalize(q.correct_text_answer as string) : null;
         const given = answer?.textAnswer ? normalize(answer.textAnswer) : null;
         if (!expected) {
-          isCorrect = null; // no expected answer set → manually graded
+          // No expected answer configured – auto-award points if student submitted any text
+          if (given) {
+            isCorrect = true;
+            pointsEarned = points;
+            correctCount++;
+          } else {
+            isCorrect = false;
+          }
         } else if (given) {
           isCorrect = given === expected;
           if (isCorrect) { pointsEarned = points; correctCount++; }
@@ -688,6 +695,15 @@ export class TestsService {
       }
     }
 
+    if (testRel?.lesson_id) {
+      await this.syncLessonCompletion(
+        testRel.lesson_id,
+        studentId,
+        attempt.test_id,
+        passingPercent,
+      );
+    }
+
     return {
       score: totalScore,
       maxScore,
@@ -828,10 +844,12 @@ export class TestsService {
       const chapter = lesson?.chapters;
       const course = chapter?.courses;
       const passingPct = test?.passing_score_percent ?? 60;
+      const score = mongo?.score ?? a.score;
+      const max_score = mongo?.max_score ?? a.max_score;
       const percentage =
-        a.max_score && a.max_score > 0
-          ? Math.round(((a.score ?? 0) / a.max_score) * 100)
-          : mongo?.percentage ?? null;
+        mongo?.percentage ?? (max_score && max_score > 0
+          ? Math.round(((score ?? 0) / max_score) * 100)
+          : null);
       return {
         id: a.id,
         type: 'test' as const,
@@ -841,11 +859,11 @@ export class TestsService {
         courseTitle: course?.title ?? mongo?.course_title ?? 'Unknown course',
         started_at: a.started_at ?? mongo?.started_at,
         completed_at: a.completed_at ?? mongo?.completed_at,
-        score: a.score ?? mongo?.score,
-        max_score: a.max_score ?? mongo?.max_score,
+        score,
+        max_score,
         time_spent_seconds: a.time_spent_seconds ?? mongo?.time_spent_seconds,
         percentage,
-        passed: percentage !== null ? percentage >= passingPct : (mongo?.passed ?? null),
+        passed: mongo?.passed ?? (percentage !== null ? percentage >= passingPct : null),
       };
     });
   }
@@ -1068,74 +1086,9 @@ export class TestsService {
     });
   }
 
-  async gradeAttemptAnswers(attemptId: string, grades: { questionId: string; isCorrect: boolean }[]) {
-
-    for (const grade of grades) {
-      const { error } = await this.supabase
-        .from('test_answers')
-        .update({ is_correct: grade.isCorrect })
-        .eq('attempt_id', attemptId)
-        .eq('question_id', grade.questionId);
-
-      if (error) throw new BadRequestException(error.message);
-    }
-
-    const { data: attempt } = await this.supabase
-      .from('test_attempts')
-      .select('test_id, student_id, max_score')
-      .eq('id', attemptId)
-      .single();
-
-    if (!attempt) throw new NotFoundException('Attempt not found');
-
-    const { data: test } = await this.supabase
-      .from('tests')
-      .select('id, lesson_id, passing_score_percent')
-      .eq('id', attempt.test_id)
-      .single();
-
-    const { data: questions } = await this.supabase
-      .from('questions')
-      .select('id, points')
-      .eq('test_id', attempt.test_id);
-
-    const { data: answers } = await this.supabase
-      .from('test_answers')
-      .select('question_id, is_correct')
-      .eq('attempt_id', attemptId);
-
-    const pointsMap = new Map((questions ?? []).map((q) => [q.id, q.points ?? 1]));
-    const calculatedMaxScore = (questions ?? []).reduce((sum, q) => sum + (q.points ?? 1), 0);
-    const maxScore = attempt.max_score ?? calculatedMaxScore;
-    const totalScore = (answers ?? [])
-      .filter((a) => a.is_correct === true)
-      .reduce((sum, a) => sum + (pointsMap.get(a.question_id) ?? 1), 0);
-
-    const { data: updatedAttempt } = await this.supabase
-      .from('test_attempts')
-      .update({ score: totalScore, max_score: maxScore })
-      .eq('id', attemptId)
-      .select()
-      .single();
-
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    const passingPercent = test?.passing_score_percent ?? 60;
-
-    if (test?.lesson_id) {
-      await this.syncLessonCompletion(
-        test.lesson_id,
-        attempt.student_id,
-        test.id,
-        passingPercent,
-      );
-    }
-
-    return { ...updatedAttempt, percentage, passed: percentage >= passingPercent };
-  }
-
   /**
-   * Manual grading can flip an attempt between pass and fail, so lesson progress and
-   * course enrollment status must be recomputed from the student's best attempt.
+   * Recompute lesson completion status from the student's best attempt after
+   * any score recalculation.
    */
   private async syncLessonCompletion(
     lessonId: string,

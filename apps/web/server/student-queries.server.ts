@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const QuerySchema = z.object({
   id: z.string(),
-  student_id: z.string(),
+  student_id: z.string().nullable().optional(),
   subject: z.string(),
   body: z.string(),
   status: z.string(),
@@ -17,9 +17,10 @@ const QuerySchema = z.object({
   updated_at: z.string(),
   query_number: z.string().nullable().optional(),
   profiles: z.object({
-    id: z.string(),
+    id: z.string().nullable().optional(),
     full_name: z.string().nullable().optional(),
     email: z.string().optional(),
+    phone: z.string().nullable().optional(),
   }).nullable().optional(),
 }).passthrough();
 
@@ -40,16 +41,22 @@ export type ContactInput = z.infer<typeof ContactSchema>;
 
 
 export async function submitContactForm(input: ContactInput) {
+  const validation = ContactSchema.safeParse(input);
+  if (!validation.success) {
+    const firstError = validation.error.issues[0]?.message ?? 'Invalid input';
+    return { error: firstError };
+  }
+
   const [error, data] = await safeFetch(z.any(), '/student-queries/contact', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     cache: 'no-store',
-    body: JSON.stringify(input),
+    body: JSON.stringify(validation.data),
   });
   if (error) {
-    const msg = typeof error === 'string' ? error : (error as any)?.message || 'Failed to submit inquiry';
+    const msg = typeof error === 'string' ? error : (error as Record<string, unknown>)?.message as string || 'Failed to submit inquiry';
     return { error: msg };
   }
   return {

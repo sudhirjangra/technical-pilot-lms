@@ -43,7 +43,6 @@ export const {
         email: { label: 'Email', type: 'text' },
         role: { label: 'Role', type: 'text' },
         full_name: { label: 'Full Name', type: 'text' },
-        date_of_birth: { label: 'Date of Birth', type: 'text' },
         phone: { label: 'Phone', type: 'text' },
         avatar_url: { label: 'Avatar URL', type: 'text' },
       },
@@ -62,7 +61,6 @@ export const {
           image: credentials.avatar_url as string | undefined,
           // Additional fields stored in user object for JWT callback
           full_name: credentials.full_name as string | undefined,
-          date_of_birth: credentials.date_of_birth as string | undefined,
           phone: credentials.phone as string | undefined,
           is_active: true,
           created_at: new Date().toISOString(),
@@ -75,7 +73,6 @@ export const {
           },
         } as NextAuthUser & {
           full_name?: string;
-          date_of_birth?: string;
           phone?: string;
           is_active: boolean;
           created_at: string;

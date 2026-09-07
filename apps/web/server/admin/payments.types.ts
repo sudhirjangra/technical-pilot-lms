@@ -32,7 +32,6 @@ export const PaymentSchema = z
     razorpay_payment_id: z.string().nullable().optional(),
     razorpay_signature: z.string().nullable().optional(),
     status: z.string(),
-    refund_reason: z.string().nullable().optional(),
     invoice_number: z.string().nullable().optional(),
     created_at: z.string(),
     updated_at: z.string().nullable().optional(),

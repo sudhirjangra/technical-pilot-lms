@@ -219,7 +219,6 @@ export interface Database {
           razorpay_payment_id: string | null;
           razorpay_signature: string | null;
           status: PaymentStatus;
-          refund_reason: string | null;
           invoice_number: string;
           created_at: string;
           updated_at: string;
@@ -234,7 +233,6 @@ export interface Database {
           razorpay_payment_id?: string | null;
           razorpay_signature?: string | null;
           status?: PaymentStatus;
-          refund_reason?: string | null;
           invoice_number: string;
           created_at?: string;
           updated_at?: string;
@@ -243,7 +241,6 @@ export interface Database {
           razorpay_payment_id?: string | null;
           razorpay_signature?: string | null;
           status?: PaymentStatus;
-          refund_reason?: string | null;
           updated_at?: string;
         };
         Relationships: [];

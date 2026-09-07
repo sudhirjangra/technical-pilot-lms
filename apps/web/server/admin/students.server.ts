@@ -197,27 +197,6 @@ export async function getAttemptDetail(
   return data!.data;
 }
 
-export async function gradeAttemptAnswers(
-  attemptId: string,
-  type: 'assignment' | 'test',
-  grades: { questionId: string; isCorrect: boolean }[],
-) {
-  const h = await headers();
-  const prefix = type === 'assignment' ? 'assignments' : 'tests';
-  const [error, data] = await safeFetch(
-    z.any(),
-    `/${prefix}/attempts/${attemptId}/grade`,
-    {
-      method: 'PATCH',
-      headers: h,
-      cache: 'no-store',
-      body: JSON.stringify({ grades }),
-    },
-  );
-  if (error) return { error };
-  return { data };
-}
-
 export async function updateEnrollmentStatus(enrollmentId: string, status: string) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), `/enrollments/${enrollmentId}`, {

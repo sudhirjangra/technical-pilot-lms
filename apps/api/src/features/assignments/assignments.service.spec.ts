@@ -276,5 +276,197 @@ describe('AssignmentsService', () => {
 
     await expect(service.findAttemptForStudent('non-existent-attempt', 'student-a')).rejects.toThrow('Attempt not found');
   });
+
+  it('should submit an attempt with consistent MongoDB snapshot, Supabase reference, and lesson sync', async () => {
+    const upsertedAnswers: any[] = [];
+    let updatedAttempt: any = null;
+    let savedMongoDoc: any = null;
+    let progressUpsert: any = null;
+
+    const supabase = {
+      from: jest.fn((table: string) => {
+        if (table === 'assignment_attempts') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            not: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({
+              data: {
+                id: 'attempt-submit-1',
+                assignment_id: 'assign-1',
+                student_id: 'student-1',
+                started_at: '2026-01-01T00:00:00.000Z',
+                completed_at: null,
+                assignments: {
+                  id: 'assign-1',
+                  title: 'Aviation Quiz',
+                  passing_score_percent: 60,
+                  lesson_id: 'lesson-1',
+                  lessons: {
+                    id: 'lesson-1',
+                    title: 'Navigation',
+                    chapter_id: 'chapter-1',
+                    chapters: {
+                      id: 'chapter-1',
+                      title: 'Ground School',
+                      course_id: 'course-1',
+                      courses: { id: 'course-1', title: 'Private Pilot' },
+                    },
+                  },
+                },
+              },
+              error: null,
+            }),
+            update: jest.fn((payload) => {
+              updatedAttempt = payload;
+              return {
+                eq: jest.fn().mockReturnValue({ error: null }),
+              };
+            }),
+            then: (resolve: (val: any) => void) =>
+              resolve({
+                data: [
+                  {
+                    id: 'attempt-submit-1',
+                    score: 10,
+                    max_score: 10,
+                    completed_at: '2026-01-01T00:10:00.000Z',
+                  },
+                ],
+                error: null,
+              }),
+          };
+        }
+
+        if (table === 'questions') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({
+              data: [
+                { id: 'q-1', question_type: 'mcq', points: 10, explanation: 'Exp 1', topic: 'Navigation', question_text: 'Heading?' },
+              ],
+              error: null,
+            }),
+          };
+        }
+
+        if (table === 'question_options') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            in: jest.fn().mockResolvedValue({
+              data: [
+                { id: 'opt-1', question_id: 'q-1', option_text: '360', is_correct: true },
+                { id: 'opt-2', question_id: 'q-1', option_text: '180', is_correct: false },
+              ],
+              error: null,
+            }),
+          };
+        }
+
+        if (table === 'profiles') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { full_name: 'Bob', email: 'bob@example.com' },
+              error: null,
+            }),
+          };
+        }
+
+        if (table === 'assignment_answers') {
+          return {
+            upsert: jest.fn((data) => {
+              upsertedAnswers.push(data);
+              return {
+                select: jest.fn().mockReturnThis(),
+                single: jest.fn().mockResolvedValue({ data: { id: 'ans-1' }, error: null }),
+              };
+            }),
+          };
+        }
+
+        if (table === 'assignment_answer_options') {
+          return {
+            delete: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({ error: null }),
+            insert: jest.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        if (table === 'progress') {
+          return {
+            upsert: jest.fn((payload) => {
+              progressUpsert = payload;
+              return { error: null };
+            }),
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            in: jest.fn().mockResolvedValue({ data: [{ lesson_id: 'lesson-1', status: 'completed' }], error: null }),
+          };
+        }
+
+        if (table === 'lessons' || table === 'chapters') {
+          return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            single: jest.fn().mockResolvedValue({
+              data: { id: 'lesson-1', chapters: { course_id: 'course-1' } },
+              error: null,
+            }),
+            maybeSingle: jest.fn().mockResolvedValue({
+              data: { id: 'lesson-1', chapters: { course_id: 'course-1' } },
+              error: null,
+            }),
+            then: (resolve: (val: any) => void) => resolve({
+              data: [{ id: 'chapter-1', lessons: [{ id: 'lesson-1', is_published: true }] }],
+              error: null,
+            }),
+          };
+        }
+
+        if (table === 'enrollments') {
+          return {
+            update: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            in: jest.fn().mockResolvedValue({ error: null }),
+          };
+        }
+
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          single: jest.fn().mockResolvedValue({ data: null, error: null }),
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      }),
+    };
+
+    const mongoService = {
+      saveAttempt: jest.fn((doc) => {
+        savedMongoDoc = doc;
+        return Promise.resolve();
+      }),
+      isConnected: jest.fn().mockReturnValue(true),
+      getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
+    };
+
+    const attemptMigrationService = {};
+    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+
+    const result = await service.submitAttempt('attempt-submit-1', 'student-1', {
+      answers: [{ questionId: 'q-1', selectedOptionIds: ['opt-1'], timeSpentSeconds: 45 }],
+    });
+
+    expect(result.score).toBe(10);
+    expect(result.passed).toBe(true);
+    expect(savedMongoDoc).toBeDefined();
+    expect(savedMongoDoc.score).toBe(10);
+    expect(savedMongoDoc.passed).toBe(true);
+    expect(updatedAttempt).toBeDefined();
+    expect(updatedAttempt.score).toBe(10);
+    expect(progressUpsert).toBeDefined();
+    expect(progressUpsert.status).toBe('completed');
+  });
 });
 

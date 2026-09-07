@@ -94,7 +94,6 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
       completed: 0,
       pending: 0,
       failed: 0,
-      refunded: 0,
     };
     for (const p of payments) {
       if (p.status in counts) {
@@ -187,8 +186,8 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
     }
 
     const headers = [
-      'Invoice Number',
-      'Date & Time',
+      'Invoice / Payment ID',
+      'Date & Time (UTC)',
       'Student Name',
       'Student Email',
       'Student Phone',
@@ -198,7 +197,6 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
       'Status',
       'Razorpay Payment ID',
       'Razorpay Order ID',
-      'Refund Reason',
     ];
 
     const rows = filtered.map((p) => [
@@ -213,7 +211,6 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
       `"${p.status}"`,
       `"${p.razorpay_payment_id || ''}"`,
       `"${p.razorpay_order_id || ''}"`,
-      `"${p.refund_reason || ''}"`,
     ]);
 
     const csvContent =
@@ -245,7 +242,7 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
             Payments & Revenue
           </h1>
           <p className="text-muted-foreground text-xs mt-0.5">
-            Monitor transactions, analyze collections, manage refunds, and audit payment lifecycles.
+            Monitor transactions, analyze collections, and audit payment lifecycles.
           </p>
         </div>
 
@@ -354,27 +351,6 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
           </span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setStatus('refunded')}
-          className={cn(
-            'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-            status === 'refunded'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20',
-          )}
-        >
-          <RotateCcw className="size-3" />
-          <span>Refunded</span>
-          <span
-            className={cn(
-              'rounded-full px-1.5 py-0.2 text-[10px] font-semibold',
-              status === 'refunded' ? 'bg-white/20 text-white' : 'bg-purple-500/20 text-purple-700 dark:text-purple-300',
-            )}
-          >
-            {statusCounts.refunded}
-          </span>
-        </button>
       </div>
 
       {/* Advanced Filter Toolbar */}
@@ -435,7 +411,6 @@ export function PaymentsClient({ payments }: { payments: Payment[] }) {
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="refunded">Refunded</SelectItem>
               </SelectContent>
             </Select>
           </FilterField>

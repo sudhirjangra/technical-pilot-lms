@@ -291,24 +291,6 @@ export async function importTestQuestions(id: string, file: File) {
   return { data: data!.data };
 }
 
-export async function gradeTestAttempt(
-  attemptId: string,
-  grades: { questionId: string; isCorrect: boolean }[],
-) {
-  const [error, data] = await safeFetch(
-    z.object({ message: z.string().optional(), data: z.any() }),
-    `/tests/attempts/${attemptId}/grade`,
-    {
-      method: 'PATCH',
-      headers: await authHeaders(),
-      cache: 'no-store',
-      body: JSON.stringify({ grades }),
-    },
-  );
-  if (error) return { error };
-  return { data };
-}
-
 const AttemptDetailSchema = z.object({
   message: z.string().optional(),
   data: z.object({

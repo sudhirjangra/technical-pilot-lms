@@ -66,13 +66,6 @@ export function getStatusBadge(status: string) {
           <span>Failed</span>
         </Badge>
       );
-    case 'refunded':
-      return (
-        <Badge className="gap-1 bg-purple-500/15 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border-purple-500/30">
-          <RotateCcw className="size-3" />
-          <span>Refunded</span>
-        </Badge>
-      );
     default:
       return <Badge variant="secondary">{status}</Badge>;
   }
@@ -154,11 +147,6 @@ export function PaymentDetailDialog({
             }
             <div class="row"><span class="label">Razorpay Order ID</span><span class="value">${payment.razorpay_order_id || 'N/A'}</span></div>
             <div class="row"><span class="label">Razorpay Payment ID</span><span class="value">${payment.razorpay_payment_id || 'N/A'}</span></div>
-            ${
-              payment.refund_reason
-                ? `<div class="row"><span class="label">Refund Reason</span><span class="value">${payment.refund_reason}</span></div>`
-                : ''
-            }
           </div>
           <div class="footer">
             Thank you for learning with Technical Pilot LMS.<br/>
@@ -253,21 +241,6 @@ export function PaymentDetailDialog({
               </div>
             </div>
           </div>
-
-          {/* Refund Notice (if refunded) */}
-          {payment.status === 'refunded' && (
-            <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-3.5 text-xs text-purple-700 dark:text-purple-300">
-              <div className="flex items-start gap-2">
-                <RotateCcw className="size-4 mt-0.5 shrink-0 text-purple-600 dark:text-purple-400" />
-                <div className="space-y-1">
-                  <p className="font-semibold">Payment was refunded</p>
-                  <p className="text-muted-foreground">
-                    Reason: {payment.refund_reason || 'Administrative refund processed'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Student & Course Cards Grid */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

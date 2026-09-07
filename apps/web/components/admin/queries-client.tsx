@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@repo/shadcn/dialog';
 import { toast } from '@repo/shadcn/sonner';
-import { CheckCircle2, Clock, MessageSquare, Send, TicketPlus, XCircle } from '@repo/shadcn/lucide';
+import { CheckCircle2, Clock, MessageSquare, Phone, Send, TicketPlus, XCircle } from '@repo/shadcn/lucide';
 
 const statusColors: Record<string, 'outline' | 'default' | 'secondary' | 'destructive'> = {
   open: 'outline',
@@ -133,8 +133,14 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{q.body}</p>
-                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground flex-wrap">
                       <span>{q.profiles?.full_name ?? q.profiles?.email ?? 'Unknown student'}</span>
+                      {q.profiles?.phone && (
+                        <span className="flex items-center gap-1 text-foreground/80 font-medium">
+                          <Phone className="size-2.5 text-primary" />
+                          {q.profiles.phone}
+                        </span>
+                      )}
                       <span>{new Date(q.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                     </div>
                   </div>
@@ -164,6 +170,15 @@ export function AdminQueriesClient({ queries }: { queries: StudentQuery[] }) {
                   <p className="text-xs text-muted-foreground mb-1">
                     From: {selected.profiles?.full_name ?? 'Unknown'} ({selected.profiles?.email ?? ''})
                   </p>
+                  {selected.profiles?.phone && (
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                      <Phone className="size-3 text-primary" />
+                      <span>Phone / WhatsApp: </span>
+                      <a href={`tel:${selected.profiles.phone}`} className="font-mono text-primary hover:underline font-medium">
+                        {selected.profiles.phone}
+                      </a>
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     {new Date(selected.created_at).toLocaleString('en-IN')}
                   </p>
