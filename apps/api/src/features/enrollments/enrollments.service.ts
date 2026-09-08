@@ -1,4 +1,6 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
+import { CoursePurchaseSuccessMail } from '@/features/mail/templates';
 import {
   BadRequestException,
   ConflictException,
@@ -7,13 +9,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Logger } from 'nestjs-pino';
 import { CreateEnrollmentDto, ListEnrollmentsQueryDto, UpdateEnrollmentDto } from './dto';
 
 @Injectable()
 export class EnrollmentsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly mailService: MailService,
+    private readonly logger: Logger,
   ) {}
+
 
   async create(dto: CreateEnrollmentDto) {
     // Check if course exists and is published
@@ -137,7 +143,7 @@ export class EnrollmentsService {
   async enrollFree(studentId: string, courseId: string) {
     const { data: course, error: courseErr } = await this.supabase
       .from('courses')
-      .select('id, status, price, discount_price')
+      .select('id, title, status, price, discount_price')
       .eq('id', courseId)
       .single();
     if (courseErr || !course) throw new NotFoundException('Course not found');
@@ -169,21 +175,65 @@ export class EnrollmentsService {
         throw new ConflictException('Already enrolled in this course');
       throw new BadRequestException(error.message);
     }
+
+    // Send confirmation email asynchronously
+    this.sendFreeEnrollmentReceiptEmail(studentId, course.title, courseId).catch(
+      (err) => {
+        this.logger.warn({ err, studentId, courseId }, 'Failed to dispatch free enrollment email');
+      },
+    );
+
     return data;
   }
 
-  /** Verify a student is enrolled in a specific course (active or completed enrollment) */
+  private async sendFreeEnrollmentReceiptEmail(
+    studentId: string,
+    courseTitle: string,
+    courseId: string,
+  ): Promise<void> {
+    try {
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', studentId)
+        .maybeSingle();
+
+      if (profile?.email) {
+        await this.mailService.sendEmail({
+          to: [profile.email],
+          subject: `Enrollment Confirmed: ${courseTitle}`,
+          html: CoursePurchaseSuccessMail({
+            name: profile.full_name ?? profile.email,
+            courseTitle,
+            courseId,
+            amount: 0,
+            purchaseDate: new Date(),
+          }),
+        });
+      }
+    } catch (err) {
+      this.logger.warn({ err, studentId, courseId }, 'Failed to send free enrollment receipt email');
+    }
+  }
+
+  /** Verify a student is enrolled in a specific course (active or completed enrollment, and not archived) */
   async verifyEnrollment(
     studentId: string,
     courseId: string,
   ): Promise<boolean> {
     const { data } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, courses(status)')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
       .in('status', ['active', 'completed'])
       .maybeSingle();
-    return !!data;
+
+    if (!data) return false;
+    const course = data.courses as unknown as { status?: string } | null;
+    if (course?.status === 'archived') return false;
+
+    return true;
   }
 }
+

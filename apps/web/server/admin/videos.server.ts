@@ -105,6 +105,24 @@ export async function deleteVideoLesson(lessonId: string) {
   return { success: true };
 }
 
+export async function uploadVideoThumbnail(lessonId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const [error, data] = await safeFetch(
+    z.object({ data: z.object({ thumbnail_url: z.string() }) }),
+    `/videos/lesson/${lessonId}/thumbnail`,
+    {
+      method: 'POST',
+      headers: await authHeaders(false),
+      cache: 'no-store',
+      body: formData,
+    },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
 export async function getVideoLessonsForCourse(courseId: string): Promise<VideoLesson[]> {
   const [error, data] = await safeFetch(
     z.object({ data: z.array(VideoLessonSchema) }),

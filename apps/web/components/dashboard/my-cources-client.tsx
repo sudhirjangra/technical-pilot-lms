@@ -146,44 +146,45 @@ export function MyCoursesClient({ enrollments }: { enrollments: StudentEnrollmen
             {group.items.map((enrollment) => {
               const course = enrollment.courses;
               const status = enrollment.status as CourseStatus;
-              const isRevoked = status === 'expired';
+              const isArchived = course?.status === 'archived';
+              const isRevoked = status === 'expired' || isArchived;
 
               if (isRevoked) {
                 return (
                   <div key={enrollment.id} className="relative">
-                    <Card className="h-full overflow-hidden border-destructive/30 bg-card/60 opacity-90 transition-shadow">
+                    <Card className="h-full overflow-hidden border-muted bg-card/60 opacity-80 transition-shadow">
                       <div className={grid ? 'aspect-[16/8] overflow-hidden bg-muted/60 relative' : 'hidden'}>
                         <CourseThumbnail title={course?.title ?? 'Course'} thumbnail={course?.thumbnail_url ?? null} />
-                        <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
-                          <Lock className="size-7 text-destructive/80" />
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+                          <Lock className="size-7 text-muted-foreground" />
                         </div>
                       </div>
                       <CardContent className={grid ? 'space-y-3 p-4' : 'flex items-center gap-4 p-4'}>
                         {!grid && (
                           <div className="size-16 shrink-0 overflow-hidden rounded-md bg-muted relative">
                             <CourseThumbnail title={course?.title ?? 'Course'} thumbnail={course?.thumbnail_url ?? null} />
-                            <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center">
-                              <Lock className="size-4 text-destructive/80" />
+                            <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
+                              <Lock className="size-4 text-muted-foreground" />
                             </div>
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="mb-2 flex items-start justify-between gap-2">
                             <h3 className="line-clamp-2 font-semibold leading-snug text-foreground/80">{course?.title ?? 'Course unavailable'}</h3>
-                            <Badge variant="destructive" className="shrink-0 bg-destructive/15 text-destructive border-destructive/30 font-medium">
-                              Access Revoked
+                            <Badge variant={isArchived ? 'secondary' : 'destructive'} className={cn('shrink-0 font-medium', isArchived ? 'bg-muted text-muted-foreground border-muted-foreground/30' : 'bg-destructive/15 text-destructive border-destructive/30')}>
+                              {isArchived ? 'Archived' : 'Access Revoked'}
                             </Badge>
                           </div>
-                          <div className="rounded-md border border-destructive/20 bg-destructive/5 p-2 text-[11px] text-destructive leading-tight flex items-start gap-1.5 mt-1">
-                            <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                            <span>Access revoked by administrator. Content locked.</span>
+                          <div className="rounded-md border border-muted bg-muted/30 p-2 text-[11px] text-muted-foreground leading-tight flex items-start gap-1.5 mt-1">
+                            <AlertCircle className="size-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+                            <span>{isArchived ? 'Course archived by Technical Pilot. Content locked, history preserved.' : 'Access revoked by administrator. Content locked.'}</span>
                           </div>
                           <div className="mt-3 flex items-center justify-between pt-1 border-t border-border/40">
                             <span className="text-xs text-muted-foreground">Enrolled {new Date(enrollment.enrolled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                              className="h-7 px-2.5 text-xs text-muted-foreground border-muted-foreground/30 hover:bg-muted"
                               onClick={() => setRevokedModalCourse(course?.title ?? 'this course')}
                             >
                               Details
@@ -230,24 +231,27 @@ export function MyCoursesClient({ enrollments }: { enrollments: StudentEnrollmen
         </div>
       ))}
 
-      {/* Access Revoked Information Dialog */}
+      {/* Access Revoked / Archived Information Dialog */}
       <Dialog open={!!revokedModalCourse} onOpenChange={(open) => !open && setRevokedModalCourse(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-2.5 text-destructive mb-1">
-              <ShieldAlert className="size-5" />
-              <DialogTitle className="text-destructive">Course Access Revoked</DialogTitle>
+            <div className="flex items-center gap-2.5 text-foreground mb-1">
+              <ShieldAlert className="size-5 text-primary" />
+              <DialogTitle>Course Access Information</DialogTitle>
             </div>
             <DialogDescription className="text-sm pt-2 text-foreground/90">
-              Access to <strong className="font-semibold text-foreground">{revokedModalCourse}</strong> has been revoked by an administrator.
+              Information regarding <strong className="font-semibold text-foreground">{revokedModalCourse}</strong>.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-xs text-muted-foreground leading-relaxed space-y-1.5">
+          <div className="rounded-lg border border-border bg-muted/40 p-3.5 text-xs text-muted-foreground leading-relaxed space-y-2">
             <p>
-              When enrollment access is revoked, all videos, course notes, PDF materials, and assessment submissions for this course are locked.
+              When a course is archived or access is revoked, video lectures, course materials, and new assessment attempts are locked.
             </p>
             <p>
-              If you believe this is an error or would like to request restoration of access, please contact platform administration.
+              Your past attempt snapshots, submission history, and completed progress remain securely preserved in your account.
+            </p>
+            <p>
+              If you have any questions or need assistance, please contact our support team.
             </p>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -255,7 +259,7 @@ export function MyCoursesClient({ enrollments }: { enrollments: StudentEnrollmen
               Dismiss
             </Button>
             <Button size="sm" asChild>
-              <Link href="/courses">Browse Other Courses</Link>
+              <Link href="/courses">Browse Active Courses</Link>
             </Button>
           </DialogFooter>
         </DialogContent>

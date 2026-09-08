@@ -1370,7 +1370,7 @@ export class TestsService {
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, courses(status)')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
       .in('status', ['active', 'completed'])
@@ -1381,7 +1381,13 @@ export class TestsService {
         'Active enrollment required to access this test',
       );
     }
+
+    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    if (courseData?.status === 'archived') {
+      throw new ForbiddenException('This course has been archived');
+    }
   }
+
 
   private async getStudentQuestionsWithOptions(testId: string) {
     const { data: questions, error } = await this.supabase

@@ -311,11 +311,11 @@ export class VideosService {
     userId: string,
     ip: string,
     userAgent: string,
-  ): Promise<{ otp: string; playbackInfo: string }> {
+  ): Promise<{ otp: string; playbackInfo: string; thumbnailUrl: string | null }> {
     // 1. Fetch video_lesson — lesson must exist and be a video
     const { data: videoLesson } = await this.supabase
       .from('video_lessons')
-      .select('vdocipher_video_id, lesson_id')
+      .select('vdocipher_video_id, lesson_id, thumbnail_url')
       .eq('lesson_id', lessonId)
       .single();
     if (!videoLesson) throw new NotFoundException('Video not available');
@@ -334,12 +334,18 @@ export class VideosService {
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, courses(status)')
       .eq('student_id', userId)
       .eq('course_id', courseId)
       .in('status', ['active', 'completed'])
       .maybeSingle();
     if (!enrollment) throw new ForbiddenException('Active enrollment required');
+
+    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    if (courseData?.status === 'archived') {
+      throw new ForbiddenException('COURSE_ACCESS_REVOKED');
+    }
+
 
     // 3. Concurrent session management — rotate stale sessions for smooth device switching
     const now = new Date().toISOString();
@@ -422,6 +428,7 @@ export class VideosService {
     return {
       otp: response.data.otp,
       playbackInfo: response.data.playbackInfo,
+      thumbnailUrl: (videoLesson as unknown as { thumbnail_url?: string | null }).thumbnail_url ?? null,
     };
   }
 
@@ -459,5 +466,94 @@ export class VideosService {
 
     if (error) throw new BadRequestException(error.message);
     return data ?? [];
+  }
+
+  /**
+   * Upload a custom thumbnail image directly to VdoCipher as a poster.
+   * Does NOT store in Supabase Storage. Saves the VdoCipher poster URL in video_lessons.
+   */
+  async uploadThumbnail(lessonId: string, request: FastifyRequest): Promise<{ thumbnail_url: string }> {
+    const { data: videoLesson } = await this.supabase
+      .from('video_lessons')
+      .select('vdocipher_video_id, lesson_id')
+      .eq('lesson_id', lessonId)
+      .maybeSingle();
+    if (!videoLesson) throw new NotFoundException('Video lesson not found');
+    if (!videoLesson.vdocipher_video_id)
+      throw new BadRequestException('Please upload a video to VdoCipher first before adding a thumbnail');
+
+    const part = await (request as MultipartRequest).file();
+    if (!part || !part.mimetype.startsWith('image/'))
+      throw new BadRequestException('An image file is required');
+
+    const buffer = await part.toBuffer();
+    const videoId = videoLesson.vdocipher_video_id;
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    const headers = {
+      Authorization: `Apisecret ${apiSecret}`,
+    };
+
+    // Upload directly to VdoCipher files API (posters/captions)
+    const form = new FormData();
+    form.append(
+      'file',
+      new Blob([new Uint8Array(buffer)], { type: part.mimetype }),
+      part.filename,
+    );
+
+    let vdoPosterUrl: string | null = null;
+
+    try {
+      const uploadRes = await axios.post(
+        `${VDOCIPHER_BASE}/videos/${videoId}/files`,
+        form,
+        { headers },
+      );
+      if (uploadRes.data && typeof uploadRes.data.url === 'string') {
+        vdoPosterUrl = uploadRes.data.url;
+      }
+    } catch (err) {
+      throw new BadRequestException(describeAxiosError('poster upload to VdoCipher', err));
+    }
+
+    // If url was not in the immediate response, fetch files or video details from VdoCipher
+    if (!vdoPosterUrl) {
+      try {
+        const filesRes = await axios.get(`${VDOCIPHER_BASE}/videos/${videoId}/files/`, { headers });
+        const files: Array<{ poster?: boolean; url?: string; type?: string }> = Array.isArray(filesRes.data)
+          ? filesRes.data
+          : filesRes.data?.files ?? [];
+        const posterFile = [...files].reverse().find((f) => f.poster || f.type === 'poster' || f.url?.includes('poster') || f.url?.includes('thumb'));
+        if (posterFile?.url) {
+          vdoPosterUrl = posterFile.url;
+        }
+      } catch (err) {
+        console.warn(describeAxiosError('fetching poster files from VdoCipher', err));
+      }
+    }
+
+    if (!vdoPosterUrl) {
+      try {
+        const videoRes = await axios.get(`${VDOCIPHER_BASE}/videos/${videoId}`, { headers });
+        const posters: Array<{ url?: string }> = videoRes.data?.posters ?? [];
+        if (posters.length > 0 && posters[posters.length - 1]?.url) {
+          vdoPosterUrl = posters[posters.length - 1].url!;
+        }
+      } catch (err) {
+        console.warn(describeAxiosError('fetching video details from VdoCipher', err));
+      }
+    }
+
+    const finalThumbnailUrl = vdoPosterUrl ?? '';
+
+    // Update video_lessons record with the VdoCipher poster URL
+    if (finalThumbnailUrl) {
+      await this.supabase
+        .from('video_lessons')
+        .update({ thumbnail_url: finalThumbnailUrl })
+        .eq('lesson_id', lessonId);
+    }
+
+    return { thumbnail_url: finalThumbnailUrl };
   }
 }

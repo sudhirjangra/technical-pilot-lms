@@ -39,9 +39,9 @@ import {
   SidebarSeparator,
   useSidebar,
 } from '@repo/shadcn/sidebar';
-import { signOut } from 'next-auth/react';
-import { useSession } from 'next-auth/react';
-import Link from 'next/link';
+import { signOut, useSession } from 'next-auth/react';
+import { GuardedLink } from '@/components/dashboard/guarded-link';
+import { isTestActive, getExitConfirmCallback, clearTestGuard } from '@/lib/test-guard';
 import { usePathname } from 'next/navigation';
 import { Fragment, useState } from 'react';
 
@@ -105,7 +105,7 @@ function NavGroup({
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                 )}
               >
-                <Link href={item.href} className="flex-1 min-w-0">
+                <GuardedLink href={item.href} className="flex-1 min-w-0">
                   <Icon
                     className={cn(
                       'size-4 shrink-0',
@@ -115,7 +115,7 @@ function NavGroup({
                     )}
                   />
                   <span className="truncate">{item.label}</span>
-                </Link>
+                </GuardedLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
           );
@@ -144,6 +144,21 @@ export function DashboardSidebar() {
   const logoSize = isCollapsed ? 28 : 32;
 
   const handleSignOut = async () => {
+    if (isTestActive()) {
+      const confirmed = window.confirm(
+        'You have an assessment in progress.\n\nSigning out will save your progress and pause the assessment. You can resume or submit it later.\n\nDo you want to exit and sign out?',
+      );
+      if (!confirmed) return;
+      const cb = getExitConfirmCallback();
+      if (cb) {
+        try {
+          await cb();
+        } catch {
+          // Best-effort auto-save
+        }
+      }
+      clearTestGuard();
+    }
     setIsSigningOut(true);
     const token = user?.tokens?.session_token;
     if (token) {
@@ -154,8 +169,8 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">
-      <SidebarHeader className="flex flex-row h-14 items-center border-b border-sidebar-border px-3 py-0">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+      <SidebarHeader className="flex flex-row h-14 min-h-14 max-h-14 shrink-0 items-center border-b border-sidebar-border px-3 py-0 box-border">
+        <GuardedLink href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="shrink-0 transition-transform group-hover:scale-105">
             <LogoIcon width={logoSize} height={logoSize} className="transition-all duration-200" />
           </div>
@@ -167,7 +182,7 @@ export function DashboardSidebar() {
           >
             {APP_NAME}
           </span>
-        </Link>
+        </GuardedLink>
       </SidebarHeader>
 
       <SidebarContent className="gap-1 py-3 no-scrollbar">
@@ -228,16 +243,16 @@ export function DashboardSidebar() {
 
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">
+                    <GuardedLink href="/profile">
                       <BadgeCheck className="size-4" />
                       Profile
-                    </Link>
+                    </GuardedLink>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile?tab=settings">
+                    <GuardedLink href="/profile?tab=settings">
                       <Settings className="size-4" />
                       Settings
-                    </Link>
+                    </GuardedLink>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
 

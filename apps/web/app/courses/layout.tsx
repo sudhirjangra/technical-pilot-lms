@@ -28,7 +28,7 @@ export default async function CoursesLayout({ children }: { children: ReactNode 
       <DashboardSidebar />
 
       <SidebarInset className="flex min-h-dvh flex-col overflow-x-hidden relative z-10 bg-transparent">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur-md">
+        <header className="sticky top-0 z-30 flex h-14 min-h-14 max-h-14 shrink-0 box-border items-center gap-3 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur-md">
           <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
           <div className="min-w-0 flex-1">
             <Link href="/courses" className="hidden truncate text-sm font-semibold sm:block">

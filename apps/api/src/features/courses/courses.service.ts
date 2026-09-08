@@ -1,5 +1,11 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import { uploadPublicImage } from '@/common/utils/storage';
+import { MailService } from '@/features/mail/mail.service';
+import {
+  CourseArchivedMail,
+  CoursePublishedMail,
+} from '@/features/mail/templates';
+import { NotificationsService } from '@/features/notifications/notifications.service';
 import {
   BadRequestException,
   Inject,
@@ -8,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { FastifyRequest } from 'fastify';
+import { Logger } from 'nestjs-pino';
 import { LessonsService } from '../lessons/lessons.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
@@ -20,6 +27,9 @@ export class CoursesService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly lessonsService: LessonsService,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly logger: Logger,
   ) {}
 
   async create(dto: CreateCourseDto, createdBy: string) {
@@ -33,6 +43,18 @@ export class CoursesService {
         throw new BadRequestException('Course slug already exists');
       throw new BadRequestException(error.message);
     }
+
+    if (dto.status === 'published') {
+      this.notificationsService
+        .notifyCourseAdded(data.id, data.title)
+        .catch((err) => {
+          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course added in-app notification');
+        });
+      this.notifyStudentsCoursePublished(data).catch((err) => {
+        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course published emails');
+      });
+    }
+
     return data;
   }
 
@@ -85,11 +107,11 @@ export class CoursesService {
   }
 
   async update(id: string, dto: UpdateCourseDto) {
+    const existing = await this.findOne(id);
     const updatePayload: Record<string, unknown> = { ...dto };
 
     // Keep published_at consistent with the status transition.
     if (dto.status === 'published') {
-      const existing = await this.findOne(id);
       if (!existing.published_at) {
         updatePayload.published_at = new Date().toISOString();
       }
@@ -110,8 +132,136 @@ export class CoursesService {
         throw new NotFoundException('Course not found');
       throw new BadRequestException(error.message);
     }
+
+    // Trigger publish notifications if status changed to published
+    if (dto.status === 'published' && existing.status !== 'published') {
+      this.notificationsService
+        .notifyCourseAdded(data.id, data.title)
+        .catch((err) => {
+          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course added in-app notification');
+        });
+      this.notifyStudentsCoursePublished(data).catch((err) => {
+        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course published emails');
+      });
+    }
+
+    // Trigger archive notifications if status changed to archived (TP-ARCHIVE-001)
+    if (dto.status === 'archived' && existing.status !== 'archived') {
+      this.notificationsService
+        .broadcast(
+          `Course Archived: ${data.title}`,
+          `The course "${data.title}" has been archived by Technical Pilot. Access to its materials has been closed while past attempt records are preserved.`,
+          'course_archived',
+          data.id,
+        )
+        .catch((err) => {
+          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course archived in-app notification');
+        });
+      this.notifyStudentsCourseArchived(data).catch((err) => {
+        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course archived emails');
+      });
+    }
+
     return data;
   }
+
+  private async notifyStudentsCoursePublished(course: {
+    id: string;
+    title: string;
+    slug: string;
+    description?: string | null;
+    price?: number;
+    discount_price?: number | null;
+  }) {
+    try {
+      const { data: students } = await this.supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .eq('role', 'student')
+        .eq('is_active', true);
+
+      if (!students || students.length === 0) return;
+
+      for (const student of students) {
+        if (!student.email) continue;
+        this.mailService
+          .sendEmail({
+            to: [student.email],
+            subject: `New Course: ${course.title}`,
+            html: CoursePublishedMail({
+              name: student.full_name ?? student.email,
+              courseTitle: course.title,
+              courseSlug: course.slug,
+              description: course.description,
+              price: course.price,
+              discountPrice: course.discount_price,
+            }),
+          })
+          .catch((err) => {
+            this.logger.warn(
+              { err, email: student.email },
+              'Failed to send course published email to student',
+            );
+          });
+      }
+    } catch (err) {
+      this.logger.warn(
+        { err, courseId: course.id },
+        'Failed to broadcast course published emails',
+      );
+    }
+  }
+
+  private async notifyStudentsCourseArchived(course: {
+    id: string;
+    title: string;
+  }) {
+    try {
+      const { data: enrollments } = await this.supabase
+        .from('enrollments')
+        .select('student_id, profiles(id, full_name, email)')
+        .eq('course_id', course.id);
+
+      const recipientMap = new Map<
+        string,
+        { full_name?: string; email: string }
+      >();
+      for (const e of enrollments ?? []) {
+        const p = e.profiles as unknown as {
+          id: string;
+          full_name?: string;
+          email?: string;
+        };
+        if (p?.email) {
+          recipientMap.set(p.email, { full_name: p.full_name, email: p.email });
+        }
+      }
+
+      for (const recipient of recipientMap.values()) {
+        this.mailService
+          .sendEmail({
+            to: [recipient.email],
+            subject: `Course Archived: ${course.title}`,
+            html: CourseArchivedMail({
+              name: recipient.full_name ?? recipient.email,
+              courseTitle: course.title,
+            }),
+          })
+          .catch((err) => {
+            this.logger.warn(
+              { err, email: recipient.email },
+              'Failed to send course archived email to student',
+            );
+          });
+      }
+    } catch (err) {
+      this.logger.warn(
+        { err, courseId: course.id },
+        'Failed to broadcast course archived emails',
+      );
+    }
+  }
+
 
   async remove(id: string) {
     const { data: chapters } = await this.supabase

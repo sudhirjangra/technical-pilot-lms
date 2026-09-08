@@ -26,8 +26,9 @@ export function PDFDocument({ pdfData }: PDFDocumentProps) {
 
     const resizeObserver = new ResizeObserver(([entry]) => {
       if (!entry) return;
-      setPageWidth(Math.max(280, Math.min(900, entry.contentRect.width - 24)));
+      setPageWidth(Math.max(280, Math.min(1100, entry.contentRect.width - 24)));
     });
+
     resizeObserver.observe(element);
     return () => resizeObserver.disconnect();
   }, []);

@@ -240,7 +240,14 @@ export function CourseViewClient({
 
                 {/* CTA */}
                 <div className="space-y-3">
-                  {isEnrolled ? (
+                  {course.status === 'archived' ? (
+                    <div className="rounded-md border border-muted bg-muted/50 p-4 text-center space-y-1.5">
+                      <p className="text-sm font-semibold text-foreground">Course Archived</p>
+                      <p className="text-xs text-muted-foreground">
+                        This course has been archived by Technical Pilot and is not accepting enrollments.
+                      </p>
+                    </div>
+                  ) : isEnrolled ? (
                     <Button size="lg" className="w-full" asChild>
                       <Link href={`/dashboard/courses/${course.id}`}>
                         Continue Learning
@@ -262,6 +269,7 @@ export function CourseViewClient({
                     </Button>
                   )}
                 </div>
+
 
                 {!isEnrolled && (
                   <p className="text-xs text-center text-muted-foreground">

@@ -27,6 +27,7 @@ import {
   Users,
 } from '@repo/shadcn/lucide';
 import Link from 'next/link';
+import { GuardedLink } from '@/components/dashboard/guarded-link';
 import { useMemo, useState, useTransition, type ComponentType } from 'react';
 
 const LESSON_ICONS: Record<string, ComponentType<{ className?: string }>> = {
@@ -225,18 +226,24 @@ export function CourseProgressClient({
   const totalEnrolled = initialLeaderboard?.totalEnrolled ?? leaderboard.length;
 
   return (
-    <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
-      <Link href="/dashboard" className="text-sm text-muted-foreground hover:underline">
+    <section className="w-full max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <GuardedLink href="/dashboard" className="text-sm text-muted-foreground hover:underline">
         ← Dashboard
-      </Link>
+      </GuardedLink>
+
 
       <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-6">
         {/* Header summary */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold sm:text-2xl">Course Overview</h1>
+            {progress.course_title && (
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Course</p>
+            )}
+            <h1 className="text-xl font-bold sm:text-2xl">
+              {progress.course_title ?? 'Course Overview'}
+            </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Flight training progress & enrolled peer rankings
+              Flight training progress &amp; enrolled peer rankings
             </p>
           </div>
           <div className="flex items-center gap-3">

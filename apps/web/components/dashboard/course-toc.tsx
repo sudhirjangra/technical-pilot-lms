@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@rep
 import { cn } from '@repo/shadcn/lib/utils';
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   Circle,
   ClipboardList,
@@ -31,6 +32,7 @@ import {
   Timer,
 } from '@repo/shadcn/lucide';
 import Link from 'next/link';
+import { GuardedLink } from '@/components/dashboard/guarded-link';
 import { usePathname } from 'next/navigation';
 import { useMemo, useState, useTransition, type ComponentType } from 'react';
 
@@ -184,7 +186,24 @@ function TocBody({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="space-y-2 border-b border-border/60 p-4">
+      {/* Course name header */}
+      <div className="border-b border-border/60 px-4 pt-3 pb-2">
+        <GuardedLink
+          href="/dashboard"
+          onClick={onNavigate}
+          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-1.5"
+        >
+          <ArrowLeft className="size-3 shrink-0" />
+          Dashboard
+        </GuardedLink>
+        {progress.course_title && (
+          <h2 className="text-sm font-semibold leading-snug line-clamp-2 text-foreground" title={progress.course_title}>
+            {progress.course_title}
+          </h2>
+        )}
+      </div>
+
+      <div className="space-y-2 border-b border-border/60 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Course Content
@@ -265,7 +284,7 @@ function TocBody({
                       return (
                         <li key={lesson.id}>
                           {lessonsUnlocked ? (
-                            <Link
+                            <GuardedLink
                               href={`/dashboard/courses/${courseId}/lessons/${lesson.id}`}
                               onClick={onNavigate}
                               aria-current={isActive ? 'page' : undefined}
@@ -327,7 +346,7 @@ function TocBody({
                                   )}
                                 </span>
                               </span>
-                            </Link>
+                            </GuardedLink>
                           ) : (
                             <div className={cn(
                               'flex min-h-9 sm:min-h-10 items-start gap-2 rounded-md px-2 py-1.5 text-xs sm:text-sm',
@@ -424,7 +443,7 @@ export function CourseToc({
       </div>
 
       {/* Desktop: persistent sidebar */}
-      <aside className="hidden h-full w-72 shrink-0 overflow-hidden border-r border-border/60 md:block lg:w-80">
+      <aside className="hidden h-full w-64 shrink-0 overflow-hidden border-r border-border/60 md:block lg:w-72 xl:w-80">
         <div className="h-full min-h-0">
           <TocBody
             courseId={courseId}
@@ -433,6 +452,7 @@ export function CourseToc({
           />
         </div>
       </aside>
+
     </>
   );
 }

@@ -202,25 +202,22 @@ export class StudentQueriesService {
       .eq(targetColumn, assessmentId)
       .maybeSingle();
 
-    const allowed =
-      assessment.max_attempts === null || assessment.max_attempts === undefined
-        ? null
-        : assessment.max_attempts + (grant?.extra_attempts ?? 0);
+    const isUnlimited =
+      assessment.max_attempts === null ||
+      assessment.max_attempts === undefined ||
+      assessment.max_attempts === 0;
+
+    const allowed = isUnlimited
+      ? null
+      : assessment.max_attempts + (grant?.extra_attempts ?? 0);
 
     if (allowed === null) {
-      throw new BadRequestException('This assignment has unlimited attempts');
+      throw new BadRequestException(
+        `This ${assessmentType === 'assignment' ? 'assignment' : 'test'} has unlimited attempts`,
+      );
     }
     if ((attempts ?? []).length < allowed) {
       throw new BadRequestException('You still have attempts remaining');
-    }
-
-    const passingPct = assessment.passing_score_percent ?? 60;
-    const passed = (attempts ?? []).some((a) => {
-      const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
-      return a.completed_at && pct >= passingPct;
-    });
-    if (passed) {
-      throw new BadRequestException('You have already passed this assignment');
     }
 
     const { data: existing } = await this.supabase
@@ -233,7 +230,7 @@ export class StudentQueriesService {
       .maybeSingle();
     if (existing) {
       throw new BadRequestException(
-        'A request for this assignment is already pending review',
+        `A request for this ${assessmentType === 'assignment' ? 'assignment' : 'test'} is already pending review`,
       );
     }
 
@@ -245,7 +242,7 @@ export class StudentQueriesService {
         subject: `Extra attempt request: ${assessment.title}`,
         body:
           reason?.trim() ||
-          'All attempts have been used without a passing score. Requesting one additional attempt.',
+          `All allowed attempts (${(attempts ?? []).length} of ${allowed}) have been used. Requesting an additional attempt.`,
         type: 'extra_attempt_request',
         metadata: {
           query_number: queryNumber,

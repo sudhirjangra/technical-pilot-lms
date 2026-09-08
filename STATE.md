@@ -10,7 +10,10 @@
 - MongoDB-backed assignment/test attempt snapshots, ownership-safe attempt history, submission consistency, unlimited attempts, and attempt display are implemented.
 - Manual grading has been removed from the frontend and backend; calculated marks remain authoritative.
 - Contact support, flexible two-to-four option imports, DOB removal, touch-device cursor handling, admin revenue removal, and payment money-deduction safeguards are implemented.
+- Direct VdoCipher custom video thumbnail upload, student course name display, assessment navigation exit guards, and lesson editor RangeError fixes are implemented.
+- SMTP transactional emails (course purchase receipt, new course launch announcement, course archived notice, password changes, sign-in/new device logins) and course archiving access control/notifications (TP-EMAIL-001, TP-ARCHIVE-001, TP-ARCHIVE-002) are implemented.
 - Supabase migrations through `017_contact_queries_support.sql` are present in the repository. Applying migrations remains an environment operation.
+
 
 ### Pending
 
@@ -125,7 +128,15 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - Removed `GradeAttemptDto` and `GradeItemDto` classes from assignments and tests DTO modules.
   - Removed `assignments:grade` and `tests:grade` permission slugs from `ALL_PERMISSIONS` and frontend `permission-groups.ts`.
   - Verified calculated marks remain authoritative and immutable via unit test suites and typechecks.
-  - **Files Changed**: [student-detail-client.tsx](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/components/admin/student-detail-client.tsx), [students.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/students.server.ts), [assignments.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/assignments.server.ts), [tests.server.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/server/admin/tests.server.ts), [assignments.controller.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.controller.ts), [tests.controller.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.controller.ts), [assignments.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/assignments.service.ts), [tests.service.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/tests.service.ts), [dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/assignments/dto/index.ts), [dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/tests/dto/index.ts), [permissions/dto/index.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/api/src/features/permissions/dto/index.ts), [permission-groups.ts](file:///home/sahi/Downloads/technical-pilot-lms/apps/web/lib/permission-groups.ts).
+- [x] **TP-VIDEO-001 - Custom VdoCipher video thumbnail & Assessment UX fixes**
+  - Implemented direct multipart upload to VdoCipher posters/files API (`POST /videos/{videoId}/files`), bypassing Supabase Storage.
+  - Stored resulting VdoCipher-hosted poster URL in `video_lessons.thumbnail_url` and updated `generateOtp` to return `thumbnailUrl`.
+  - Added video poster preview overlay in `VideoPlayer` before VdoCipher iframe initializes.
+  - Added thumbnail status badge, "Add/Change Thumbnail" button, and image upload form in admin `CourseDetailClient`.
+  - Fixed ProseMirror/Tiptap `plugin$39` RangeError in admin lesson description editor by keying `RichTextEditor` to `editingLesson.id`.
+  - Added course name display in student course TOC sidebar header and course progress overview header.
+  - Added in-app assessment exit guard (`test-guard.ts`, `GuardedLink`, `LessonBackLink`) to prompt students and autosave answers before leaving active tests/assignments.
+  - **Files Changed**: `apps/api/src/features/videos/videos.controller.ts`, `apps/api/src/features/videos/videos.service.ts`, `apps/web/app/api/video-otp/[lessonId]/route.ts`, `apps/web/app/dashboard/courses/[courseId]/layout.tsx`, `apps/web/app/dashboard/courses/[courseId]/lessons/[lessonId]/page.tsx`, `apps/web/app/dashboard/courses/[courseId]/page.tsx`, `apps/web/components/admin/course-detail-client.tsx`, `apps/web/components/dashboard/course-progress-client.tsx`, `apps/web/components/dashboard/course-toc.tsx`, `apps/web/components/dashboard/test-viewer.tsx`, `apps/web/components/video-player.tsx`, `apps/web/server/admin/videos.server.ts`, `apps/web/server/student/courses.server.ts`, `apps/web/components/dashboard/guarded-link.tsx`, `apps/web/components/dashboard/lesson-back-link.tsx`, `apps/web/lib/test-guard.ts`.
 
 ## Immediate Next Step
 
@@ -227,7 +238,7 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 - [x] **TP-DOUBT-004 - Fix admin creation**
   - Make the complete flow work: create, target, save, notify, and student access. Diagnose the current admin creation failure rather than hiding it in the UI.
 
-- [ ] **TP-EMAIL-001 - Successful purchase receipt**
+- [x] **TP-EMAIL-001 - Successful purchase receipt**
   - After successful purchase, send confirmation/receipt to the registered email confirming purchase and enrollment. Do not generate or attach a PDF.
   - Email failures must be handled gracefully and must not mark a successful purchase as failed.
 
@@ -256,18 +267,19 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 ### Course Access and Content
 
-- [ ] **TP-ARCHIVE-001 - Archive notification**
+- [x] **TP-ARCHIVE-001 - Archive notification**
   - When an admin archives a course, notify users that Technical Pilot/admin has archived it.
 
-- [ ] **TP-ARCHIVE-002 - Revoke archived-course access**
+- [x] **TP-ARCHIVE-002 - Revoke archived-course access**
   - Revoke access for all students, prevent enrolled and non-enrolled users from opening/viewing archived content, show a dimmed course tile with Archived status, and enforce restrictions in backend/API as well as UI.
   - Preserve historical enrollment, payment, progress, and attempt data.
+
 
 - [x] **TP-IMPORT-001 - Flexible two-to-four option imports**
   - If option fields A/B/C/D contain empty values, accept the question and map only options with values. Support two, three, and four options.
   - Preserve correct-answer mapping and do not reject a question solely because optional option fields are empty.
 
-- [ ] **TP-VIDEO-001 - Custom VdoCipher video thumbnail**
+- [x] **TP-VIDEO-001 - Custom VdoCipher video thumbnail**
   - Allow an admin to upload and associate a custom thumbnail with the correct video. Show it to students before playback.
   - If no custom thumbnail exists, retain the existing fallback behavior.
 

@@ -43,6 +43,7 @@ import {
 } from '@/server/admin/tests.server';
 import {
   deleteVideoLesson,
+  uploadVideoThumbnail,
   VideoLesson,
 } from '@/server/admin/videos.server';
 import { Badge } from '@repo/shadcn/badge';
@@ -249,6 +250,7 @@ export function CourseDetailClient({
   const [chapterDraft, setChapterDraft] = useState({ title: '', description: '', is_published: false });
   const [lessonFormChapterId, setLessonFormChapterId] = useState<string | null>(null);
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
+  const [thumbnailFormLessonId, setThumbnailFormLessonId] = useState<string | null>(null);
   const [pdfFormLessonId, setPdfFormLessonId] = useState<string | null>(null);
   const [newLessonType, setNewLessonType] = useState<LessonKind>('video');
   const [editingLesson, setEditingLesson] = useState<{
@@ -327,6 +329,34 @@ export function CourseDetailClient({
 
     toast.success('Video uploaded');
     setVideoFormLessonId(null);
+    router.refresh();
+  };
+
+  const handleUploadThumbnail = async (
+    event: React.FormEvent<HTMLFormElement>,
+    lessonId: string,
+  ) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const file = formData.get('thumbnail');
+    if (!(file instanceof File) || file.size === 0) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    setUploadingLessonId(lessonId);
+    setLoading(true);
+    const result = await uploadVideoThumbnail(lessonId, file);
+    setLoading(false);
+    setUploadingLessonId(null);
+
+    if (result.error || !result.data) {
+      toast.error(result.error ?? 'Failed to upload thumbnail');
+      return;
+    }
+
+    toast.success('Thumbnail uploaded');
+    setThumbnailFormLessonId(null);
     router.refresh();
   };
 
@@ -1602,9 +1632,16 @@ export function CourseDetailClient({
                             ) : null}
                             {lesson.lesson_type === 'video' && (
                               videoLesson ? (
-                                <Badge variant="secondary" className="text-[10px] font-mono">
-                                  {videoLesson.vdocipher_video_id.slice(0, 12)}…
-                                </Badge>
+                                <>
+                                  <Badge variant="secondary" className="text-[10px] font-mono">
+                                    {videoLesson.vdocipher_video_id.slice(0, 12)}…
+                                  </Badge>
+                                  {videoLesson.thumbnail_url ? (
+                                    <Badge variant="outline" className="border-sky-500/40 text-[10px] text-sky-600 dark:text-sky-400">
+                                      Thumbnail
+                                    </Badge>
+                                  ) : null}
+                                </>
                               ) : (
                                 <Badge variant="outline" className="border-yellow-400 text-[10px] text-yellow-600">
                                   No video
@@ -1665,8 +1702,20 @@ export function CourseDetailClient({
                                     videoFormLessonId === lesson.id ? null : lesson.id,
                                   )}
                                 >
-                                  {videoLesson ? 'Replace' : 'Upload'}
+                                  {videoLesson ? 'Replace Video' : 'Upload Video'}
                                 </Button>
+                                {videoLesson && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 sm:h-8 px-2 text-xs"
+                                    onClick={() => setThumbnailFormLessonId(
+                                      thumbnailFormLessonId === lesson.id ? null : lesson.id,
+                                    )}
+                                  >
+                                    {videoLesson.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="destructive"
@@ -1740,6 +1789,39 @@ export function CourseDetailClient({
                               {uploadingLessonId === lesson.id
                                 ? `Uploading${videoUploadProgress != null ? ` ${videoUploadProgress}%` : '...'}`
                                 : 'Upload'}
+                            </Button>
+                          </form>
+                        )}
+
+                        {lesson.lesson_type === 'video' && thumbnailFormLessonId === lesson.id && (
+                          <form
+                            onSubmit={(event) => handleUploadThumbnail(event, lesson.id)}
+                            className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end rounded-md border border-border/60 bg-muted/20 p-3"
+                          >
+                            {videoLesson?.thumbnail_url && (
+                              <div className="w-20 h-12 rounded overflow-hidden border border-border shrink-0 bg-black">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={videoLesson.thumbnail_url}
+                                  alt="Current thumbnail"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <label className="text-xs font-medium text-muted-foreground">
+                                Thumbnail image (JPG, PNG, WebP)
+                              </label>
+                              <Input
+                                name="thumbnail"
+                                type="file"
+                                required
+                                accept="image/*"
+                                className="mt-1 text-xs"
+                              />
+                            </div>
+                            <Button type="submit" size="sm" disabled={loading}>
+                              {uploadingLessonId === lesson.id ? 'Uploading...' : 'Save Thumbnail'}
                             </Button>
                           </form>
                         )}
@@ -1890,6 +1972,7 @@ export function CourseDetailClient({
                   Lesson Description (Rich Text)
                 </label>
                 <RichTextEditor
+                  key={editingLesson.id}
                   value={editingLesson.description}
                   onChange={(html) =>
                     setEditingLesson({ ...editingLesson, description: html })

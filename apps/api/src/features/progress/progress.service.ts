@@ -30,18 +30,21 @@ export class ProgressService {
 
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id, status')
+      .select('id, status, courses(status)')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
       .maybeSingle();
 
-    if (!enrollment || enrollment.status === 'expired') {
+    const courseData = enrollment?.courses as unknown as { status?: string } | null;
+
+    if (!enrollment || enrollment.status === 'expired' || courseData?.status === 'archived') {
       throw new ForbiddenException(
-        enrollment?.status === 'expired'
+        enrollment?.status === 'expired' || courseData?.status === 'archived'
           ? 'COURSE_ACCESS_REVOKED'
           : 'Active enrollment required to access this content',
       );
     }
+
 
     // Upsert progress record
     const { data, error } = await this.supabase
@@ -187,17 +190,20 @@ export class ProgressService {
 
   /** Get all progress for a student in a course */
   async getCourseProgress(courseId: string, studentId: string) {
-    // Check if the student's enrollment is revoked
+    // Check if the student's enrollment is revoked or course is archived
     const { data: enrollment } = await this.supabase
       .from('enrollments')
-      .select('id, status')
+      .select('id, status, courses(status)')
       .eq('student_id', studentId)
       .eq('course_id', courseId)
       .maybeSingle();
 
-    if (enrollment && enrollment.status === 'expired') {
+    const courseData = enrollment?.courses as unknown as { status?: string } | null;
+
+    if (enrollment && (enrollment.status === 'expired' || courseData?.status === 'archived')) {
       throw new ForbiddenException('COURSE_ACCESS_REVOKED');
     }
+
 
     // Get all lessons for the course. Note: nested-table dot filters (e.g. "lessons.is_published")
     // are not reliably applied by PostgREST without an `!inner` join hint, and silently return

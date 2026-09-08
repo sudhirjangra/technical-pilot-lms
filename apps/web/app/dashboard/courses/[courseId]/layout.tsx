@@ -24,7 +24,7 @@ export default async function CourseLayout({
   const enrollments = await getMyEnrollments();
   const enrollment = enrollments.find((e) => e.course_id === courseId);
 
-  if (enrollment && enrollment.status === 'expired') {
+  if (enrollment && (enrollment.status === 'expired' || enrollment.courses?.status === 'archived')) {
     return (
       <AccessRevokedView
         courseTitle={enrollment.courses?.title}
@@ -33,8 +33,11 @@ export default async function CourseLayout({
     );
   }
 
-  const progress = await getCourseProgress(courseId);
-  if (!progress && enrollment?.status === 'expired') {
+  const progress = await getCourseProgress(courseId, {
+    title: enrollment?.courses?.title,
+    thumbnailUrl: enrollment?.courses?.thumbnail_url,
+  });
+  if (!progress) {
     return (
       <AccessRevokedView
         courseTitle={enrollment?.courses?.title}
@@ -43,11 +46,13 @@ export default async function CourseLayout({
     );
   }
 
+
   return (
-    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
       <CourseToc courseId={courseId} progress={progress} />
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }
+
 

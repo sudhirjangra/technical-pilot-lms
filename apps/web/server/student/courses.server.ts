@@ -187,6 +187,8 @@ export type StudentCourseProgress = {
   chapters: StudentChapterProgress[];
   overall_percent: number;
   overall_status: 'not_started' | 'in_progress' | 'completed';
+  course_title?: string | null;
+  course_thumbnail_url?: string | null;
 };
 
 const toOverallStatus = (
@@ -270,6 +272,7 @@ export async function verifyPayment(payment: {
 
 export async function getCourseProgress(
   courseId: string,
+  courseMeta?: { title?: string | null; thumbnailUrl?: string | null },
 ): Promise<StudentCourseProgress | null> {
   const session = await auth();
   if (!session?.user) return null;
@@ -326,6 +329,8 @@ export async function getCourseProgress(
     chapters,
     overall_percent: data!.overall_percent ?? 0,
     overall_status: toOverallStatus(data!.overall_status),
+    course_title: courseMeta?.title ?? null,
+    course_thumbnail_url: courseMeta?.thumbnailUrl ?? null,
   };
 }
 

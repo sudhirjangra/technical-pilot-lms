@@ -76,6 +76,17 @@ export class VideosController {
     return { message: 'Video lesson deleted' };
   }
 
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post('lesson/:lessonId/thumbnail')
+  async uploadThumbnail(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Req() request: FastifyRequest,
+  ) {
+    const data = await this.videosService.uploadThumbnail(lessonId, request);
+    return { message: 'Thumbnail uploaded', data };
+  }
+
   // ── Student endpoint: OTP generation ────────────────────────────────────
 
   @Throttle({ short: { limit: 10, ttl: 60000 } })

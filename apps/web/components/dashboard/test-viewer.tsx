@@ -64,6 +64,8 @@ import {
 } from '@/server/student/assignments.server';
 import { toast } from '@repo/shadcn/sonner';
 import { requestExtraAttempt } from '@/server/student-queries.server';
+import { clearTestGuard, registerTestGuard } from '@/lib/test-guard';
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -192,16 +194,13 @@ function InstructionsScreen({
   mode: 'test' | 'assignment';
 }) {
   const maxAttempts = test.max_attempts ?? null;
-  const attemptsLeft = maxAttempts !== null && maxAttempts > 0 ? Math.max(0, maxAttempts - attemptsUsed) : null;
+  const isInfiniteAttempts = maxAttempts === null || maxAttempts === 0;
+  const attemptsLeft = !isInfiniteAttempts && maxAttempts !== null ? Math.max(0, maxAttempts - attemptsUsed) : null;
   const instructions = 'instructions' in test ? test.instructions : null;
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
 
-  const completedAttempts = allAttempts.filter((a) => a.completed_at);
-  const everPassed = completedAttempts.some((a) => a.passed === true);
-  const isInfiniteAttempts = maxAttempts === null || maxAttempts === 0;
-  const failedOut =
-    !isInfiniteAttempts && attemptsLeft !== null && attemptsLeft <= 0 && !everPassed && completedAttempts.length > 0;
+  const allAttemptsExhausted = !isInfiniteAttempts && attemptsLeft !== null && attemptsLeft <= 0;
 
   const handleRequestExtraAttempt = async () => {
     setRequesting(true);
@@ -329,7 +328,9 @@ function InstructionsScreen({
               <span>
                 {isInfiniteAttempts
                   ? `Unlimited attempts are permitted for this assessment (${attemptsUsed} tried so far).`
-                  : `You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining (${attemptsUsed} of ${maxAttempts} used).`}
+                  : attemptsLeft && attemptsLeft > 0
+                    ? `You have ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining (${attemptsUsed} of ${maxAttempts} used).`
+                    : `All ${maxAttempts} allowed attempt${maxAttempts !== 1 ? 's have' : ' has'} been used. You can request an additional attempt from the admin.`}
               </span>
             </li>
           </ul>
@@ -400,16 +401,16 @@ function InstructionsScreen({
       )}
 
       {/* Action Area */}
-      {failedOut ? (
+      {allAttemptsExhausted ? (
         <div className="w-full space-y-3">
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-left">
-            <div className="flex items-center gap-2 text-destructive font-medium text-sm mb-1">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 p-4 text-left">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium text-sm mb-1">
               <ShieldAlert className="size-4" />
-              <span>All Attempts Utilized</span>
+              <span>All Attempts Utilized ({attemptsUsed} of {maxAttempts})</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              You have exhausted all attempts for this assessment without achieving a passing score.
-              You may submit a request to the flight instructor team for an additional attempt allowance.
+              You have reached the maximum allowed attempts for this {mode === 'assignment' ? 'assignment' : 'test'}.
+              To take this assessment again, please submit a request to the admin for an additional attempt allowance.
             </p>
             <Button
               size="sm"
@@ -422,7 +423,7 @@ function InstructionsScreen({
                 ? 'Request Submitted (Under Review)'
                 : requesting
                   ? 'Submitting Request…'
-                  : 'Request Additional Attempt'}
+                  : 'Request Additional Attempt from Admin'}
             </Button>
           </div>
         </div>
@@ -442,7 +443,7 @@ function InstructionsScreen({
             ) : (
               <>
                 <Sparkles className="size-4" />
-                Start Assessment Now
+                {attemptsUsed > 0 ? 'Retake Assessment' : 'Start Assessment Now'}
               </>
             )}
           </Button>
@@ -670,6 +671,7 @@ function ResultsScreen({
   onRetake,
   viewMode,
   onBackFromView,
+  mode,
 }: {
   result: SubmitResult | AssignmentSubmitResult;
   test: UnifiedItem;
@@ -679,6 +681,7 @@ function ResultsScreen({
   onRetake: () => void;
   viewMode?: boolean;
   onBackFromView?: () => void;
+  mode: 'test' | 'assignment';
 }) {
   const router = useRouter();
   const passed = result.passed;
@@ -690,7 +693,25 @@ function ResultsScreen({
   const showTopics = topicBreakdown.length > 1;
 
   const maxAttempts = test.max_attempts ?? null;
-  const canRetake = maxAttempts === null || attemptsUsed < maxAttempts;
+  const isInfiniteAttempts = maxAttempts === null || maxAttempts === 0;
+  const canRetake = isInfiniteAttempts || (maxAttempts !== null && attemptsUsed < maxAttempts);
+
+  const [requesting, setRequesting] = useState(false);
+  const [requested, setRequested] = useState(false);
+
+  const handleRequestExtraAttempt = async () => {
+    setRequesting(true);
+    const res = await requestExtraAttempt(mode, test.id);
+    setRequesting(false);
+    if (res.error) {
+      toast.error(
+        typeof res.error === 'string' ? res.error : 'Unable to send request',
+      );
+      return;
+    }
+    setRequested(true);
+    toast.success('Request sent to the admin team.');
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -961,13 +982,27 @@ function ResultsScreen({
       <div className="flex flex-col sm:flex-row gap-2">
         {viewMode ? (
           <Button variant="outline" onClick={onBackFromView} className="flex-1">
-            ← Back to Attempts
+            ← Back to Overview
           </Button>
         ) : (
           <>
-            {canRetake && (
+            {canRetake ? (
               <Button variant="default" onClick={onRetake} className="flex-1">
                 Retake
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={handleRequestExtraAttempt}
+                disabled={requesting || requested}
+                className="flex-1 gap-2"
+              >
+                <RotateCcw className="size-3.5" />
+                {requested
+                  ? 'Request Submitted (Under Review)'
+                  : requesting
+                    ? 'Submitting Request…'
+                    : 'Request Additional Attempt from Admin'}
               </Button>
             )}
             <Button
@@ -1070,6 +1105,23 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
     autoSaveTimer.current = setInterval(doAutoSave, 30000);
     return () => {
       if (autoSaveTimer.current) clearInterval(autoSaveTimer.current);
+    };
+  }, [phase, doAutoSave]);
+
+  // ── Register / clear navigation guard while test is active ─────────────────
+
+  useEffect(() => {
+    if (phase === 'test') {
+      registerTestGuard(async () => {
+        await doAutoSave();
+        clearTestGuard();
+        setPhase('instructions');
+      });
+    } else {
+      clearTestGuard();
+    }
+    return () => {
+      clearTestGuard();
     };
   }, [phase, doAutoSave]);
 
@@ -1326,6 +1378,7 @@ export function TestViewer({ lessonId, courseId, mode = 'test' }: TestViewerProp
         onRetake={handleRetake}
         viewMode={!!viewingResult}
         onBackFromView={handleBackFromView}
+        mode={mode}
       />
     );
   }

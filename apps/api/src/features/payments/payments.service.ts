@@ -1,4 +1,6 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
+import { CoursePurchaseSuccessMail } from '@/features/mail/templates';
 import {
   BadRequestException,
   ForbiddenException,
@@ -9,6 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createHmac } from 'crypto';
+import { Logger } from 'nestjs-pino';
 import { CreateOrderDto, VerifyPaymentDto } from './dto';
 
 @Injectable()
@@ -19,12 +22,15 @@ export class PaymentsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly config: ConfigService,
+    private readonly mailService: MailService,
+    private readonly logger: Logger,
   ) {
     this.razorpayKeyId = this.config.getOrThrow<string>('RAZORPAY_KEY_ID');
     this.razorpayKeySecret = this.config.getOrThrow<string>(
       'RAZORPAY_KEY_SECRET',
     );
   }
+
 
   /** Create a Razorpay order and store pending payment record */
   async createOrder(dto: CreateOrderDto, studentId: string) {
@@ -185,6 +191,15 @@ export class PaymentsService {
         { onConflict: 'student_id,course_id' },
       );
 
+    // Dispatch confirmation receipt email asynchronously
+    this.sendPurchaseReceiptEmail(studentId, payment.course_id, {
+      amount: payment.amount,
+      invoice_number: payment.invoice_number,
+      razorpay_order_id: payment.razorpay_order_id,
+    }).catch((err) => {
+      this.logger.warn({ err, studentId }, 'Failed to dispatch purchase confirmation email');
+    });
+
     return { message: 'Payment verified, enrollment activated', payment };
   }
 
@@ -221,7 +236,7 @@ export class PaymentsService {
         })
         .eq('razorpay_order_id', orderId)
         .eq('status', 'pending')
-        .select('student_id, course_id')
+        .select('student_id, course_id, amount, invoice_number, razorpay_order_id')
         .single();
 
       if (payment) {
@@ -237,6 +252,15 @@ export class PaymentsService {
             },
             { onConflict: 'student_id,course_id' },
           );
+
+        // Dispatch confirmation receipt email asynchronously
+        this.sendPurchaseReceiptEmail(payment.student_id, payment.course_id, {
+          amount: payment.amount,
+          invoice_number: payment.invoice_number,
+          razorpay_order_id: payment.razorpay_order_id,
+        }).catch((err) => {
+          this.logger.warn({ err, studentId: payment.student_id }, 'Failed to dispatch purchase confirmation email');
+        });
       }
     } else if (event === 'payment.failed') {
       const paymentEntity = (payload['payment'] as Record<string, unknown>)[
@@ -254,6 +278,53 @@ export class PaymentsService {
 
     return { received: true };
   }
+
+  private async sendPurchaseReceiptEmail(
+    studentId: string,
+    courseId: string,
+    paymentDetails: {
+      amount: number;
+      invoice_number?: string;
+      razorpay_order_id?: string;
+    },
+  ): Promise<void> {
+    try {
+      const [{ data: profile }, { data: course }] = await Promise.all([
+        this.supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('id', studentId)
+          .maybeSingle(),
+        this.supabase
+          .from('courses')
+          .select('title, slug')
+          .eq('id', courseId)
+          .maybeSingle(),
+      ]);
+
+      if (profile?.email && course?.title) {
+        await this.mailService.sendEmail({
+          to: [profile.email],
+          subject: `Enrollment Confirmed: ${course.title}`,
+          html: CoursePurchaseSuccessMail({
+            name: profile.full_name ?? profile.email,
+            courseTitle: course.title,
+            courseId,
+            amount: paymentDetails.amount,
+            invoiceNumber: paymentDetails.invoice_number,
+            orderId: paymentDetails.razorpay_order_id,
+            purchaseDate: new Date(),
+          }),
+        });
+      }
+    } catch (err) {
+      this.logger.warn(
+        { err, studentId, courseId },
+        'Failed to send course purchase receipt email',
+      );
+    }
+  }
+
 
   /** Admin: list all payments with filters */
   async findAll(filters?: {

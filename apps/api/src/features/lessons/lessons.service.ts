@@ -91,13 +91,19 @@ export class LessonsService {
     const chapter = lesson.chapters as unknown as { course_id: string };
     const { data: enrollment, error: enrollmentError } = await this.supabase
       .from('enrollments')
-      .select('id')
+      .select('id, courses(status)')
       .eq('course_id', chapter.course_id)
       .eq('student_id', user.id)
       .in('status', ['active', 'completed'])
       .maybeSingle();
     if (enrollmentError || !enrollment) 
       throw new BadRequestException('Not enrolled in this course');
+
+    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    if (courseData?.status === 'archived') {
+      throw new BadRequestException('This course has been archived');
+    }
+
 
     // Get PDF file path
     const { data: pdfNote, error: pdfError } = await this.supabase

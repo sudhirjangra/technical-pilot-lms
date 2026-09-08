@@ -16,7 +16,7 @@ export default async function CourseProgressPage({ params }: { params: Promise<{
   const enrollments = await getMyEnrollments();
   const enrollment = enrollments.find((e) => e.course_id === courseId);
 
-  if (enrollment && enrollment.status === 'expired') {
+  if (enrollment && (enrollment.status === 'expired' || enrollment.courses?.status === 'archived')) {
     return (
       <AccessRevokedView
         courseTitle={enrollment.courses?.title}
@@ -26,11 +26,14 @@ export default async function CourseProgressPage({ params }: { params: Promise<{
   }
 
   const [progress, leaderboardData] = await Promise.all([
-    getCourseProgress(courseId),
+    getCourseProgress(courseId, {
+      title: enrollment?.courses?.title,
+      thumbnailUrl: enrollment?.courses?.thumbnail_url,
+    }),
     getCourseLeaderboard(courseId),
   ]);
 
-  if (!progress && enrollment?.status === 'expired') {
+  if (!progress) {
     return (
       <AccessRevokedView
         courseTitle={enrollment?.courses?.title}
@@ -38,6 +41,7 @@ export default async function CourseProgressPage({ params }: { params: Promise<{
       />
     );
   }
+
 
   return (
     <CourseProgressClient

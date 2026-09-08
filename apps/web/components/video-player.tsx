@@ -11,6 +11,7 @@ interface VideoPlayerProps {
 interface OtpData {
   otp: string;
   playbackInfo: string;
+  thumbnailUrl?: string | null;
 }
 
 interface WatermarkPos {
@@ -112,6 +113,8 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
   const [resumeAt, setResumeAt] = useState(0);
   const [hidden, setHidden] = useState(false);
   const [apiReady, setApiReady] = useState(false);
+  // Track whether the VdoCipher player has initialised and is ready to display
+  const [playerVisible, setPlayerVisible] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<VdoPlayerInstance | null>(null);
@@ -202,6 +205,7 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
 
     const player = window.VdoPlayer.getInstance(iframeRef.current);
     playerRef.current = player;
+    setPlayerVisible(true);
 
     // Seek to saved position once metadata is loaded
     if (resumeAt > 5) {
@@ -367,8 +371,8 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
 
   if (loading) {
     return (
-      <div className="aspect-video bg-black flex items-center justify-center rounded-lg">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="aspect-video bg-black flex items-center justify-center rounded-lg relative overflow-hidden">
+        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10" />
       </div>
     );
   }
@@ -415,6 +419,28 @@ export function VideoPlayer({ lessonId }: VideoPlayerProps) {
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
         />
+
+        {/* Thumbnail poster — shown before the player initialises */}
+        {!playerVisible && otpData.thumbnailUrl && (
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black"
+            style={{ zIndex: 5 }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={otpData.thumbnailUrl}
+              alt="Video thumbnail"
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+            />
+            {/* Overlay with loading indicator */}
+            <div className="relative z-10 flex flex-col items-center gap-2">
+              <div className="w-14 h-14 rounded-full bg-black/50 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* HTML watermark overlay — rendered on top of iframe */}
         <WatermarkOverlay />

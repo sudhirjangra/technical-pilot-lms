@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { AccessRevokedView } from '@/components/dashboard/access-revoked-view';
+import { LessonBackLink } from '@/components/dashboard/lesson-back-link';
 import { LessonPlaceholder } from '@/components/dashboard/lesson-placeholder';
 import { LessonProgressActions } from '@/components/dashboard/lesson-progress-actions';
 import { PDFViewer } from '@/components/dashboard/pdf-viewer';
@@ -25,7 +26,7 @@ export default async function LessonPage({
   const enrollments = await getMyEnrollments();
   const enrollment = enrollments.find((e) => e.course_id === courseId);
 
-  if (enrollment && enrollment.status === 'expired') {
+  if (enrollment && (enrollment.status === 'expired' || enrollment.courses?.status === 'archived')) {
     return (
       <AccessRevokedView
         courseTitle={enrollment.courses?.title}
@@ -34,9 +35,12 @@ export default async function LessonPage({
     );
   }
 
-  const progress = await getCourseProgress(courseId);
+  const progress = await getCourseProgress(courseId, {
+    title: enrollment?.courses?.title,
+    thumbnailUrl: enrollment?.courses?.thumbnail_url,
+  });
 
-  if (!progress && enrollment?.status === 'expired') {
+  if (!progress) {
     return (
       <AccessRevokedView
         courseTitle={enrollment?.courses?.title}
@@ -44,6 +48,7 @@ export default async function LessonPage({
       />
     );
   }
+
 
   // Lesson sort_order is scoped per chapter, so a global sort would interleave chapters.
   const orderedChapters = [...(progress?.chapters ?? [])].sort(
@@ -69,17 +74,13 @@ export default async function LessonPage({
   const chapterStarted = !!chapter?.started_at;
 
   return (
-    <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
-      <Link
-        href={`/dashboard/courses/${courseId}`}
-        className="text-sm text-muted-foreground hover:underline"
-      >
-        ← Course Progress
-      </Link>
+    <section className="w-full max-w-6xl xl:max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <LessonBackLink href={`/dashboard/courses/${courseId}`} />
 
       {lesson && (
-        <h1 className="mt-3 text-lg font-semibold sm:text-xl">{lesson.title}</h1>
+        <h1 className="mt-3 text-lg font-semibold sm:text-xl lg:text-2xl">{lesson.title}</h1>
       )}
+
 
       {chapter && !chapterStarted ? (
         <Card className="mt-4 sm:mt-6">

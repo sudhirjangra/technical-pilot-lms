@@ -33,5 +33,8 @@ export async function POST(
   }
 
   const { data } = await apiRes.json();
-  return NextResponse.json(data, { status: 200 });
+  return NextResponse.json(
+    { otp: data.otp, playbackInfo: data.playbackInfo, thumbnailUrl: data.thumbnailUrl ?? null },
+    { status: 200 },
+  );
 }
