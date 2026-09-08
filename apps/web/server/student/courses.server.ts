@@ -288,12 +288,14 @@ export async function getCourseProgress(
     .map((chapter) => ({
       id: chapter.id,
       title: chapter.title ?? 'Untitled chapter',
+      description: chapter.description ?? null,
       sort_order: chapter.sort_order ?? 0,
       started_at: chapter.started_at ?? null,
       lessons: (chapter.lessons ?? [])
         .map((lesson) => ({
           id: lesson.id,
           title: lesson.title ?? 'Untitled lesson',
+          description: lesson.description ?? null,
           sort_order: lesson.sort_order ?? 0,
           lesson_type: lesson.lesson_type ?? 'video',
           due_at: lesson.due_at ?? null,

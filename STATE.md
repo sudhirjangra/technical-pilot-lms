@@ -2,6 +2,22 @@
 
 `STATE.md` is the only execution queue for coding agents. Work on exactly one item under `Immediate Next Step`, then stop after focused validation and update this file.
 
+## Status At A Glance
+
+### Done
+
+- Authentication, authorization, course/content, enrollment, payment processing, notifications, doubt sessions, progress, analytics, and responsive student/admin flows are implemented.
+- MongoDB-backed assignment/test attempt snapshots, ownership-safe attempt history, submission consistency, unlimited attempts, and attempt display are implemented.
+- Manual grading has been removed from the frontend and backend; calculated marks remain authoritative.
+- Contact support, flexible two-to-four option imports, DOB removal, touch-device cursor handling, admin revenue removal, and payment money-deduction safeguards are implemented.
+- Supabase migrations through `017_contact_queries_support.sql` are present in the repository. Applying migrations remains an environment operation.
+
+### Pending
+
+- **Current active task:** `TP-ANALYSIS-001 - Question categorization`.
+- All unchecked requirements in **Pending Requirements Queue** remain pending. They must be promoted one at a time into `Immediate Next Step`.
+- The final verification checklist remains open until the corresponding behavior is verified end to end, even where implementation work is already recorded above.
+
 Detailed requirements and acceptance criteria are preserved in the **Technical Pilot Portal - Master Implementation Specification** section of `LMS_ROADMAP.md`. The IDs below are the source-of-truth references for that specification.
 
 ## Completed Baseline
@@ -9,9 +25,9 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
 - Authentication, email confirmation, password recovery, Google sign-in, device limits, session management, and role routing are implemented.
 - Admin and sub-admin RBAC, permission storage, permission guards, and permission-aware content/student/payment actions are implemented.
 - Course, category, chapter, lesson, video, PDF, assignment, test, question-bank import, grading, enrollment, payment, notification, doubt-session, progress, and analytics flows are implemented in the current codebase.
-- VdoCipher OTP playback, watermarking, concurrent playback checks, private PDF proxying, Supabase course media uploads, Razorpay verification/webhooks/refunds, and responsive admin/student UX are implemented.
-- Student and admin assessment attempt history, progress inspection, manual grading, access-revoked handling, and the combined attempts page are implemented as the current baseline and may be changed only by the new requirements below.
-- Migrations through `015_private_course_materials.sql` have been written in the repository. Applying database migrations is an environment operation, not a coding task.
+- VdoCipher OTP playback, watermarking, concurrent playback checks, private PDF proxying, Supabase course media uploads, Razorpay verification/webhooks, and responsive admin/student UX are implemented.
+- Student and admin assessment attempt history, progress inspection, access-revoked handling, and the combined attempts page are implemented as the current baseline. Manual grading is no longer part of the current implementation.
+- Migrations through `017_contact_queries_support.sql` have been written in the repository. Applying database migrations is an environment operation, not a coding task.
 - [x] **TP-DISCOVERY-001 - Inspect affected flows and define migration boundaries**
   - **Inspected Code Paths**:
     - Submission & History: `apps/api/src/features/assignments/` and `apps/api/src/features/tests/` (controllers, services, DTOs), `apps/web/server/student/{assignments,tests}.server.ts`, `apps/web/components/dashboard/attempts-client.tsx`, `apps/web/components/dashboard/attempts-history-client.tsx`, `apps/web/components/admin/student-detail-client.tsx`.
@@ -118,7 +134,9 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - Persist the fields for assignment and test questions, expose them in admin creation/edit/import flows, and preserve existing questions when fields are absent.
   - Acceptance: questions retain categorized metadata across creation, update, and bulk import without breaking existing assessment flows.
 
-## New Requirements Queue
+## Pending Requirements Queue
+
+Only unchecked items in this section are pending. Checked items are retained as historical acceptance criteria and are not active work.
 
 Promote only the next unchecked task to `Immediate Next Step`. Do not implement multiple queue items in one session. The full requirements below are intentionally preserved; do not replace them with a UI-only approximation or a short summary.
 
@@ -309,14 +327,14 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 Do not mark the full specification complete until all of these are verified:
 
-- [ ] MongoDB attempt history works reliably and Supabase stores attempt references.
-- [ ] Manual grading is removed from frontend and backend without incorrect score resets.
-- [ ] Unlimited attempts and correct attempt display work.
+- [x] MongoDB attempt history works reliably and Supabase stores attempt references.
+- [x] Manual grading is removed from frontend and backend without incorrect score resets.
+- [x] Unlimited attempts and correct attempt display work.
 - [ ] Weak-point analysis uses real attempt data.
-- [ ] Course-based doubt sessions and notifications work.
+- [x] Course-based doubt sessions and notifications work.
 - [ ] Course expiry and renewal work without losing progress.
 - [ ] Archived courses revoke access in frontend and backend.
-- [ ] Refund and admin money-deduction functionality cannot be triggered.
+- [x] Refund and admin money-deduction functionality cannot be triggered.
 - [ ] Referral credits and manual conversion work safely.
 - [ ] Existing data is preserved and important edge cases are tested.
 - [ ] No unrelated functionality is broken.
