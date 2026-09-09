@@ -8,6 +8,7 @@ import FollowCursor from '@repo/shadcn/follow-cursor';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { getMyPermissions } from '@/server/admin/permissions.server';
 import { ReactNode } from 'react';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -16,6 +17,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect('/');
   }
 
+  const isSubAdmin = session.user.role === 'sub_admin';
+  const permissions = isSubAdmin ? await getMyPermissions() : [];
+
   const cookieStore = await cookies();
   const sidebarState = cookieStore.get('sidebar_state')?.value;
   const defaultOpen = sidebarState !== 'false';
@@ -23,7 +27,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <SidebarProvider defaultOpen={defaultOpen} className="dashboard-shell">
       <FollowCursor color="oklch(0.55 0.16 160 / 0.16)" />
-      <AdminSidebar />
+      <AdminSidebar userRole={session.user.role} permissions={permissions} />
 
       <SidebarInset className="flex flex-col min-h-dvh overflow-x-hidden">
         <header className="sticky top-0 z-30 flex h-14 min-h-14 max-h-14 shrink-0 box-border items-center gap-3 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur-md">
@@ -33,7 +37,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               href="/admin"
               className="text-sm font-semibold text-foreground truncate hidden sm:block"
             >
-              {APP_NAME} — Admin
+              {APP_NAME} — {isSubAdmin ? 'Sub-Admin' : 'Admin'}
             </Link>
           </div>
           <div className="flex items-center gap-2 shrink-0">

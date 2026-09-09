@@ -27,9 +27,12 @@ import type { OverviewData } from '@/server/admin/analytics.server';
 
 interface Props {
   overview: OverviewData | null;
+  role?: string;
 }
 
-export function AdminDashboardClient({ overview }: Props) {
+export function AdminDashboardClient({ overview, role }: Props) {
+  const isSubAdmin = (role ?? '').toLowerCase() === 'sub_admin';
+
   if (!overview) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -52,7 +55,16 @@ export function AdminDashboardClient({ overview }: Props) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Dashboard</h1>
+      <div className="flex items-center gap-2.5">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+          {isSubAdmin ? 'Sub-Admin Dashboard' : 'Admin Dashboard'}
+        </h1>
+        {isSubAdmin && (
+          <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+            Sub-Admin
+          </Badge>
+        )}
+      </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">

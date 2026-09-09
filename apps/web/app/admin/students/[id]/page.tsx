@@ -9,6 +9,7 @@ import {
   getStudentAttempts,
 } from '@/server/admin/analytics.server';
 import { StudentDetailClient } from '@/components/admin/student-detail-client';
+import { requireAdminPermission } from '@/server/admin/permissions.server';
 import { notFound } from 'next/navigation';
 
 export default async function AdminStudentDetailPage({
@@ -16,6 +17,7 @@ export default async function AdminStudentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPermission('students:read');
   const { id } = await params;
   const [student, enrollments, progress, analytics, attempts] =
     await Promise.all([

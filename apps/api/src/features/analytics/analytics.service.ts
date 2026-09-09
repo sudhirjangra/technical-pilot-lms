@@ -214,20 +214,98 @@ export class AnalyticsService {
       stats.not_started += studentIds.filter((sid: string) => !tracked.has(sid)).length;
     }
 
-    // Enriched chapters with lesson stats
+    // For test/assignment lessons, get attempt stats
+    const testLessonIds = allLessons.filter((l) => l.lessonType === 'test').map((l) => l.id);
+    const assignmentLessonIds = allLessons.filter((l) => l.lessonType === 'assignment').map((l) => l.id);
+
+    const [testsRes, assignmentsRes] = await Promise.all([
+      testLessonIds.length
+        ? this.supabase
+            .from('tests')
+            .select('id, lesson_id, passing_score_percent, test_attempts(id, score, max_score)')
+            .in('lesson_id', testLessonIds)
+        : Promise.resolve({ data: [] }),
+      assignmentLessonIds.length
+        ? this.supabase
+            .from('assignments')
+            .select('id, lesson_id, passing_score_percent, assignment_attempts(id, score, max_score)')
+            .in('lesson_id', assignmentLessonIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const attemptStatsByLesson = new Map<string, { totalAttempts: number; avgScore: number; passRate: number }>();
+
+    for (const test of (testsRes as any).data ?? []) {
+      const attempts = test.test_attempts ?? [];
+      const passingScore = test.passing_score_percent ?? 0;
+      const totalAttempts = attempts.length;
+      const avgScore = totalAttempts > 0
+        ? Math.round(
+            attempts.reduce((sum: number, a: any) => {
+              const pct = a.max_score > 0 ? (a.score / a.max_score) * 100 : 0;
+              return sum + pct;
+            }, 0) / totalAttempts,
+          )
+        : 0;
+      const passCount = attempts.filter((a: any) => {
+        const pct = a.max_score > 0 ? (a.score / a.max_score) * 100 : 0;
+        return pct >= passingScore;
+      }).length;
+      const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
+      attemptStatsByLesson.set(test.lesson_id, { totalAttempts, avgScore, passRate });
+    }
+
+    for (const assignment of (assignmentsRes as any).data ?? []) {
+      const attempts = assignment.assignment_attempts ?? [];
+      const passingScore = assignment.passing_score_percent ?? 0;
+      const totalAttempts = attempts.length;
+      const avgScore = totalAttempts > 0
+        ? Math.round(
+            attempts.reduce((sum: number, a: any) => {
+              const pct = a.max_score > 0 ? (a.score / a.max_score) * 100 : 0;
+              return sum + pct;
+            }, 0) / totalAttempts,
+          )
+        : 0;
+      const passCount = attempts.filter((a: any) => {
+        const pct = a.max_score > 0 ? (a.score / a.max_score) * 100 : 0;
+        return pct >= passingScore;
+      }).length;
+      const passRate = totalAttempts > 0 ? Math.round((passCount / totalAttempts) * 100) : 0;
+      attemptStatsByLesson.set(assignment.lesson_id, { totalAttempts, avgScore, passRate });
+    }
+
+    // Enriched chapters with lesson stats and avgProgress
     const enrichedChapters = chapters.map((ch: any) => ({
       id: ch.id,
       title: ch.title,
       sortOrder: ch.sort_order,
       isPublished: ch.is_published,
-      lessons: ((ch.lessons ?? []) as any[]).map((l: any) => ({
-        id: l.id,
-        title: l.title,
-        lessonType: l.lesson_type,
-        sortOrder: l.sort_order,
-        isPublished: l.is_published,
-        stats: lessonStats.get(l.id) ?? { completed: 0, in_progress: 0, not_started: totalEnrolled },
-      })),
+      lessons: ((ch.lessons ?? []) as any[]).map((l: any) => {
+        const progressForLesson = progressByLesson.get(l.id) ?? [];
+        const progressSum = progressForLesson.reduce(
+          (sum: number, p: any) =>
+            sum +
+            (p.status === 'completed'
+              ? 100
+              : Math.min(100, Math.max(0, p.progress_percent ?? 0))),
+          0,
+        );
+        const avgProgress =
+          totalEnrolled > 0 ? Math.round(progressSum / totalEnrolled) : 0;
+        const attemptStats = attemptStatsByLesson.get(l.id);
+
+        return {
+          id: l.id,
+          title: l.title,
+          lessonType: l.lesson_type,
+          sortOrder: l.sort_order,
+          isPublished: l.is_published,
+          stats: lessonStats.get(l.id) ?? { completed: 0, in_progress: 0, not_started: totalEnrolled },
+          avgProgress,
+          ...(attemptStats ? attemptStats : {}),
+        };
+      }),
     }));
 
     // Per-chapter completion: a student "completes" a chapter only once every lesson in it is completed.
@@ -1079,7 +1157,11 @@ export class AnalyticsService {
     const rankings = enrollments.map((e: any) => {
       const studentProgress = progressByStudent.get(e.student_id) ?? [];
       const progressSum = studentProgress.reduce(
-        (sum: number, p: any) => sum + (p.progress_percent ?? 0),
+        (sum: number, p: any) =>
+          sum +
+          (p.status === 'completed'
+            ? 100
+            : Math.min(100, Math.max(0, p.progress_percent ?? 0))),
         0,
       );
       const overallProgress = totalLessons > 0 ? Math.round(progressSum / totalLessons) : 0;

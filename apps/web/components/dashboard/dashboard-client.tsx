@@ -6,11 +6,26 @@ import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Progress } from '@repo/shadcn/progress';
 import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend as RechartsLegend,
+} from 'recharts';
+import {
   AlertTriangle,
+  BarChart3,
   BookOpen,
   CheckCircle2,
   Clock3,
   GraduationCap,
+  PieChart as PieChartIcon,
   Play,
   ShoppingCart,
   Sparkles,
@@ -225,6 +240,101 @@ export function DashboardClient({
             })}
           </CardContent>
         </Card>
+      )}
+
+      {/* Performance & Learning Overview Charts */}
+      {enrollments.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+          {/* Enrollment Status Breakdown */}
+          <Card>
+            <CardHeader className="p-3.5 sm:p-5 border-b border-border/50">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                <PieChartIcon className="size-4 text-primary shrink-0" />
+                Enrollment Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-6 flex flex-col items-center justify-center">
+              <div className="w-full h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Completed', value: completedCourses.length, color: '#10b981' },
+                        { name: 'In Progress', value: activeCourses.length, color: '#3b82f6' },
+                      ].filter((d) => d.value > 0)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={4}
+                      label={({ name, value }: { name?: string; value?: number }) => `${name ?? ''}: ${value ?? 0}`}
+                    >
+                      {[
+                        { name: 'Completed', value: completedCourses.length, color: '#10b981' },
+                        { name: 'In Progress', value: activeCourses.length, color: '#3b82f6' },
+                      ]
+                        .filter((d) => d.value > 0)
+                        .map((entry, index) => (
+                          <Cell key={`dash-pie-${index}`} fill={entry.color} />
+                        ))}
+                    </Pie>
+                    <RechartsTooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '8px',
+                        fontSize: 12,
+                        color: '#fff',
+                      }}
+                    />
+                    <RechartsLegend wrapperStyle={{ fontSize: 12, paddingTop: 4 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Enrolled Courses List / Progress */}
+          <Card>
+            <CardHeader className="p-3.5 sm:p-5 border-b border-border/50 flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                <BarChart3 className="size-4 text-primary shrink-0" />
+                Course Performance
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+                <Link href="/dashboard/attempts">View All Attempts →</Link>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-5 space-y-3">
+              {enrollments.slice(0, 4).map((e) => {
+                const isCompleted = e.status === 'completed';
+                return (
+                  <div key={e.id} className="space-y-1.5 rounded-lg border bg-muted/20 p-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium truncate max-w-[200px] sm:max-w-[280px]">
+                        {e.courses?.title ?? 'Untitled Course'}
+                      </span>
+                      <Badge
+                        variant={isCompleted ? 'secondary' : 'default'}
+                        className="text-[10px] shrink-0"
+                      >
+                        {isCompleted ? 'Completed' : 'Active'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Progress value={isCompleted ? 100 : 50} className="h-1.5 flex-1" />
+                      <span className="text-[11px] font-mono text-muted-foreground">
+                        {isCompleted ? '100%' : 'In Progress'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Continue Learning */}

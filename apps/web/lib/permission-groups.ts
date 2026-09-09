@@ -90,9 +90,19 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     id: 'support',
-    name: 'Doubts & Inquiries',
-    description: 'Schedule doubt sessions and answer student questions',
+    name: 'Communications & Support',
+    description: 'Broadcast notifications, schedule doubt sessions, and answer inquiries',
     permissions: [
+      {
+        slug: 'notifications:read',
+        label: 'View Notifications',
+        description: 'Read sent notifications, announcements, and audit logs.',
+      },
+      {
+        slug: 'notifications:manage',
+        label: 'Broadcast Notifications',
+        description: 'Create and broadcast targeted notifications to students and course batches.',
+      },
       {
         slug: 'doubt_sessions:manage',
         label: 'Manage Doubt Sessions',

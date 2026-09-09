@@ -20,6 +20,17 @@ import { PermissionsService } from './permissions.service';
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
+  @Get('my')
+  @Roles('ADMIN', 'SUB_ADMIN')
+  async getMyPermissions(@User() user: { id: string; role?: string }) {
+    const role = (user.role ?? '').toLowerCase();
+    if (role === 'admin') {
+      return { permissions: ALL_PERMISSIONS };
+    }
+    const permissions = await this.permissionsService.getPermissions(user.id);
+    return { permissions };
+  }
+
   @Get('available')
   getAvailablePermissions() {
     return { data: ALL_PERMISSIONS };

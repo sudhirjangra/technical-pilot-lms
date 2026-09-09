@@ -1,4 +1,4 @@
-import { Roles } from '@/common/decorators';
+import { Permissions, Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -47,12 +47,14 @@ export class NotificationsController {
 
   @Post('broadcast')
   @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('notifications:manage')
   broadcast(@Body() dto: BroadcastNotificationDto) {
     return this.service.broadcast(dto.title, dto.body, dto.type, dto.course_id);
   }
 
   @Post('send')
   @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('notifications:manage')
   send(@Body() dto: SendNotificationDto) {
     return this.service.send(
       dto.recipient_id,
@@ -65,6 +67,7 @@ export class NotificationsController {
 
   @Get('admin/logs')
   @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('notifications:read')
   getAdminNotificationLogs() {
     return this.service.getAdminNotificationLogs();
   }

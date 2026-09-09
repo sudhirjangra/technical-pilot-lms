@@ -45,6 +45,37 @@ export async function getAvailablePermissions(): Promise<string[]> {
   return data!.data;
 }
 
+import { redirect } from 'next/navigation';
+
+export async function getMyPermissions(): Promise<string[]> {
+  const session = await auth();
+  if (!session?.user) return [];
+  if (session.user.role === 'admin') {
+    return getAvailablePermissions();
+  }
+  const h = await headers();
+  const [error, data] = await safeFetch(
+    z.object({ permissions: z.array(z.string()) }),
+    '/permissions/my',
+    { headers: h, cache: 'no-store' },
+  );
+  if (error || !data) return [];
+  return data.permissions;
+}
+
+export async function requireAdminPermission(...required: string[]) {
+  const session = await auth();
+  if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'sub_admin')) {
+    redirect('/');
+  }
+  if (session.user.role === 'admin') return;
+  const userPerms = await getMyPermissions();
+  const hasAccess = required.some((p) => userPerms.includes(p));
+  if (!hasAccess) {
+    redirect('/admin');
+  }
+}
+
 export async function setPermissions(userId: string, permissions: string[]) {
   const h = await headers();
   const [error] = await safeFetch(z.any(), '/permissions', {

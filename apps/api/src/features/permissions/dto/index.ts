@@ -18,6 +18,8 @@ export const ALL_PERMISSIONS = [
   'queries:reply',
   'reports:read',
   'reports:export',
+  'notifications:read',
+  'notifications:manage',
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];

@@ -49,7 +49,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Fragment, useState } from 'react';
 
-const navGroups = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: any;
+  exact?: boolean;
+  requiredPermissions?: string[];
+  adminOnly?: boolean;
+}
+
+interface NavGroupDef {
+  group: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroupDef[] = [
   {
     group: 'Overview',
     items: [
@@ -59,30 +73,30 @@ const navGroups = [
   {
     group: 'Content',
     items: [
-      { label: 'Courses', href: '/admin/courses', icon: BookOpen, exact: false },
-      { label: 'Categories', href: '/admin/categories', icon: FolderKanban, exact: false },
+      { label: 'Courses', href: '/admin/courses', icon: BookOpen, exact: false, requiredPermissions: ['courses:read', 'courses:write'] },
+      { label: 'Categories', href: '/admin/categories', icon: FolderKanban, exact: false, requiredPermissions: ['courses:read', 'courses:write'] },
     ],
   },
   {
     group: 'Users',
     items: [
-      { label: 'Students', href: '/admin/students', icon: Users, exact: false },
-      { label: 'Sub-Admins', href: '/admin/sub-admins', icon: ShieldCheck, exact: false },
-      { label: 'Enrollments', href: '/admin/enrollments', icon: GraduationCap, exact: false },
+      { label: 'Students', href: '/admin/students', icon: Users, exact: false, requiredPermissions: ['students:read'] },
+      { label: 'Sub-Admins', href: '/admin/sub-admins', icon: ShieldCheck, exact: false, adminOnly: true },
+      { label: 'Enrollments', href: '/admin/enrollments', icon: GraduationCap, exact: false, requiredPermissions: ['enrollments:read', 'enrollments:write'] },
     ],
   },
   {
     group: 'Communications',
     items: [
-      { label: 'Notifications', href: '/admin/notifications', icon: Bell, exact: false },
-      { label: 'Doubt Sessions', href: '/admin/doubt-sessions', icon: CalendarDays, exact: false },
-      { label: 'Student Queries', href: '/admin/queries', icon: MessageSquare, exact: false },
+      { label: 'Notifications', href: '/admin/notifications', icon: Bell, exact: false, requiredPermissions: ['notifications:read', 'notifications:manage'] },
+      { label: 'Doubt Sessions', href: '/admin/doubt-sessions', icon: CalendarDays, exact: false, requiredPermissions: ['doubt_sessions:manage'] },
+      { label: 'Student Queries', href: '/admin/queries', icon: MessageSquare, exact: false, requiredPermissions: ['queries:read', 'queries:reply'] },
     ],
   },
   {
     group: 'Finance',
     items: [
-      { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false },
+      { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false, requiredPermissions: ['payments:read'] },
     ],
   },
 ];
@@ -92,7 +106,7 @@ function NavGroup({
   items,
 }: {
   group: string;
-  items: (typeof navGroups)[0]['items'];
+  items: NavItem[];
 }) {
   const pathname = usePathname();
   const { state } = useSidebar();
@@ -144,7 +158,13 @@ function NavGroup({
   );
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({
+  userRole,
+  permissions = [],
+}: {
+  userRole?: string;
+  permissions?: string[];
+} = {}) {
   const { state } = useSidebar();
   const { data: session } = useSession();
   const isCollapsed = state === 'collapsed';
@@ -171,16 +191,21 @@ export function AdminSidebar() {
     await signOut({ callbackUrl: '/auth/sign-in' });
   };
 
-  const isSubAdmin = user?.role === 'sub_admin';
+  const effectiveRole = (userRole ?? user?.role ?? '').toLowerCase();
+  const isSubAdmin = effectiveRole === 'sub_admin';
   const roleTitle = isSubAdmin ? 'Sub-Admin' : 'Admin';
 
-  const visibleNavGroups = navGroups.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      if (item.href === '/admin/sub-admins' && isSubAdmin) return false;
-      return true;
-    }),
-  })).filter((group) => group.items.length > 0);
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.adminOnly && isSubAdmin) return false;
+        if (!isSubAdmin) return true;
+        if (!item.requiredPermissions || item.requiredPermissions.length === 0) return true;
+        return item.requiredPermissions.some((perm) => permissions.includes(perm));
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">

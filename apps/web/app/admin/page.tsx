@@ -7,5 +7,5 @@ export default async function AdminDashboardPage() {
   const session = await auth();
   if (!session) redirect('/auth/sign-in');
   const overview = await getOverview();
-  return <AdminDashboardClient overview={overview} />;
+  return <AdminDashboardClient overview={overview} role={session.user.role} />;
 }
