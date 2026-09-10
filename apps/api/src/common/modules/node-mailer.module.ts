@@ -16,7 +16,7 @@ import * as nodemailer from 'nodemailer';
         const smtpPass = config.get('SMTP_PASS');
 
         if (smtpHost && smtpUser && smtpPass) {
-          const numericPort = Number(smtpPort ?? 587);
+          const numericPort = Number(smtpPort ?? 465);
           return {
             transport: {
               host: smtpHost,
@@ -26,11 +26,12 @@ import * as nodemailer from 'nodemailer';
                 user: smtpUser,
                 pass: smtpPass,
               },
+              family: 4,
               connectionTimeout: 10000,
               socketTimeout: 10000,
             },
             defaults: {
-              from: `${config.get('MAIL_FROM')}`,
+              from: `${config.get('MAIL_FROM') || smtpUser}`,
             },
           };
         }

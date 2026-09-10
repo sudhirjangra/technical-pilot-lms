@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { cn } from '@repo/shadcn/lib/utils';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -77,6 +78,21 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const CATEGORY_COLORS = [
+    '#3b82f6',
+    '#10b981',
+    '#8b5cf6',
+    '#f59e0b',
+    '#06b6d4',
+    '#ec4899',
+    '#6366f1',
+    '#14b8a6',
+    '#f97316',
+    '#84cc16',
+  ];
+
+  const [selectedTopicFilter, setSelectedTopicFilter] = useState<string | null>(null);
+
   // Performance metrics calculation
   const passedAttempts = attempts.filter((a) => a.passed === true);
   const failedAttempts = attempts.filter((a) => a.passed === false);
@@ -113,13 +129,13 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
 
   // Bar chart data: recent 10 attempts in chronological order (oldest to newest for trend)
   const recentTrend = [...attempts]
-    .filter((a) => a.completed_at || a.started_at)
+    .filter((a) => a.percentage !== null && a.percentage !== undefined)
     .slice(0, 10)
     .reverse()
     .map((a, i) => {
-      const score = Math.round(a.percentage ?? 0);
+      const score = Math.min(100, Math.max(0, Math.round(a.percentage ?? 0)));
       const title = a.testTitle || `Attempt ${i + 1}`;
-      const shortTitle = title.length > 14 ? title.slice(0, 14) + '…' : title;
+      const shortTitle = title.length > 12 ? title.slice(0, 12) + '…' : title;
       return {
         name: shortTitle,
         fullTitle: title,
@@ -129,6 +145,7 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
         type: a.type,
       };
     });
+
 
   const handleOpenDetail = async (attempt: Attempt) => {
     setSelectedAttempt(attempt);
@@ -283,20 +300,22 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
               ) : (
                 <div className="w-full h-[220px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={recentTrend} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                    <BarChart data={recentTrend} margin={{ top: 15, right: 15, left: -5, bottom: 25 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.6} />
                       <XAxis
                         dataKey="name"
                         tick={{ fontSize: 10 }}
                         stroke="var(--muted-foreground)"
                         interval={0}
-                        angle={-25}
+                        angle={-20}
                         textAnchor="end"
                       />
                       <YAxis
                         domain={[0, 100]}
+                        width={36}
                         tick={{ fontSize: 10 }}
                         stroke="var(--muted-foreground)"
+                        tickFormatter={(v) => `${v}%`}
                       />
                       <RechartsTooltip
                         content={({ active, payload }) => {
@@ -307,7 +326,7 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
                               <div className="rounded-lg border bg-popover/95 p-2 shadow-md text-xs text-popover-foreground">
                                 <p className="font-semibold">{data.fullTitle}</p>
                                 <p className="text-muted-foreground">{data.date} · {data.type}</p>
-                                <p className="mt-1 font-mono font-bold">
+                                <p className="mt-1 font-mono font-bold text-primary">
                                   Score: {data.score}% ({data.passed ? 'Pass' : 'Fail'})
                                 </p>
                               </div>
@@ -327,6 +346,7 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+
               )}
             </CardContent>
           </Card>
@@ -496,143 +516,304 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
                 </div>
               </div>
 
-              {/* Topic Breakdown */}
+              {/* Topic Breakdown & Categories Pie/Bar Chart */}
               {detailData.topicBreakdown && detailData.topicBreakdown.length > 0 && (
-                <div className="space-y-2 rounded-lg border p-3 bg-muted/10">
-                  <p className="text-xs font-semibold">Topic Performance Breakdown</p>
-                  <div className="w-full h-[150px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={detailData.topicBreakdown.map((t) => ({
-                          topic: t.topic.length > 15 ? t.topic.slice(0, 15) + '…' : t.topic,
-                          fullTopic: t.topic,
-                          correct: t.correct,
-                          incorrect: Math.max(0, t.total - t.correct),
-                          total: t.total,
-                        }))}
-                        margin={{ top: 5, right: 10, left: -20, bottom: 15 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.6} />
-                        <XAxis dataKey="topic" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length > 0 && payload[0]) {
-                              const data = payload[0].payload;
-                              if (!data) return null;
-                              return (
-                                <div className="rounded-lg border bg-popover/95 p-2 shadow-md text-xs text-popover-foreground">
-                                  <p className="font-semibold">{data.fullTopic}</p>
-                                  <p className="text-emerald-600 dark:text-emerald-400 font-mono">
-                                    Correct: {data.correct} / {data.total}
-                                  </p>
-                                  {data.incorrect > 0 && (
-                                    <p className="text-destructive font-mono">
-                                      Missed: {data.incorrect}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="correct" name="Correct" fill="#10b981" stackId="a" />
-                        <Bar dataKey="incorrect" name="Missed" fill="#ef4444" stackId="a" radius={[3, 3, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                <div className="space-y-4 rounded-xl border p-4 bg-muted/10">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <p className="text-xs sm:text-sm font-semibold flex items-center gap-1.5">
+                      <PieChartIcon className="size-4 text-primary" />
+                      Category & Topic Analysis
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Hover for detailed statistics · Click a category to filter questions
+                    </p>
                   </div>
-                  <div className="space-y-1.5 pt-1">
-                    {detailData.topicBreakdown.map((topic) => (
-                      <div key={topic.topic} className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground truncate">{topic.topic}</span>
-                        <span className="font-mono font-medium ml-2">
-                          {topic.correct}/{topic.total} correct ({topic.total > 0 ? Math.round((topic.correct / topic.total) * 100) : 0}%)
-                        </span>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {/* Category Distribution Pie Chart */}
+                    <div className="rounded-lg border bg-card/60 p-3 flex flex-col items-center">
+                      <p className="text-xs font-medium text-muted-foreground self-start mb-1">
+                        Category Distribution (Questions)
+                      </p>
+                      <div className="w-full h-[180px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={detailData.topicBreakdown.map((t, idx) => ({
+                                name: t.topic,
+                                value: t.total,
+                                correct: t.correct,
+                                missed: Math.max(0, t.total - t.correct),
+                                accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0,
+                                points: t.points,
+                                earnedPoints: t.earnedPoints,
+                                totalTime: t.totalTime,
+                                color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length],
+                              }))}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={42}
+                              outerRadius={68}
+                              paddingAngle={3}
+                              onClick={(entry) => {
+                                const topicName = (entry as any)?.name;
+                                setSelectedTopicFilter((prev) => (prev === topicName ? null : topicName));
+                              }}
+                              className="cursor-pointer"
+                            >
+                              {detailData.topicBreakdown.map((t, idx) => {
+                                const isSelected = selectedTopicFilter === t.topic;
+                                return (
+                                  <Cell
+                                    key={`pie-topic-${idx}`}
+                                    fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]}
+                                    stroke={isSelected ? '#ffffff' : 'transparent'}
+                                    strokeWidth={isSelected ? 3 : 1}
+                                    opacity={selectedTopicFilter && !isSelected ? 0.45 : 1}
+                                  />
+                                );
+                              })}
+                            </Pie>
+                            <RechartsTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length > 0 && payload[0]) {
+                                  const data = payload[0].payload;
+                                  if (!data) return null;
+                                  return (
+                                    <div className="rounded-lg border bg-popover/95 p-2.5 shadow-lg text-xs text-popover-foreground min-w-[170px] space-y-1">
+                                      <p className="font-semibold text-foreground">{data.name}</p>
+                                      <div className="text-[11px] space-y-0.5 pt-0.5 border-t border-border/50">
+                                        <p className="flex justify-between">
+                                          <span className="text-muted-foreground">Questions:</span>
+                                          <span className="font-mono font-medium">{data.value}</span>
+                                        </p>
+                                        <p className="flex justify-between">
+                                          <span className="text-muted-foreground">Correct:</span>
+                                          <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                                            {data.correct}/{data.value} ({data.accuracy}%)
+                                          </span>
+                                        </p>
+                                        <p className="flex justify-between">
+                                          <span className="text-muted-foreground">Points:</span>
+                                          <span className="font-mono font-medium">{data.earnedPoints}/{data.points} pts</span>
+                                        </p>
+                                        <p className="flex justify-between">
+                                          <span className="text-muted-foreground">Time Spent:</span>
+                                          <span className="font-medium">{formatDuration(data.totalTime)}</span>
+                                        </p>
+                                      </div>
+                                      <p className="text-[10px] text-primary italic pt-1">
+                                        Click to {selectedTopicFilter === data.name ? 'clear' : 'filter questions'}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Category Accuracy / Comparison Bar Chart */}
+                    <div className="rounded-lg border bg-card/60 p-3 flex flex-col">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        Category Accuracy (Correct vs Missed)
+                      </p>
+                      <div className="w-full h-[180px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={detailData.topicBreakdown.map((t) => ({
+                              topic: t.topic.length > 12 ? t.topic.slice(0, 12) + '…' : t.topic,
+                              fullTopic: t.topic,
+                              correct: t.correct,
+                              incorrect: Math.max(0, t.total - t.correct),
+                              total: t.total,
+                              accuracy: t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0,
+                              points: t.points,
+                              earnedPoints: t.earnedPoints,
+                            }))}
+                            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                            <XAxis dataKey="topic" tick={{ fontSize: 9 }} stroke="var(--muted-foreground)" />
+                            <YAxis allowDecimals={false} width={30} tick={{ fontSize: 9 }} stroke="var(--muted-foreground)" />
+                            <RechartsTooltip
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length > 0 && payload[0]) {
+                                  const data = payload[0].payload;
+                                  if (!data) return null;
+                                  return (
+                                    <div className="rounded-lg border bg-popover/95 p-2 shadow-md text-xs text-popover-foreground">
+                                      <p className="font-semibold">{data.fullTopic}</p>
+                                      <p className="text-emerald-600 dark:text-emerald-400 font-mono">
+                                        Correct: {data.correct} / {data.total} ({data.accuracy}%)
+                                      </p>
+                                      {data.incorrect > 0 && (
+                                        <p className="text-destructive font-mono">
+                                          Missed: {data.incorrect}
+                                        </p>
+                                      )}
+                                      <p className="text-muted-foreground text-[11px] mt-0.5">
+                                        Points: {data.earnedPoints} / {data.points}
+                                      </p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Bar dataKey="correct" name="Correct" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
+                            <Bar dataKey="incorrect" name="Missed" fill="#ef4444" stackId="a" radius={[3, 3, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Category Filter Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <Button
+                      size="sm"
+                      variant={selectedTopicFilter === null ? 'default' : 'outline'}
+                      className="h-6 px-2.5 text-[11px] rounded-full"
+                      onClick={() => setSelectedTopicFilter(null)}
+                    >
+                      All Categories ({detailData.questionReview?.length ?? detailData.totalCount})
+                    </Button>
+                    {detailData.topicBreakdown.map((t, idx) => {
+                      const isSelected = selectedTopicFilter === t.topic;
+                      const pctCorrect = t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0;
+                      return (
+                        <button
+                          key={t.topic}
+                          type="button"
+                          onClick={() => setSelectedTopicFilter(isSelected ? null : t.topic)}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] border transition-all duration-150',
+                            isSelected
+                              ? 'border-primary bg-primary/15 text-primary font-medium ring-1 ring-primary/40'
+                              : 'border-border/60 bg-muted/40 text-muted-foreground hover:text-foreground hover:border-primary/40',
+                          )}
+                        >
+                          <span
+                            className="size-2 rounded-full shrink-0"
+                            style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                          />
+                          <span>{t.topic}</span>
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            ({t.correct}/{t.total} · {pctCorrect}%)
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {/* Questions Review */}
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Question Breakdown ({detailData.questionReview?.length ?? 0})
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Question Breakdown ({detailData.questionReview?.length ?? 0})
+                  </p>
+                  {selectedTopicFilter && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-primary"
+                      onClick={() => setSelectedTopicFilter(null)}
+                    >
+                      Showing: {selectedTopicFilter} (Clear filter ✕)
+                    </Button>
+                  )}
+                </div>
 
                 {(!detailData.questionReview || detailData.questionReview.length === 0) ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">
                     No individual question records available for this attempt.
                   </p>
                 ) : (
-                  detailData.questionReview.map((q, idx) => (
-                    <div
-                      key={q.questionId || idx}
-                      className="rounded-lg border bg-card/60 p-3 space-y-2 text-xs sm:text-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {q.isCorrect === true ? (
-                            <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                          ) : q.isCorrect === false ? (
-                            <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                          ) : (
-                            <HelpCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
-                          )}
-                          <p className="font-medium text-foreground">
-                            {idx + 1}. {q.questionText}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={q.isCorrect ? 'default' : q.isCorrect === false ? 'destructive' : 'secondary'}
-                          className="shrink-0 text-[10px]"
-                        >
-                          {q.pointsEarned ?? (q.isCorrect ? q.points ?? 0 : 0)}/{q.points ?? 1} pt
-                        </Badge>
-                      </div>
-
-                      {/* Options or Text Answer */}
-                      {q.options && q.options.length > 0 ? (
-                        <div className="space-y-1 pl-6">
-                          {q.options.map((opt) => (
-                            <div
-                              key={opt.id}
-                              className={`rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-2 ${
-                                opt.isCorrect
-                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-500/30'
-                                  : opt.isSelected
-                                    ? 'bg-destructive/10 text-destructive border border-destructive/30'
-                                    : 'bg-muted/30 text-muted-foreground'
-                              }`}
+                  detailData.questionReview
+                    .filter((q) => !selectedTopicFilter || (q.topic || 'General') === selectedTopicFilter)
+                    .map((q, idx) => (
+                      <div
+                        key={q.questionId || idx}
+                        className="rounded-lg border bg-card/60 p-3 space-y-2 text-xs sm:text-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {q.isCorrect === true ? (
+                              <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+                            ) : q.isCorrect === false ? (
+                              <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+                            ) : (
+                              <HelpCircle className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                            )}
+                            <p className="font-medium text-foreground">
+                              {idx + 1}. {q.questionText}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {q.topic && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {q.topic}
+                              </Badge>
+                            )}
+                            <Badge
+                              variant={q.isCorrect ? 'default' : q.isCorrect === false ? 'destructive' : 'secondary'}
+                              className="shrink-0 text-[10px]"
                             >
-                              <span>{opt.text}</span>
-                              <div className="flex items-center gap-1 shrink-0 text-[10px]">
-                                {opt.isSelected && <span>(Your choice)</span>}
-                                {opt.isCorrect && <span>✓ Correct</span>}
-                              </div>
-                            </div>
-                          ))}
+                              {q.pointsEarned ?? (q.isCorrect ? q.points ?? 0 : 0)}/{q.points ?? 1} pt
+                            </Badge>
+                          </div>
                         </div>
-                      ) : q.textAnswer ? (
-                        <div className="pl-6 space-y-1">
-                          <p className="text-[11px] text-muted-foreground">Your answer:</p>
-                          <p className="rounded bg-muted/40 p-2 text-xs">{q.textAnswer}</p>
-                        </div>
-                      ) : null}
 
-                      {/* Explanation */}
-                      {q.explanation && (
-                        <div className="pl-6 pt-1">
-                          <p className="rounded border border-primary/20 bg-primary/5 p-2 text-[11px] text-muted-foreground">
-                            <strong className="text-primary">Explanation:</strong> {q.explanation}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        {/* Options or Text Answer */}
+                        {q.options && q.options.length > 0 ? (
+                          <div className="space-y-1 pl-6">
+                            {q.options.map((opt) => (
+                              <div
+                                key={opt.id}
+                                className={`rounded px-2.5 py-1.5 text-xs flex items-center justify-between gap-2 ${
+                                  opt.isCorrect
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium border border-emerald-500/30'
+                                    : opt.isSelected
+                                      ? 'bg-destructive/10 text-destructive border border-destructive/30'
+                                      : 'bg-muted/30 text-muted-foreground'
+                                }`}
+                              >
+                                <span>{opt.text}</span>
+                                <div className="flex items-center gap-1 shrink-0 text-[10px]">
+                                  {opt.isSelected && <span>(Your choice)</span>}
+                                  {opt.isCorrect && <span>✓ Correct</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : q.textAnswer ? (
+                          <div className="pl-6 space-y-1">
+                            <p className="text-[11px] text-muted-foreground">Your answer:</p>
+                            <p className="rounded bg-muted/40 p-2 text-xs">{q.textAnswer}</p>
+                          </div>
+                        ) : null}
+
+                        {/* Explanation */}
+                        {q.explanation && (
+                          <div className="pl-6 pt-1">
+                            <p className="rounded border border-primary/20 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+                              <strong className="text-primary">Explanation:</strong> {q.explanation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
                 )}
               </div>
+
             </div>
           ) : (
             <p className="text-xs text-muted-foreground py-8 text-center">

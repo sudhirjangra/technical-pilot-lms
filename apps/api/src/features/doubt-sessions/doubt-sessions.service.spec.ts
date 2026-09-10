@@ -5,6 +5,8 @@ describe('DoubtSessionsService', () => {
   let service: DoubtSessionsService;
   let supabase: any;
   let notificationsService: any;
+  let mailService: any;
+  let logger: any;
 
   beforeEach(() => {
     notificationsService = {
@@ -12,7 +14,16 @@ describe('DoubtSessionsService', () => {
       broadcast: jest.fn().mockResolvedValue({ sent: 5 }),
       notifyAdmins: jest.fn().mockResolvedValue({ sent: 2 }),
     };
+    mailService = {
+      sendEmail: jest.fn().mockResolvedValue(undefined),
+    };
+    logger = {
+      warn: jest.fn(),
+      error: jest.fn(),
+      info: jest.fn(),
+    };
   });
+
 
   describe('createSlot targeting & notification', () => {
     it('should create an all-student slot and broadcast notification', async () => {
@@ -56,7 +67,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       const result = await service.createSlot(
         {
@@ -122,7 +133,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       const result = await service.createSlot(
         {
@@ -150,7 +161,7 @@ describe('DoubtSessionsService', () => {
 
     it('should throw BadRequestException if target_type is course but course_id is missing', async () => {
       supabase = { from: jest.fn() };
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       await expect(
         service.createSlot(
@@ -209,7 +220,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       const result = await service.createSlot(
         {
@@ -301,7 +312,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       const slots = await service.getUpcomingSlots('student-me');
       const slotIds = slots.map((s) => s.id);
@@ -336,7 +347,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       await expect(
         service.bookSlot({ slot_id: 'slot-private' }, 'student-me'),
@@ -385,7 +396,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       await expect(
         service.bookSlot({ slot_id: 'slot-course' }, 'student-me'),
@@ -449,7 +460,7 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService);
+      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
 
       const booking = await service.bookSlot({ slot_id: 'slot-valid' }, 'student-me');
       expect(booking).toBeDefined();

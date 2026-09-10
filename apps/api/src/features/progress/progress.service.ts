@@ -1,4 +1,7 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
+import { CourseCompletedMail } from '@/features/mail/templates';
+import { NotificationsService } from '@/features/notifications/notifications.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -7,13 +10,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Logger } from 'nestjs-pino';
 import { CreateProgressDto, UpdateProgressDto } from './dto';
+
 
 @Injectable()
 export class ProgressService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly logger: Logger,
   ) {}
+
 
   /** Initialize or get progress for a lesson — verifies enrollment first */
   async initOrGet(dto: CreateProgressDto, studentId: string) {
@@ -164,13 +173,55 @@ export class ProgressService {
     ).length;
 
     if (completedCount >= allLessonIds.length) {
-      await this.supabase
+      const { data: updatedEnrollment } = await this.supabase
         .from('enrollments')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('student_id', studentId)
         .eq('course_id', courseId)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .select('id, student_id, course_id, courses(id, title), profiles(id, full_name, email)')
+        .maybeSingle();
+
+      if (updatedEnrollment) {
+        const courseData = updatedEnrollment.courses as unknown as { id: string; title: string } | null;
+        const profileData = updatedEnrollment.profiles as unknown as { full_name?: string; email?: string } | null;
+        const courseTitle = courseData?.title || 'your enrolled course';
+        const studentEmail = profileData?.email;
+        const studentName = profileData?.full_name || studentEmail || 'Student';
+
+        // Broadcast in-app notification
+        this.notificationsService
+          .broadcast(
+            `Course Completed: ${courseTitle}`,
+            `Congratulations ${studentName}! You have successfully completed all lessons and assessments in ${courseTitle}.`,
+            'course_completed',
+            courseId,
+            studentId,
+          )
+          .catch((err) => {
+            this.logger.warn({ err, studentId, courseId }, 'Failed to send course completed in-app notification');
+          });
+
+        // Send congratulations email
+        if (studentEmail) {
+          this.mailService
+            .sendEmail({
+              to: [studentEmail],
+              subject: `Congratulations on Completing ${courseTitle}! 🏆`,
+              html: CourseCompletedMail({
+                name: studentName,
+                courseTitle,
+                courseId,
+                completedDate: new Date(),
+              }),
+            })
+            .catch((err) => {
+              this.logger.warn({ err, studentEmail, courseId }, 'Failed to send course completed email');
+            });
+        }
+      }
     } else {
+
       const overallStatus = completedCount > 0 ? 'active' : 'active';
       const { data: enrollment } = await this.supabase
         .from('enrollments')

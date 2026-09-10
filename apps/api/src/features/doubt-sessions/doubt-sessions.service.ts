@@ -1,4 +1,6 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
+import { DoubtBookingSuccessMail } from '@/features/mail/templates';
 import {
   BadRequestException,
   ConflictException,
@@ -8,6 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Logger } from 'nestjs-pino';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   BookSlotDto,
@@ -21,7 +24,10 @@ export class DoubtSessionsService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
+    private readonly logger: Logger,
   ) {}
+
 
   private async hydrateSlots(slots: any[]): Promise<any[]> {
     if (!slots || slots.length === 0) return [];
@@ -320,7 +326,7 @@ export class DoubtSessionsService {
       })
       .eq('id', dto.slot_id);
 
-    // Notify admins about new doubt session booking
+    // Notify admins and student about new doubt session booking
     try {
       const { data: student } = await this.supabase
         .from('profiles')
@@ -335,9 +341,29 @@ export class DoubtSessionsService {
         'doubt_booking',
         { booking_id: booking.id, slot_id: slot.id, student_id: studentId },
       );
+
+      if (student?.email) {
+        this.mailService
+          .sendEmail({
+            to: [student.email],
+            subject: `Doubt Session Confirmed: ${slot.topic || 'General Session'}`,
+            html: DoubtBookingSuccessMail({
+              name: student.full_name ?? student.email,
+              topic: slot.topic,
+              date: slot.date,
+              startTime: slot.start_time,
+              endTime: slot.end_time,
+              meetingLink: slot.meeting_link,
+            }),
+          })
+          .catch((err) => {
+            this.logger.warn({ err, studentId }, 'Failed to send doubt booking confirmation email');
+          });
+      }
     } catch {
       // Don't fail booking if notification fails
     }
+
 
     return booking;
   }

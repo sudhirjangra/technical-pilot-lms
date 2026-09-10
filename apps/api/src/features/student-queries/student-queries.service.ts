@@ -1,4 +1,6 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { MailService } from '@/features/mail/mail.service';
+import { ContactQueryReceivedMail } from '@/features/mail/templates';
 import {
   BadRequestException,
   Inject,
@@ -6,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Logger } from 'nestjs-pino';
 import { NotificationsService } from '../notifications/notifications.service';
 
 import { CreateContactQueryDto } from './dto';
@@ -42,7 +45,10 @@ export class StudentQueriesService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly notificationsService: NotificationsService,
+    private readonly mailService: MailService,
+    private readonly logger: Logger,
   ) {}
+
 
   async submitContact(dto: CreateContactQueryDto) {
     const queryNumber = generateQueryNumber();
@@ -87,9 +93,27 @@ export class StudentQueriesService {
           phone: dto.phone,
         },
       );
+
+      if (dto.email) {
+        this.mailService
+          .sendEmail({
+            to: [dto.email.trim().toLowerCase()],
+            subject: `Inquiry Received: ${subject} [${queryNumber}]`,
+            html: ContactQueryReceivedMail({
+              name: dto.name.trim(),
+              subject,
+              ticketId: queryNumber,
+              message: dto.message,
+            }),
+          })
+          .catch((err) => {
+            this.logger.warn({ err, email: dto.email }, 'Failed to send contact inquiry acknowledgment email');
+          });
+      }
     } catch {
       // Non-blocking notification
     }
+
 
     return {
       message: 'Your inquiry has been submitted successfully. Our team will contact you shortly.',
