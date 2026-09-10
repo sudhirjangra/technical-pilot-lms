@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 6fN1zg3l2j6s6y3fZYzxIgVl9AurtwbSIUAbGLuDSRuAgoZsKOlrYnmxriOxnhZ
+\restrict SFQLGglcEw7TqBWkTdaaTmXpd3XNNu7nnn5caQYdxcgg0bE0zWMwbh9bYDR5WLy
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-1.pgdg24.04+2)
@@ -785,6 +785,13 @@ COPY public.assignment_answers (id, attempt_id, question_id, text_answer, is_cor
 
 COPY public.assignment_attempts (id, assignment_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, created_at, updated_at) FROM stdin;
 e44c4d89-32a3-4e1b-96d4-c115b83df3c7	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-07 09:53:05.277+00	2026-09-07 09:53:25.762+00	9	11	20	2026-09-07 09:53:05.624575+00	2026-09-07 09:53:05.624575+00
+766a981b-668b-4b5c-87d0-0601e18a44f9	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-08 12:53:17.792+00	\N	\N	\N	\N	2026-09-08 12:53:17.893263+00	2026-09-08 12:53:17.893263+00
+94d3cfd6-7ab1-4e4c-8b48-c3464a0139b8	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-08 14:10:58.121+00	\N	\N	\N	\N	2026-09-08 14:10:58.235929+00	2026-09-08 14:10:58.235929+00
+3e2d9064-2917-4e7d-8d9b-75421b204d6d	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-08 14:11:20.854+00	\N	\N	\N	\N	2026-09-08 14:11:20.969375+00	2026-09-08 14:11:20.969375+00
+18daf3c5-c458-4389-a4c3-7cb75332eaee	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-08 15:03:12.389+00	2026-09-08 15:04:02.715+00	12	12	50	2026-09-08 15:03:12.441888+00	2026-09-08 15:03:12.441888+00
+22586db9-5add-4ea5-ab95-52fac5fdc437	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	2c919628-836c-4d18-abc9-2def9e21573a	2026-09-09 09:15:39.977+00	2026-09-09 09:16:02.818+00	11	11	23	2026-09-09 09:15:40.027326+00	2026-09-09 09:15:40.027326+00
+3e40904d-7037-41a5-8bdd-0d5b27e78a8b	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	2026-09-10 12:34:17.884+00	2026-09-10 12:34:54.515+00	11	11	37	2026-09-10 12:34:18.071662+00	2026-09-10 12:34:18.071662+00
+259bcb9a-eec9-49a1-ae73-bd34601b7800	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	2026-09-10 12:38:35.619+00	2026-09-10 12:38:40.236+00	0	11	5	2026-09-10 12:38:35.70192+00	2026-09-10 12:38:35.70192+00
 \.
 
 
@@ -793,8 +800,8 @@ e44c4d89-32a3-4e1b-96d4-c115b83df3c7	6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	53ac7a
 --
 
 COPY public.assignments (id, lesson_id, title, instructions, max_score, created_at, updated_at, time_limit_seconds, passing_score_percent, max_attempts, due_days_after_start) FROM stdin;
-6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	b7304d3b-6618-4cd4-b52f-8d8ce583244a	Assignment 01	No cheating	100	2026-09-05 11:19:14.20073+00	2026-09-05 11:19:14.20073+00	120	75	1	1
-4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	c4884aea-3279-4c09-a05a-82ad980e3ae0	Nav-Assignment	Don't use AI	100	2026-09-06 13:02:50.093251+00	2026-09-06 13:02:50.093251+00	1200	75	1	30
+4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	c4884aea-3279-4c09-a05a-82ad980e3ae0	Nav-Assignment	Don't use AI	100	2026-09-06 13:02:50.093251+00	2026-09-08 14:06:25.957515+00	1200	75	0	30
+6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0	b7304d3b-6618-4cd4-b52f-8d8ce583244a	Assignment 01	No cheating	100	2026-09-05 11:19:14.20073+00	2026-09-08 14:10:41.455043+00	120	75	0	1
 \.
 
 
@@ -837,6 +844,13 @@ d062b435-db4e-4efb-b679-d35ffc691a43	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	629fe6
 f8186eb7-09b9-435a-8314-4f6c7e403a96	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-06 10:59:58.357671+00	2026-09-06 10:59:58.357671+00
 d02c036f-8dd7-4264-8f29-f64b91173fb4	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	ab7ae40b-4edb-47e4-8203-7f9670e7736f	2026-09-06 13:11:45.805213+00	2026-09-06 13:11:45.805213+00
 7749bc14-1731-4a12-880d-02025d05b723	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	2026-09-06 13:12:11.505328+00	2026-09-06 13:12:11.505328+00
+b9886252-8fe6-458b-a868-db6fb8732490	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-08 12:57:35.234138+00	2026-09-08 12:57:35.234138+00
+a96c3add-1daa-44e9-b612-410b8d2ad36f	2c919628-836c-4d18-abc9-2def9e21573a	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-09 09:06:17.049436+00	2026-09-09 09:06:17.049436+00
+0b39230a-5b50-4b4a-9f33-7374334b7e0d	2c919628-836c-4d18-abc9-2def9e21573a	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-09 09:13:39.962116+00	2026-09-09 09:13:39.962116+00
+3be2fd6e-084a-45d7-b128-7d2e4d031b66	2c919628-836c-4d18-abc9-2def9e21573a	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-09 09:17:11.260502+00	2026-09-09 09:17:11.260502+00
+6fcc8f3c-2fe3-470a-b8d3-2776ba7a1252	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	629fe62d-64a0-40c6-b2cc-46a5eff84c85	2026-09-10 12:29:54.897011+00	2026-09-10 12:29:54.897011+00
+b739090f-af31-4340-a3dc-d94919ac9453	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	d57a0791-d98b-43ec-b40c-dcc68959488f	2026-09-10 12:33:08.708208+00	2026-09-10 12:33:08.708208+00
+8012eee8-9610-4b29-a1c3-116a6d3d5806	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	e4d45eb4-e03e-43e2-a580-59a376fdabca	2026-09-10 12:39:02.907082+00	2026-09-10 12:39:02.907082+00
 \.
 
 
@@ -858,9 +872,8 @@ ab7ae40b-4edb-47e4-8203-7f9670e7736f	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	Chapte
 --
 
 COPY public.courses (id, category_id, title, slug, description, thumbnail_url, price, discount_price, status, created_by, published_at, created_at, updated_at) FROM stdin;
-b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testing-Phase-I	testing-phase-i	This is test course\nGive feedback	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/b8434539-78f9-4e76-b6a7-d002cc006640/thumbnail.jpeg?v=1788606290508	999.00	499.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-05 11:02:50.183+00	2026-09-05 11:02:32.770246+00	2026-09-05 11:04:57.719774+00
-2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	615e7731-be3c-49d1-bf65-fcb6a4b92a42	Demo-Course-1	demo-course-1	Common Types of DemosProduct Demos: Sales presentations showing software or hardware features to potential buyers. They can be live, pre-recorded videos, or interactive trials.Teaching Demos: Trial lessons where teachers showcase their classroom skills to a hiring committee.Music & Gaming Demos: Sample recordings of songs or trial versions of video games meant to give users a taste of the final release.	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d/thumbnail.jpeg?v=1788690365117	24999.00	19999.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 10:23:46.144+00	2026-09-06 10:23:21.75475+00	2026-09-06 10:26:08.08569+00
-17f620f4-ff2a-4c63-b63b-f9bc920c99ca	9c950693-2835-4088-8fdb-ae651820e3c0	Navigation-Part-I	navigation-part-i	\N	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/17f620f4-ff2a-4c63-b63b-f9bc920c99ca/thumbnail.jpeg?v=1788699209389	20000.00	15000.00	archived	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 13:10:48.927+00	2026-09-06 12:52:19.604544+00	2026-09-06 13:18:17.510154+00
+b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testing-Phase-I	testing-phase-i	The Aviation Course is designed to provide students with a strong understanding of the aviation and airline industry. It covers key areas such as airport operations, passenger handling, airline management, aviation safety, customer service, and basic industry procedures. The course helps students develop practical skills, professional communication, and industry knowledge needed to pursue exciting career opportunities in aviation and airport services.	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/b8434539-78f9-4e76-b6a7-d002cc006640/thumbnail.jpeg?v=1788606290508	999.00	499.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-05 11:02:50.183+00	2026-09-05 11:02:32.770246+00	2026-09-10 12:02:08.917901+00
+17f620f4-ff2a-4c63-b63b-f9bc920c99ca	9c950693-2835-4088-8fdb-ae651820e3c0	Navigation-Part-I	navigation-part-i	\N	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/17f620f4-ff2a-4c63-b63b-f9bc920c99ca/thumbnail.jpeg?v=1788875344430	20000.00	15000.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 13:10:48.927+00	2026-09-06 12:52:19.604544+00	2026-09-08 13:49:08.123389+00
 \.
 
 
@@ -869,12 +882,20 @@ b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testin
 --
 
 COPY public.devices (id, user_id, device_fingerprint, device_name, platform, last_active_at, created_at) FROM stdin;
-0a9aed9b-9791-4cbf-8442-88d0206b785c	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc3MjQzMSwiZXhwIjoxNzkxMzY0NDMxfQ.WgJEjE622C-XJNeZ_6DwlJooilIbE2gEUMWrhr065Hc	unknown	web	2026-09-07 09:13:51.904716+00	2026-09-07 09:13:51.904716+00
-1341c88f-57d7-4c51-8f01-fd396eb490d9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODc3MzA2NCwiZXhwIjoxNzkxMzY1MDY0fQ.cRhkDTHk3r1elwd3TpyvSmhml1aYRkXFZAx_NkEjj1s	unknown	web	2026-09-07 09:24:24.193116+00	2026-09-07 09:24:24.193116+00
-d35ef743-40bc-4e1a-ba7a-9ebdf5e16c23	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc3NDgzNywiZXhwIjoxNzkxMzY2ODM3fQ._SD_ZCtgXAS0-1lq8vLHw33CAoqcyGtW-iUh5iEGeBM	unknown	web	2026-09-07 09:53:57.365071+00	2026-09-07 09:53:57.365071+00
-d16c4ca5-9ee3-4a59-a70f-d65a81414acd	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4ODc4OTAzOCwiZXhwIjoxNzkxMzgxMDM4fQ.Gr9g9sjaAXegJBHpMo_SHJgFAJG2it5pDUrtr5qCFas	unknown	web	2026-09-07 13:50:38.935223+00	2026-09-07 13:50:38.935223+00
-e597c909-2c2a-4d50-9ab9-f0cf7362b61f	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc5MDM3MiwiZXhwIjoxNzkxMzgyMzcyfQ.P64qfuv1livX_MHG4hrkKw3obhtvHqBx64I86ZhX6bw	unknown	web	2026-09-07 14:12:52.605638+00	2026-09-07 14:12:52.605638+00
-036be48c-f42b-4308-834a-05af5bfa6405	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4ODc5MDY4MywiZXhwIjoxNzkxMzgyNjgzfQ.r3GRPpgG5Z5G5RcDq2ts1g_-Fddy9IW0FwUruFEQdfA	unknown	web	2026-09-07 14:18:03.751681+00	2026-09-07 14:18:03.751681+00
+a9780ffa-2ac5-42ed-86ac-ca928bf97e2f	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTA0MTI1OCwiZXhwIjoxNzkxNjMzMjU4fQ.On0Xr10NRy3SWHgsUlDqmFRs7Dyf2vmO-aPd65GbRMo	unknown	web	2026-09-10 11:54:18.371276+00	2026-09-10 11:54:18.371276+00
+b138ede6-c3b5-42eb-993c-73fc0ac84329	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4OTA0MTQ3NiwiZXhwIjoxNzkxNjMzNDc2fQ.HJq_-l6tOI8EF2IKzWFpIU7EC2yLxbvGC5j20FPW16A	unknown	web	2026-09-10 11:57:56.789318+00	2026-09-10 11:57:56.789318+00
+96f07c1e-fc02-43d4-aeec-bd367d5622aa	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI5ZDE3MGFlLWE5ZTAtNGRhYi04N2FkLThjZDRhYzgyYjNlOSIsImVtYWlsIjoidHBsbXMwMUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwNDE4NTksImV4cCI6MTc5MTYzMzg1OX0.G1karOBmN4XNYsKj7dKvb08Q3SJzFpdT1nvuaFr2Vr4	unknown	web	2026-09-10 12:04:19.455439+00	2026-09-10 12:04:19.455439+00
+bd764828-9349-4fb4-89be-e91262a2b948	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4OTA0MzQ4NSwiZXhwIjoxNzkxNjM1NDg1fQ.K8lWhImElB5TU-1wpYh9L4nGwyA8NzU9HkNHPHUA9Qc	unknown	web	2026-09-10 12:31:26.199213+00	2026-09-10 12:31:26.199213+00
+4cb3a441-b221-4f81-9d03-1148c36142d1	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI5ZDE3MGFlLWE5ZTAtNGRhYi04N2FkLThjZDRhYzgyYjNlOSIsImVtYWlsIjoidHBsbXMwMUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjM5OTQsImV4cCI6MTc5MTYxNTk5NH0.RTBpdLyYVTIO-pQ3S0UNWLoHA1xOMxaIOHnpzkozKPY	unknown	web	2026-09-10 07:06:34.282751+00	2026-09-10 07:06:34.282751+00
+01ecab7f-de7b-4a9e-86c1-23f4680aae8d	027fe0b1-5d20-4543-aa20-22843b83e39d	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyN2ZlMGIxLTVkMjAtNDU0My1hYTIwLTIyODQzYjgzZTM5ZCIsImVtYWlsIjoidHBsbXMwMkBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQxMjcsImV4cCI6MTc5MTYxNjEyN30.nnFKS-dA66OSCQJCWPrwHWmlyk39mElUYghm4z7v4kk	Web Browser	web	2026-09-10 07:08:47.359786+00	2026-09-10 07:08:47.359786+00
+1aca96cd-0492-403d-86f7-551f546c1eb9	027fe0b1-5d20-4543-aa20-22843b83e39d	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyN2ZlMGIxLTVkMjAtNDU0My1hYTIwLTIyODQzYjgzZTM5ZCIsImVtYWlsIjoidHBsbXMwMkBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQxNTksImV4cCI6MTc5MTYxNjE1OX0.Kha7rcbOv4pUAhCo61NhdGZTCZWIllE9YqcsMJHVbgA	unknown	web	2026-09-10 07:09:19.979328+00	2026-09-10 07:09:19.979328+00
+1c7f9550-098f-4dce-a17d-6d87ba4dd0c5	ac16bf89-3b9f-4dff-9229-6ceea67c483c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjMTZiZjg5LTNiOWYtNGRmZi05MjI5LTZjZWVhNjdjNDgzYyIsImVtYWlsIjoidHBsbXMwM0BhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQyMTYsImV4cCI6MTc5MTYxNjIxNn0.Rq7YQgpXgREAxAJUTmkegbWEzV-aH2x5gQ9p_uRVBdM	Web Browser	web	2026-09-10 07:10:17.291447+00	2026-09-10 07:10:17.291447+00
+9ed98255-4fcf-4448-a5e8-9192834f3b07	ac16bf89-3b9f-4dff-9229-6ceea67c483c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjMTZiZjg5LTNiOWYtNGRmZi05MjI5LTZjZWVhNjdjNDgzYyIsImVtYWlsIjoidHBsbXMwM0BhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQyMjUsImV4cCI6MTc5MTYxNjIyNX0.uMBb4Bglxjzr4EdXum7s8BXsgPZdCrxz1e3PKKhEPag	unknown	web	2026-09-10 07:10:25.524031+00	2026-09-10 07:10:25.524031+00
+1383427a-45f8-4a38-bd1f-3cb017cdc281	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhjODEyMGNiLTkyZjctNGU5ZS05NWY4LTFlZWE1ODIxZDNlZiIsImVtYWlsIjoidHBsbXMwNEBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQzNTMsImV4cCI6MTc5MTYxNjM1M30.e8XINhn6ETqPUaO6KYGFLRCpdNL6uwZF8IhjAe2YOf4	Web Browser	web	2026-09-10 07:12:34.069709+00	2026-09-10 07:12:34.069709+00
+7f2bb2ee-d97d-4203-a89f-781cedb39800	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhjODEyMGNiLTkyZjctNGU5ZS05NWY4LTFlZWE1ODIxZDNlZiIsImVtYWlsIjoidHBsbXMwNEBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQzODQsImV4cCI6MTc5MTYxNjM4NH0.HmjxKiWI9Ej4v8qctwso32QkxEMyxxPIwGv74e5bqgY	unknown	web	2026-09-10 07:13:04.957222+00	2026-09-10 07:13:04.957222+00
+4b55ce44-75a9-4d90-9a32-a938ae732922	439195c5-3e21-4eb6-b8fc-58a86ea95882	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQzOTE5NWM1LTNlMjEtNGViNi1iOGZjLTU4YTg2ZWE5NTg4MiIsImVtYWlsIjoidHBsbXMwNUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQ1MDAsImV4cCI6MTc5MTYxNjUwMH0.RJdCMvi9_W2geoejsedcZ6iUAwV04YZOaqrumA8kLsg	Web Browser	web	2026-09-10 07:15:00.934067+00	2026-09-10 07:15:00.934067+00
+eebe87f3-2d8d-4bf3-abf6-2537fe96fc88	439195c5-3e21-4eb6-b8fc-58a86ea95882	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQzOTE5NWM1LTNlMjEtNGViNi1iOGZjLTU4YTg2ZWE5NTg4MiIsImVtYWlsIjoidHBsbXMwNUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQ1MTcsImV4cCI6MTc5MTYxNjUxN30.nbSFzSitGxgRADfWm-QuPHUy0ySFvhajZFD6JxHZdiI	unknown	web	2026-09-10 07:15:17.314783+00	2026-09-10 07:15:17.314783+00
+d348e012-b1de-4e30-af9a-73d4ead645e9	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTAyNDU1MywiZXhwIjoxNzkxNjE2NTUzfQ.hFie_D_A5SQ6LddW0hwgW9OP-mjLz17mBMGxBEPKiw4	unknown	web	2026-09-10 07:15:53.114132+00	2026-09-10 07:15:53.114132+00
 \.
 
 
@@ -899,9 +920,12 @@ COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_mi
 --
 
 COPY public.enrollments (id, student_id, course_id, enrolled_at, status, completed_at, updated_at) FROM stdin;
-4c4d6bed-f7f2-472b-9e35-2d515db672c9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-06 13:11:36.47+00	active	\N	2026-09-06 13:11:36.521672+00
-00ad86c8-e707-4924-887c-a29a6c8b2e23	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	2026-09-06 15:14:25.803+00	active	\N	2026-09-06 15:14:25.857478+00
-cb016fd4-e073-46c0-9647-c78fa4b451f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-06 10:53:20.714+00	active	\N	2026-09-07 09:23:05.961003+00
+42e4c36d-3a76-4632-a7a4-2d938dadbdb0	2c919628-836c-4d18-abc9-2def9e21573a	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-09 09:05:14.666+00	completed	2026-09-09 09:17:55.051+00	2026-09-09 09:17:55.102062+00
+c6d46e52-297e-4dab-8501-7387b118573a	2c919628-836c-4d18-abc9-2def9e21573a	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-09 11:46:36.125+00	active	\N	2026-09-09 11:46:36.354939+00
+287e152a-48ed-4080-aa26-d4e6a9cd1158	439195c5-3e21-4eb6-b8fc-58a86ea95882	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-10 08:27:21.765+00	active	\N	2026-09-10 08:27:21.818151+00
+bd53a2eb-b80e-40bd-a847-fe350213110a	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-10 12:07:01.467+00	active	\N	2026-09-10 12:39:22.397674+00
+4c4d6bed-f7f2-472b-9e35-2d515db672c9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-06 13:11:36.47+00	completed	2026-09-08 15:05:06.047+00	2026-09-08 15:05:06.097318+00
+cb016fd4-e073-46c0-9647-c78fa4b451f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-06 10:53:20.714+00	completed	2026-09-09 05:20:01.227+00	2026-09-09 05:20:01.281803+00
 \.
 
 
@@ -916,9 +940,9 @@ COPY public.lessons (id, chapter_id, title, description, lesson_type, sort_order
 e82d3a0d-ff5b-4551-a376-1777f9f98c72	e4d45eb4-e03e-43e2-a580-59a376fdabca	Final Test	\N	test	1	t	\N	2026-09-05 11:16:52.33653+00	2026-09-05 11:16:52.33653+00
 b7304d3b-6618-4cd4-b52f-8d8ce583244a	d57a0791-d98b-43ec-b40c-dcc68959488f	Assignment 01	\N	assignment	3	t	\N	2026-09-05 11:18:55.182407+00	2026-09-05 11:18:55.182407+00
 6df80b8e-e552-4834-95a4-2c7c400435cb	ab7ae40b-4edb-47e4-8203-7f9670e7736f	Introduction to Navigations	\N	pdf	1	t	\N	2026-09-06 12:56:01.008202+00	2026-09-06 12:56:01.008202+00
-adaf23e3-ad60-417b-98b7-b63e7d9efe7c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1 Notes	Navigation Notes	pdf	2	t	\N	2026-09-06 12:58:13.736713+00	2026-09-06 12:58:13.736713+00
-decf63f1-f42d-48a4-b0cd-9d0f05971a7a	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1	<p>MacKenzie Scott has set a new milestone in her philanthropy to historically Black colleges and universities (HBCUs), with her latest donations taking her total giving to the institutions to more than $1 billion. The former wife of Amazon founder <a target="_blank" rel="noopener noreferrer nofollow" class="text-primary underline hover:text-primary/80 cursor-pointer" href="https://timesofindia.indiatimes.com/topic/jeff-bezos">Jeff Bezos</a>, who sold about half of her Amazon stake in 2020, has given tens of millions of dollar</p>	video	1	t	\N	2026-09-06 12:57:21.700265+00	2026-09-06 12:59:50.759978+00
 c4884aea-3279-4c09-a05a-82ad980e3ae0	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	Nav-Assignment	\N	assignment	3	t	\N	2026-09-06 13:00:17.108453+00	2026-09-06 13:00:17.108453+00
+decf63f1-f42d-48a4-b0cd-9d0f05971a7a	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1	<p><strong>Important:</strong> the product UI above is not the exact configuration I recommend; the exact best-value model is the <strong>ASUS Gaming V16 V3607VM-RP057WS</strong> below.</p><p><strong>ASUS Gaming V16 V3607VM-RP057WS</strong></p><ul class="list-disc list-outside ml-4 space-y-1"><li><p><strong>₹1,09,990</strong> on ASUS India</p></li><li><p><strong>Intel Core 7 240H</strong> — 10 cores / 16 threads, up to 5.2 GHz</p></li><li><p><strong>RTX 5060 Laptop GPU, 8GB GDDR7</strong></p></li><li><p><strong>16GB DDR5-5600</strong>, upgradeable to <strong>32GB</strong></p></li><li><p>512GB PCIe 4.0 SSD</p></li><li><p>16" 1920×1200 144Hz IPS</p></li><li><p>300 nits</p></li><li><p>1.95 kg</p></li><li><p>Windows 11 + Office Home 2024</p></li><li><p>63Wh battery</p></li><li><p>150W adapter</p></li></ul><p>ASUS itself currently lists it at <strong>₹1,09,990</strong> and shows it as an orderable product with free shipping; delivery eligibility is checked by entering the PIN code at checkout.</p>	video	1	t	\N	2026-09-06 12:57:21.700265+00	2026-09-07 14:41:08.236574+00
+adaf23e3-ad60-417b-98b7-b63e7d9efe7c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vid-1 Notes	<p>LMS stands for Learning Management System.</p><p>It is a software platform used to create, manage, and deliver online learning.</p><p>For example, a school or college might use an LMS to:</p><p>Share study materials and videos</p><p>Give assignments and quizzes</p><p>Track students’ progress</p><p>Conduct online classes</p><p>Manage grades and certificates</p><p>Examples: Moodle, Google Classroom, and Canvas.</p><p>In simple words, an LMS is like a digital classroom.</p>	pdf	2	t	\N	2026-09-06 12:58:13.736713+00	2026-09-08 02:10:39.148035+00
 \.
 
 
@@ -935,6 +959,17 @@ cb9a8b2e-9f9c-4bd1-b865-eeb14ad3b5fd	c7412dd5-8f70-4716-aa60-ac597baf36d7	studen
 e2611fa2-88e2-480a-a994-11a8fc33dcc1	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-07 at 15:35 (Chatper-1).	{"slot_id": "3292e001-7e4d-4f46-acfd-4c6b40b5cb0e", "booking_id": "6666de76-4c92-4a92-94cd-93b616e1eb0d", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	t	2026-09-07 10:06:08.967681+00
 7496c737-bd66-4d34-93f9-de91394b6a01	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-07 at 15:35 (Chatper-1).	{"slot_id": "3292e001-7e4d-4f46-acfd-4c6b40b5cb0e", "booking_id": "abca2c02-8380-44d6-a600-d196fe3c1503", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	t	2026-09-07 10:05:46.041944+00
 b35f386b-d818-4068-8afc-ac952549cfa8	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-87645	New Student (9898898998): Why my access is blocked.?	{"email": "hello@hello.com", "phone": "9898898998", "query_id": "352f4584-0a9f-45e6-a099-09c30f4fd59c", "query_number": "Q-87645"}	t	2026-09-07 14:12:43.816825+00
+98295834-31b4-4fe4-8459-d836d6e96c92	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-27461	Ramu (8080908090): I'm unaware of this platform.	{"email": "ramu@test.com", "phone": "8080908090", "query_id": "a2abe9b6-c87c-4398-8d97-fcc62e6d2067", "query_number": "Q-27461"}	t	2026-09-07 17:35:00.321652+00
+30f15a18-5d5b-4fac-bbfd-53318f3c30fd	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	announcement	hi	gi	{}	t	2026-09-09 05:25:24.71593+00
+0d07a7f2-4530-45c8-9802-e98a50994872	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: Navigation-Part-I (Navigation Chapter Queries)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-10 at 18:15. Book your slot now!	{}	f	2026-09-10 12:43:12.131625+00
+9ca755d7-3c9c-4059-9bc2-db614ef0d266	ac16bf89-3b9f-4dff-9229-6ceea67c483c	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
+98af2ee9-4301-4626-b152-d6984a7df13b	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
+e5e2a582-5338-420a-9bc7-f02e2f2ce929	439195c5-3e21-4eb6-b8fc-58a86ea95882	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
+7bf74299-775f-4718-b2a3-8045e23f5f8b	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
+fda9fc44-fe27-4bfb-9893-f037d4391488	027fe0b1-5d20-4543-aa20-22843b83e39d	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
+23113a30-8bdf-4ac9-a21e-179b27762806	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	t	2026-09-10 12:44:54.187817+00
+d71bc249-fe93-41fd-8a8e-06e35e70a249	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-10 at 18:16 (All students).	{"slot_id": "e2d64b0e-eac2-4b66-b7d8-97b71c1213c6", "booking_id": "8e0fc13a-49cf-4a3b-b1ac-955cf3282978", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	f	2026-09-10 12:45:23.728567+00
+a4df5fb1-7b63-4b43-b9f7-347b7d5bedc6	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	t	2026-09-10 12:44:54.187817+00
 \.
 
 
@@ -945,7 +980,11 @@ b35f386b-d818-4068-8afc-ac952549cfa8	c7412dd5-8f70-4716-aa60-ac597baf36d7	contac
 COPY public.payments (id, student_id, course_id, amount, discount_amount, razorpay_order_id, razorpay_payment_id, razorpay_signature, status, refund_reason, invoice_number, created_at, updated_at) FROM stdin;
 bf7ac66d-2940-4abe-9b95-27765f7eafa9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TYj0BiGHLmzXfH	pay_TYj0ayBHx69qro	d6813872c04bc29f000d97d3c561bf5afac23727d0adbdacd8d7a9e852dc89cf	completed	\N	INV-1788691956904-6EYR58	2026-09-06 10:52:36.966269+00	2026-09-06 10:53:20.646935+00
 b00a848a-1768-4e2a-a930-6b12337a8f95	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TYlMamX8voCK7b	pay_TYlMhpGuSePsA5	8be0d1c77fd0222a028da552263cb1aca428563ac518ecc4fabc16273549f554	completed	\N	INV-1788700272695-Z49TVZ	2026-09-06 13:11:12.756489+00	2026-09-06 13:11:36.418874+00
-e9971116-c49a-478b-bbd1-fabdb58a9f12	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2caf07b4-b647-4d2a-98cd-ea6d5dc8c62d	19999.00	5000.00	order_TYnS9Io2uafwbY	pay_TYnSQE8FLS9CK9	0459707bef6989b5b1faaea56d61e453c24b3f4d3a459c7d17cf5d0102b3d0fe	completed	\N	INV-1788707631553-RQXKUH	2026-09-06 15:13:51.621626+00	2026-09-06 15:14:25.701038+00
+acb9f99f-2a7f-45c5-bf82-58dd1b5ca243	2c919628-836c-4d18-abc9-2def9e21573a	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TZslWFBpLvZOWG	pay_TZsloRpQa2x0x6	2a7c42ea53c12a93858f1ac954c2f76e96aad1835481edcb0009152d12d36ffb	completed	\N	INV-1788944679951-O8SAA9	2026-09-09 09:04:40.003985+00	2026-09-09 09:05:14.60091+00
+6f681c41-fbe8-4f3c-8e0e-30f8f8687cc2	2c919628-836c-4d18-abc9-2def9e21573a	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TZvW4MNcDW4L4x	pay_TZvWGXpFmC9F6E	cad9773beb361949dc01bca2f4620e691d9be119a75ef3585a2c63b0ff8522c1	completed	\N	INV-1788954367252-HSQXGR	2026-09-09 11:46:07.340794+00	2026-09-09 11:46:36.048881+00
+d5c4c061-16df-470a-8943-2cda53e85442	439195c5-3e21-4eb6-b8fc-58a86ea95882	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaGeV7nv5waoo9	pay_TaGes8NCas71po	e19c34ca69408d702e52e51da87dd519b5e075421e94e7305a2f37fee4f459b9	completed	\N	INV-1789028800081-PPZHO3	2026-09-10 08:26:40.150567+00	2026-09-10 08:27:21.689586+00
+4477372a-ff8b-4618-9de5-b503e48eb165	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TaKGP6UpIsAjcT	\N	\N	pending	\N	INV-1789041517859-831YKD	2026-09-10 11:58:37.955073+00	2026-09-10 11:58:37.955073+00
+8cb6a958-771b-4508-b94a-082feb4e45ff	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaKOL0vlwgC3Uj	pay_TaKOwFrt8mydZg	6e29cefe5578c5e437251c0dd3900b3f92e3ad634390815f7312c131685e11f8	completed	\N	INV-1789041968459-1U9VQ4	2026-09-10 12:06:08.532594+00	2026-09-10 12:07:01.39473+00
 \.
 
 
@@ -965,8 +1004,14 @@ d7b4efd4-f647-481d-97f7-208ea66e74aa	adaf23e3-ad60-417b-98b7-b63e7d9efe7c	naviga
 --
 
 COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at) FROM stdin;
+ac16bf89-3b9f-4dff-9229-6ceea67c483c	tplms03@atomicmail.io	student	Technical Pilot 03	9889097898	\N	t	2026-09-10 07:09:49.675676+00	2026-09-10 07:09:49.786019+00
+8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	tplms04@atomicmail.io	student	Technical Pilot 04	9809909809	\N	t	2026-09-10 07:11:49.45116+00	2026-09-10 07:11:49.617251+00
+439195c5-3e21-4eb6-b8fc-58a86ea95882	tplms05@atomicmail.io	student	Qwerty@1	9889988899	\N	t	2026-09-10 07:13:38.858581+00	2026-09-10 07:13:39.223256+00
 c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-09-05 14:26:40.013197+00
 53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	luck28kudida@atomicmail.io	student	Student	9898656598	\N	t	2026-09-06 10:24:24.756663+00	2026-09-06 12:05:15.334094+00
+2c919628-836c-4d18-abc9-2def9e21573a	mohan819.tp@gmail.com	student	Mohan	9878767898	https://lh3.googleusercontent.com/a/ACg8ocJbq4bwrWsjaBn_HPrZk1KTYdsZr-LkD2EPcAFL4PO1N_yQLQ=s96-c	t	2026-09-09 05:22:23.5441+00	2026-09-09 09:03:57.694696+00
+b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	tplms01@atomicmail.io	student	Technical Pilot 01	9898878776	\N	t	2026-09-10 06:57:24.4559+00	2026-09-10 06:57:24.693815+00
+027fe0b1-5d20-4543-aa20-22843b83e39d	tplms02@atomicmail.io	student	Technical Pilot 02	9889878909	\N	t	2026-09-10 07:08:15.433687+00	2026-09-10 07:08:15.619111+00
 \.
 
 
@@ -976,11 +1021,24 @@ c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LM
 
 COPY public.progress (id, student_id, lesson_id, status, progress_percent, last_position_seconds, completed_at, updated_at) FROM stdin;
 c974554e-93c6-4bd2-a6e9-67b198800ab1	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	6df80b8e-e552-4834-95a4-2c7c400435cb	completed	100	0	2026-09-06 13:11:54.961+00	2026-09-06 13:11:55.012235+00
-0cb33985-b339-4d32-8abd-57712be35eca	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	completed	100	4	2026-09-06 13:18:56.838+00	2026-09-06 13:41:53.624837+00
+2931cae6-4f0f-4dc8-88aa-d89c562e74c5	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-10 12:33:42.522+00	2026-09-10 12:33:42.676787+00
+5ac066bc-553a-4a75-9814-1240468f3f32	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	c4884aea-3279-4c09-a05a-82ad980e3ae0	completed	100	0	2026-09-08 15:04:06.471+00	2026-09-08 15:04:06.522456+00
+ccba6ad7-defe-4d50-98ee-bafcb9fee440	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	adaf23e3-ad60-417b-98b7-b63e7d9efe7c	completed	100	0	2026-09-08 15:05:05.619+00	2026-09-08 15:05:05.68238+00
+b7193b64-ad1e-4e75-acb4-7a798bf5f74f	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	e82d3a0d-ff5b-4551-a376-1777f9f98c72	completed	100	0	2026-09-09 05:20:03.59+00	2026-09-09 05:20:03.681748+00
+3336b29a-8c61-4e53-b3ae-060159cbdf47	2c919628-836c-4d18-abc9-2def9e21573a	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-09 09:06:37.853+00	2026-09-09 09:06:37.901026+00
 76f89fc0-755a-44da-abcd-85ccbf0f5c61	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-07 09:53:29.851+00	2026-09-07 09:53:30.038043+00
+a815b685-bb58-4bbf-92e2-7f90d9e65829	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-10 12:34:07.692+00	2026-09-10 12:34:07.74748+00
 6f3bc546-b7c7-40b5-9628-e300394caf08	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-06 10:59:20.88+00	2026-09-06 10:59:20.966065+00
-87e5f941-f466-4e1b-96f0-34d9bd5e9d74	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-06 11:03:28.904+00	2026-09-06 11:03:28.953505+00
-a0db5de0-affd-4667-bba6-a7e3100d3f0b	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-06 11:03:57.501+00	2026-09-06 11:03:57.537539+00
+87e5f941-f466-4e1b-96f0-34d9bd5e9d74	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-08 12:52:09.605+00	2026-09-08 12:52:09.713554+00
+6d7b5e30-ca82-457d-ba3f-0719c5a1cafc	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-10 12:38:42.265+00	2026-09-10 12:38:42.318696+00
+a0db5de0-affd-4667-bba6-a7e3100d3f0b	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-08 12:52:17.269+00	2026-09-08 12:52:17.373034+00
+14a66eee-8bb7-49d7-b2e3-6f273ad472a3	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	e82d3a0d-ff5b-4551-a376-1777f9f98c72	in_progress	0	0	\N	2026-09-10 12:39:21.865134+00
+0cb33985-b339-4d32-8abd-57712be35eca	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	completed	100	9	2026-09-06 13:18:56.838+00	2026-09-10 12:43:24.936088+00
+d6a0c04f-5416-4f54-b95e-67a74a03f567	2c919628-836c-4d18-abc9-2def9e21573a	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-09 09:14:33.017+00	2026-09-09 09:14:33.066238+00
+a3719857-12e1-4aea-beb9-ba81aea6e2c4	2c919628-836c-4d18-abc9-2def9e21573a	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-09 09:15:30.788+00	2026-09-09 09:15:30.836142+00
+b91b8bb6-a8f7-4698-8dfc-3afbd3f00932	2c919628-836c-4d18-abc9-2def9e21573a	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-09 09:16:05.654+00	2026-09-09 09:16:05.706199+00
+e870c071-2703-4eaa-91d8-848296d61817	2c919628-836c-4d18-abc9-2def9e21573a	e82d3a0d-ff5b-4551-a376-1777f9f98c72	completed	100	0	2026-09-09 09:17:56.095+00	2026-09-09 09:17:56.149196+00
+31c90a55-719a-4f76-a4a8-b9bc71777fb8	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-10 12:30:11.663+00	2026-09-10 12:30:11.741531+00
 \.
 
 
@@ -1081,6 +1139,10 @@ e20cb148-13b3-448f-8f75-374d93899387	33a1d7c5-a5b9-4469-9279-3e561b009f4d	Wood	f
 fdc5a832-becb-49d1-8325-77a9bda2ba02	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	6	f	2	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
 691c9a9f-67dd-4cbc-9def-24532a001dec	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	8	t	3	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
 5949c23a-5609-4bda-b9e2-10e1a531e389	feb37145-7d85-42b6-b0f9-ab93dbecaeb8	10	f	4	2026-09-06 13:10:23.14462+00	2026-09-06 13:10:23.14462+00
+5b58151c-a93f-4648-a37e-bc76006902d9	9550acfb-b8a0-40f3-b073-650765c557c4	New York	f	1	2026-09-09 09:38:59.576602+00	2026-09-09 09:38:59.576602+00
+a0c3884e-d7c4-44e9-a663-b683f40ebc27	9550acfb-b8a0-40f3-b073-650765c557c4	Paris	t	2	2026-09-09 09:38:59.576602+00	2026-09-09 09:38:59.576602+00
+42d05d31-5d1e-4d5a-91b2-22fe4e1674ad	c9256184-8ed3-4405-9474-ecd92e11f554	2	t	1	2026-09-09 09:39:29.188826+00	2026-09-09 09:39:29.188826+00
+388b7270-19e1-4213-86b4-709a89c7008a	c9256184-8ed3-4405-9474-ecd92e11f554	3	t	2	2026-09-09 09:39:29.188826+00	2026-09-09 09:39:29.188826+00
 \.
 
 
@@ -1118,6 +1180,9 @@ d13c05b9-738a-4a13-8be2-520c223fd8c0	\N	Which of these are continents?	msq	1	Asi
 33a1d7c5-a5b9-4469-9279-3e561b009f4d	\N	Which of these are states of matter?	msq	1	Solid, liquid, and gas are common states of matter. Wood is a material, not a state of matter.	8	2026-09-06 13:10:22.152758+00	2026-09-06 13:10:22.152758+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	8	\N	Science
 3153127c-d24d-4a58-8f8c-bc06650016ed	\N	What gas do humans need to breathe?	text	2	Humans need oxygen for respiration and energy production.	9	2026-09-06 13:10:22.668694+00	2026-09-06 13:10:22.668694+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	9	Oxygen	Science
 feb37145-7d85-42b6-b0f9-ab93dbecaeb8	\N	How many legs does a spider have?	mcq	1	A spider has eight legs.	10	2026-09-06 13:10:22.922853+00	2026-09-06 13:10:22.922853+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	10	\N	Science
+9550acfb-b8a0-40f3-b073-650765c557c4	\N	What is the capital of France?	mcq	1	Paris has been the capital since the 12th century.	11	2026-09-09 09:38:59.18847+00	2026-09-09 09:38:59.18847+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	11	\N	Geography
+09f14687-c1fa-48a5-882b-b3f9d067cfb6	\N	What is 2+2=?	text	2	2+2 = 4	13	2026-09-09 09:39:00.301631+00	2026-09-09 09:39:00.301631+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	13	4	Mathematics
+c9256184-8ed3-4405-9474-ecd92e11f554	\N	Which of these are prime numbers?	msq	1	2 and 5 are prime	12	2026-09-09 09:38:59.69712+00	2026-09-09 09:39:28.943613+00	4d8bdb1b-579b-4d1b-a590-dc1e9d060dc8	12	\N	Mathematics
 \.
 
 
@@ -1128,7 +1193,8 @@ feb37145-7d85-42b6-b0f9-ab93dbecaeb8	\N	How many legs does a spider have?	mcq	1	
 COPY public.student_queries (id, student_id, subject, body, status, admin_reply, replied_by, replied_at, created_at, updated_at, type, metadata) FROM stdin;
 2a797c15-d7e6-4611-a837-a1902456a5df	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	Extra attempt request: Assignment 01	All attempts have been used without a passing score. Requesting one additional attempt.	answered	Approved. You have been granted 1 additional attempt.	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 12:34:53.525+00	2026-09-06 11:20:14.091174+00	2026-09-06 12:34:53.57132+00	extra_attempt_request	{"lesson_id": "b7304d3b-6618-4cd4-b52f-8d8ce583244a", "query_number": "Q-30317", "assignment_id": "6dcd5851-86ee-42cb-bd71-52e7f2b2d3f0", "attempts_used": 1, "assessment_type": "assignment"}
 97e95d70-81b1-409d-8a75-c176181ded23	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	This is a test message	Hi Sir.!	answered	Hello.!	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 12:35:17.795+00	2026-09-06 11:39:23.594407+00	2026-09-06 12:35:17.849268+00	general	{"query_number": "Q-63994"}
-352f4584-0a9f-45e6-a099-09c30f4fd59c	\N	Why my access is blocked.?	Please reply.	open	\N	\N	\N	2026-09-07 14:12:43.324645+00	2026-09-07 14:12:43.324645+00	contact_form	{"is_guest": true, "guest_name": "New Student", "guest_email": "hello@hello.com", "guest_phone": "9898898998", "query_number": "Q-87645"}
+a2abe9b6-c87c-4398-8d97-fcc62e6d2067	\N	I'm unaware of this platform.	Please guide me through the platform.	answered	Ok	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-08 02:08:07.89+00	2026-09-07 17:34:59.665617+00	2026-09-08 02:08:07.946186+00	contact_form	{"is_guest": true, "guest_name": "Ramu", "guest_email": "ramu@test.com", "guest_phone": "8080908090", "query_number": "Q-27461"}
+352f4584-0a9f-45e6-a099-09c30f4fd59c	\N	Why my access is blocked.?	Please reply.	answered	Ok	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-08 02:08:15.088+00	2026-09-07 14:12:43.324645+00	2026-09-08 02:08:15.146601+00	contact_form	{"is_guest": true, "guest_name": "New Student", "guest_email": "hello@hello.com", "guest_phone": "9898898998", "query_number": "Q-87645"}
 \.
 
 
@@ -1161,6 +1227,9 @@ COPY public.test_answers (id, attempt_id, question_id, selected_option_id, text_
 --
 
 COPY public.test_attempts (id, test_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds, created_at, updated_at) FROM stdin;
+f0bdd232-e8a7-4afa-8e15-178cfb95d4ed	bd505e3d-b811-4212-87a8-0521b4a42385	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	2026-09-09 05:19:19.106+00	2026-09-09 05:19:58.087+00	12	12	39	2026-09-09 05:19:19.18362+00	2026-09-09 05:19:58.642334+00
+8f55bfc7-9475-4118-ae5f-e87c57eff071	bd505e3d-b811-4212-87a8-0521b4a42385	2c919628-836c-4d18-abc9-2def9e21573a	2026-09-09 09:17:23.002+00	2026-09-09 09:17:52.528+00	12	12	30	2026-09-09 09:17:23.046117+00	2026-09-09 09:17:53.026421+00
+1e7bccf7-a80a-4e88-a645-96cf8af60360	bd505e3d-b811-4212-87a8-0521b4a42385	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	2026-09-10 12:39:16.668+00	2026-09-10 12:39:19.885+00	0	12	3	2026-09-10 12:39:16.736791+00	2026-09-10 12:39:20.225298+00
 \.
 
 
@@ -1180,7 +1249,7 @@ bd505e3d-b811-4212-87a8-0521b4a42385	e82d3a0d-ff5b-4551-a376-1777f9f98c72	Final 
 COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, thumbnail_url, created_at, updated_at) FROM stdin;
 741b99de-5824-478c-97c0-d52c0c581b99	4827d058-7606-4146-bea2-bc391b05a85c	a958b263d5864763a7f567efde5f5221	\N	\N	2026-09-05 11:08:10.987783+00	2026-09-05 11:09:00.424894+00
 46680f36-d073-466b-b368-c06d3f8405fa	597ccd87-b524-4446-a648-e397ab4fffaf	fd778b64448b4afcb2100b794fd5fccc	\N	\N	2026-09-05 11:09:26.615899+00	2026-09-05 11:09:26.615899+00
-2d000a97-2088-42fb-9db2-d5c089d9bcf0	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	f192641d1e144c8580e13ac6084ccc6f	\N	\N	2026-09-06 12:57:27.327262+00	2026-09-06 12:57:27.327262+00
+2d000a97-2088-42fb-9db2-d5c089d9bcf0	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	f192641d1e144c8580e13ac6084ccc6f	\N	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/video-thumbnails/decf63f1-f42d-48a4-b0cd-9d0f05971a7a.jpeg	2026-09-06 12:57:27.327262+00	2026-09-08 13:33:37.09968+00
 \.
 
 
@@ -1189,9 +1258,11 @@ COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, 
 --
 
 COPY public.video_sessions (id, user_id, lesson_id, ip_address, user_agent, created_at, expires_at) FROM stdin;
-6a0ab20c-dcf4-4713-81cf-26e984f3bfe7	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,3.88.33.251, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:12:15.698765+00	2026-09-06 13:27:15.641+00
-c4b646e8-c5ab-4354-8dfa-0c50f333be86	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,54.87.240.41, 104.22.66.68, 10.24.8.245	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:12:38.108999+00	2026-09-06 13:27:38.048+00
-38fe9486-53cb-42ea-9e98-3b7488ce4614	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	103.240.234.193,3.88.33.251, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-06 13:18:51.467425+00	2026-09-06 13:33:51.401+00
+780fe4c5-a14b-496c-9f82-d3cb82facd0d	2c919628-836c-4d18-abc9-2def9e21573a	4827d058-7606-4146-bea2-bc391b05a85c	136.226.244.100,100.30.201.22, 172.70.174.234, 10.24.8.245	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-09 09:13:44.326058+00	2026-09-09 09:28:44.274+00
+6379165d-b3d5-470c-be37-b926cfcb1d18	2c919628-836c-4d18-abc9-2def9e21573a	597ccd87-b524-4446-a648-e397ab4fffaf	136.226.244.100,3.87.155.243, 172.71.124.247, 10.30.43.217	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-09 09:14:34.503636+00	2026-09-09 09:29:34.115+00
+13343717-240a-40ab-8992-d34c6ede14a7	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:31:45.639761+00	2026-09-10 12:46:45.446+00
+dabcfa49-4fe9-4e48-9867-eac871a57a04	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	4827d058-7606-4146-bea2-bc391b05a85c	103.240.233.140,13.223.82.211, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:33:15.967059+00	2026-09-10 12:48:15.919+00
+1fa2ee0c-05d7-4986-b702-01b7becaadd5	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	103.240.233.140,3.81.118.16, 162.158.162.103, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:33:43.425982+00	2026-09-10 12:48:43.372+00
 \.
 
 
@@ -3326,5 +3397,5 @@ ALTER TABLE public.video_sessions ENABLE ROW LEVEL SECURITY;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6fN1zg3l2j6s6y3fZYzxIgVl9AurtwbSIUAbGLuDSRuAgoZsKOlrYnmxriOxnhZ
+\unrestrict SFQLGglcEw7TqBWkTdaaTmXpd3XNNu7nnn5caQYdxcgg0bE0zWMwbh9bYDR5WLy
 

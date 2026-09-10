@@ -1,12 +1,8 @@
-import { HttpModule } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import {
-  DiskHealthIndicator,
   HealthCheckService,
-  HttpHealthIndicator,
   MemoryHealthIndicator,
   TerminusModule,
-  TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
@@ -16,7 +12,7 @@ describe('HealthController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [TerminusModule, HttpModule],
+      imports: [TerminusModule],
       controllers: [HealthController],
       providers: [
         {
@@ -26,42 +22,12 @@ describe('HealthController', () => {
           },
         },
         {
-          provide: HttpHealthIndicator,
-          useValue: {
-            pingCheck: jest
-              .fn()
-              .mockReturnValue(() =>
-                Promise.resolve({ http: { status: 'up' } }),
-              ),
-          },
-        },
-        {
-          provide: TypeOrmHealthIndicator,
-          useValue: {
-            pingCheck: jest
-              .fn()
-              .mockReturnValue(() =>
-                Promise.resolve({ database: { status: 'up' } }),
-              ),
-          },
-        },
-        {
-          provide: DiskHealthIndicator,
-          useValue: {
-            checkStorage: jest
-              .fn()
-              .mockReturnValue(() =>
-                Promise.resolve({ disk: { status: 'up' } }),
-              ),
-          },
-        },
-        {
           provide: MemoryHealthIndicator,
           useValue: {
             checkHeap: jest
               .fn()
               .mockReturnValue(() =>
-                Promise.resolve({ memory: { status: 'up' } }),
+                Promise.resolve({ memory_heap: { status: 'up' } }),
               ),
           },
         },
