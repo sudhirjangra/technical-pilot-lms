@@ -66,24 +66,32 @@ export const DoubtBookingSuccessMail = ({
             ${startTime.slice(0, 5)}${endTime ? ` - ${endTime.slice(0, 5)}` : ''}
           </td>
         </tr>
-        ${meetingLink ? `
+        ${
+          meetingLink
+            ? `
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Meeting Link:</td>
           <td style="padding:6px 0;text-align:right;">
             <a href="${meetingLink}" style="color:#2563eb;text-decoration:underline;font-weight:500;" target="_blank">Join Meeting</a>
           </td>
         </tr>
-        ` : ''}
+        `
+            : ''
+        }
       </table>
     </div>
 
-    ${meetingLink ? `
+    ${
+      meetingLink
+        ? `
     <div style="text-align:center;margin:28px 0 20px;">
       <a href="${meetingLink}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;font-size:15px;" target="_blank">
         Open Meeting Room
       </a>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <p style="font-size:13px;line-height:1.5;color:#6b7280;margin:20px 0 0;">
       Please join 5 minutes prior to the scheduled start time with your questions prepared.

@@ -10,4 +10,3 @@ import { EnrollmentsService } from './enrollments.service';
   exports: [EnrollmentsService],
 })
 export class EnrollmentsModule {}
-

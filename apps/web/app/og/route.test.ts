@@ -1,9 +1,16 @@
 import { NextRequest } from 'next/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { GET } from './route';
 
 describe('OG Image Route', () => {
   it('Returns a valid ImageResponse', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      }),
+    );
+
     // Mock NextRequest with title and description params
     const url = new URL(
       'http://localhost/api/og?title=Test+Title&description=Test+Desc',
@@ -16,5 +23,6 @@ describe('OG Image Route', () => {
 
     expect(res).toBeInstanceOf(Response); // or ImageResponse
     expect(res.headers.get('Content-Type')).toBe('image/png');
+    vi.unstubAllGlobals();
   });
 });

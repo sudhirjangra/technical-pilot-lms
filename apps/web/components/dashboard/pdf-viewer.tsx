@@ -13,14 +13,14 @@ const PDFDocument = dynamic(
 interface PDFViewerProps {
   lessonId: string;
   studentEmail?: string;
+  lessonTitle?: string;
 }
 
 /**
- * PDF viewer component with watermark overlay.
- * Shows "Content Reserved" watermark 2x per page, light visible.
- * Loads protected PDF bytes through the application proxy.
+ * PDF viewer component.
+ * Loads protected PDF bytes through the application proxy and allows secure downloads for enrolled students.
  */
-export function PDFViewer({ lessonId, studentEmail }: PDFViewerProps) {
+export function PDFViewer({ lessonId, studentEmail, lessonTitle }: PDFViewerProps) {
   const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,5 +58,5 @@ export function PDFViewer({ lessonId, studentEmail }: PDFViewerProps) {
     );
   }
 
-  return <PDFDocument pdfData={pdfData} />;
+  return <PDFDocument pdfData={pdfData} lessonTitle={lessonTitle} />;
 }

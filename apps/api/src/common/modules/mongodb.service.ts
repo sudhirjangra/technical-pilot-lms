@@ -80,12 +80,15 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly config: ConfigService) {
     this.uri = this.config.get<string>('MONGODB_URI') || '';
-    this.dbName = this.config.get<string>('MONGODB_DB_NAME') || 'technical_pilot_lms';
+    this.dbName =
+      this.config.get<string>('MONGODB_DB_NAME') || 'technical_pilot_lms';
   }
 
   async onModuleInit() {
     if (!this.uri) {
-      this.logger.warn('MONGODB_URI is not set. MongoDB operations will be skipped.');
+      this.logger.warn(
+        'MONGODB_URI is not set. MongoDB operations will be skipped.',
+      );
       return;
     }
 
@@ -120,7 +123,10 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
       const attemptsCollection = this.getAttemptsCollection();
       await attemptsCollection.createIndex({ attempt_id: 1 }, { unique: true });
       await attemptsCollection.createIndex({ student_id: 1, assessment_id: 1 });
-      await attemptsCollection.createIndex({ student_id: 1, assessment_type: 1 });
+      await attemptsCollection.createIndex({
+        student_id: 1,
+        assessment_type: 1,
+      });
       await attemptsCollection.createIndex({ assessment_id: 1 });
       await attemptsCollection.createIndex({ created_at: -1 });
     } catch (error) {
@@ -151,9 +157,13 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async saveAttempt(doc: Omit<MongoAttemptDocument, 'created_at' | 'updated_at'>): Promise<void> {
+  async saveAttempt(
+    doc: Omit<MongoAttemptDocument, 'created_at' | 'updated_at'>,
+  ): Promise<void> {
     if (!this.isConnected()) {
-      this.logger.warn(`MongoDB not connected. Skipping MongoDB persist for attempt ${doc.attempt_id}`);
+      this.logger.warn(
+        `MongoDB not connected. Skipping MongoDB persist for attempt ${doc.attempt_id}`,
+      );
       return;
     }
 

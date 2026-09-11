@@ -1,4 +1,4 @@
-import { ArrayNotEmpty, IsArray, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export const ALL_PERMISSIONS = [
   'courses:read',
@@ -20,6 +20,8 @@ export const ALL_PERMISSIONS = [
   'reports:export',
   'notifications:read',
   'notifications:manage',
+  'referrals:read',
+  'referrals:manage',
 ] as const;
 
 export type Permission = (typeof ALL_PERMISSIONS)[number];

@@ -29,6 +29,7 @@ import {
   ConfirmEmailSuccessMail,
   SignInSuccessMail,
 } from '@/features/mail/templates';
+import { ReferralsService } from '@/features/referrals/referrals.service';
 import {
   BadRequestException,
   Inject,
@@ -52,6 +53,7 @@ export class AuthService {
     @Inject(SUPABASE_ANON)
     private readonly supabaseAnon: SupabaseClient,
     private readonly mailService: MailService,
+    private readonly referralsService: ReferralsService,
     private readonly logger: Logger,
   ) {}
 
@@ -194,6 +196,24 @@ export class AuthService {
       throw new BadRequestException('Registration failed. Please try again.');
     }
 
+    // Ensure newly registered user has a unique TP referral code
+    await this.referralsService.ensureUserReferralCode(userId);
+
+    // Process referral code if student was referred by someone
+    if (dto.referral_code) {
+      try {
+        await this.referralsService.processSignupReferral(
+          userId,
+          dto.referral_code,
+        );
+      } catch (refErr) {
+        this.logger.warn(
+          { refErr, userId, referralCode: dto.referral_code },
+          'Failed to process signup referral',
+        );
+      }
+    }
+
     const { error: resendError } = await this.supabaseAnon.auth.resend({
       type: 'signup',
       email: dto.email,
@@ -312,16 +332,17 @@ export class AuthService {
 
     if (!authUser) {
       // Create new user in Supabase Auth
-      const { data: authData, error } = await this.supabase.auth.admin.createUser({
-        email: dto.email,
-        email_confirm: true, // Google emails are pre-verified
-        user_metadata: {
-          full_name: dto.name,
-          avatar_url: dto.image,
-          provider: 'google',
-          provider_id: dto.sub,
-        },
-      });
+      const { data: authData, error } =
+        await this.supabase.auth.admin.createUser({
+          email: dto.email,
+          email_confirm: true, // Google emails are pre-verified
+          user_metadata: {
+            full_name: dto.name,
+            avatar_url: dto.image,
+            provider: 'google',
+            provider_id: dto.sub,
+          },
+        });
 
       if (error) {
         this.logger.error(
@@ -334,17 +355,19 @@ export class AuthService {
       authUser = authData.user;
 
       // Create profile with Google info
-      const { error: profileError } = await this.supabase.from('profiles').upsert(
-        {
-          id: authUser.id,
-          email: dto.email,
-          role: 'student',
-          full_name: dto.name,
-          avatar_url: dto.image,
-          phone: null,
-        },
-        { onConflict: 'id' },
-      );
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: authUser.id,
+            email: dto.email,
+            role: 'student',
+            full_name: dto.name,
+            avatar_url: dto.image,
+            phone: null,
+          },
+          { onConflict: 'id' },
+        );
 
       if (profileError) {
         this.logger.error(
@@ -352,7 +375,9 @@ export class AuthService {
           'Profile upsert failed for Google sign-in, rolling back auth user',
         );
         await this.supabase.auth.admin.deleteUser(authUser.id);
-        throw new BadRequestException('Google sign-in failed. Please try again.');
+        throw new BadRequestException(
+          'Google sign-in failed. Please try again.',
+        );
       }
     } else {
       // User exists, update profile with Google info if missing
@@ -363,12 +388,18 @@ export class AuthService {
         .single();
 
       if (profile && (!profile.full_name || !profile.avatar_url)) {
-        await this.supabase.from('profiles').update({
-          full_name: profile.full_name ?? dto.name,
-          avatar_url: profile.avatar_url ?? dto.image,
-        }).eq('id', authUser.id);
+        await this.supabase
+          .from('profiles')
+          .update({
+            full_name: profile.full_name ?? dto.name,
+            avatar_url: profile.avatar_url ?? dto.image,
+          })
+          .eq('id', authUser.id);
       }
     }
+
+    // Ensure Google user has a unique TP referral code
+    await this.referralsService.ensureUserReferralCode(authUser.id);
 
     // Get profile data
     const { data: profile, error: profileError } = await this.supabase
@@ -431,7 +462,10 @@ export class AuthService {
         }),
       });
     } catch (mailError) {
-      this.logger.warn({ mailError }, 'Mail delivery failed during Google sign-in');
+      this.logger.warn(
+        { mailError },
+        'Mail delivery failed during Google sign-in',
+      );
     }
 
     return {
@@ -445,7 +479,10 @@ export class AuthService {
     };
   }
 
-  async completeProfile(userId: string, dto: CompleteProfileDto): Promise<void> {
+  async completeProfile(
+    userId: string,
+    dto: CompleteProfileDto,
+  ): Promise<void> {
     const { error } = await this.supabase
       .from('profiles')
       .update({
@@ -459,7 +496,27 @@ export class AuthService {
         { error: error.message, userId },
         'Failed to complete profile',
       );
-      throw new BadRequestException('Failed to update profile. Please try again.');
+      throw new BadRequestException(
+        'Failed to update profile. Please try again.',
+      );
+    }
+
+    // Ensure referral code is assigned
+    await this.referralsService.ensureUserReferralCode(userId);
+
+    // Process referral code if provided
+    if (dto.referral_code) {
+      try {
+        await this.referralsService.processSignupReferral(
+          userId,
+          dto.referral_code,
+        );
+      } catch (refErr) {
+        this.logger.warn(
+          { refErr, userId, referralCode: dto.referral_code },
+          'Failed to process referral code during profile completion',
+        );
+      }
     }
   }
 
@@ -489,6 +546,14 @@ export class AuthService {
     }
   }
 
+  async checkEmailStatus(email: string): Promise<{ isConfirmed: boolean }> {
+    const authUser = await this.getUserByEmail(email);
+    if (!authUser) {
+      return { isConfirmed: false };
+    }
+    return { isConfirmed: Boolean(authUser.email_confirmed_at) };
+  }
+
   async confirmEmail(dto: ConfirmEmailDto): Promise<LoginUserInterface> {
     let verifyError: any = null;
     const { error: signupError } = await this.supabaseAnon.auth.verifyOtp({
@@ -508,7 +573,11 @@ export class AuthService {
 
     if (signupError && verifyError) {
       this.logger.error(
-        { signupError: signupError.message, verifyError: verifyError?.message, email: dto.email },
+        {
+          signupError: signupError.message,
+          verifyError: verifyError?.message,
+          email: dto.email,
+        },
         'OTP verification failed',
       );
       throw new BadRequestException(
@@ -525,7 +594,10 @@ export class AuthService {
         email_confirm: true,
       });
     } catch (e) {
-      this.logger.warn({ error: e }, 'Failed to set email_confirm in admin auth');
+      this.logger.warn(
+        { error: e },
+        'Failed to set email_confirm in admin auth',
+      );
     }
 
     const { data: profile, error: profileError } = await this.supabase
@@ -575,7 +647,10 @@ export class AuthService {
       existingDevices.length > 0
     ) {
       // Remove oldest device to ensure clean onboarding
-      await this.supabase.from('devices').delete().eq('id', existingDevices[0].id);
+      await this.supabase
+        .from('devices')
+        .delete()
+        .eq('id', existingDevices[0].id);
     }
 
     const deviceName = dto.device_name ?? 'Web Browser';
@@ -687,7 +762,8 @@ export class AuthService {
   }
 
   async changePassword(dto: ChangePasswordDto): Promise<void> {
-    if (!dto.identifier) throw new BadRequestException('Identifier is required');
+    if (!dto.identifier)
+      throw new BadRequestException('Identifier is required');
     const authUser = await this.getUserByEmail(dto.identifier);
     if (!authUser) throw new NotFoundException('User not found');
 
@@ -907,37 +983,44 @@ export class AuthService {
     if (!authUser) {
       // Create new user in Supabase Auth (they already exist in Supabase Auth via OAuth)
       // We just need to create the profile
-      const { data: supabaseUsers, error: listError } = await this.supabase.auth.admin.listUsers();
+      const { data: supabaseUsers, error: listError } =
+        await this.supabase.auth.admin.listUsers();
       if (listError) {
-        throw new InternalServerErrorException('Failed to find user in Supabase Auth');
+        throw new InternalServerErrorException(
+          'Failed to find user in Supabase Auth',
+        );
       }
-      
-      const foundUser = supabaseUsers.users.find(u => u.email === dto.email);
-      
+
+      const foundUser = supabaseUsers.users.find((u) => u.email === dto.email);
+
       if (!foundUser) {
         throw new NotFoundException('User not found in Supabase Auth');
       }
       authUser = foundUser;
 
       // Create profile with Supabase OAuth info
-      const { error: profileError } = await this.supabase.from('profiles').upsert(
-        {
-          id: authUser.id,
-          email: dto.email,
-          role: 'student',
-          full_name: dto.name,
-          avatar_url: dto.avatar_url,
-          phone: null,
-        },
-        { onConflict: 'id' },
-      );
+      const { error: profileError } = await this.supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: authUser.id,
+            email: dto.email,
+            role: 'student',
+            full_name: dto.name,
+            avatar_url: dto.avatar_url,
+            phone: null,
+          },
+          { onConflict: 'id' },
+        );
 
       if (profileError) {
         this.logger.error(
           { profileError: profileError.message, userId: authUser.id },
           'Profile upsert failed for Supabase sync',
         );
-        throw new BadRequestException('Failed to create profile. Please try again.');
+        throw new BadRequestException(
+          'Failed to create profile. Please try again.',
+        );
       }
     } else {
       // User exists, update profile with OAuth info if missing
@@ -948,10 +1031,13 @@ export class AuthService {
         .single();
 
       if (profile && (!profile.full_name || !profile.avatar_url)) {
-        await this.supabase.from('profiles').update({
-          full_name: profile.full_name ?? dto.name,
-          avatar_url: profile.avatar_url ?? dto.avatar_url,
-        }).eq('id', authUser.id);
+        await this.supabase
+          .from('profiles')
+          .update({
+            full_name: profile.full_name ?? dto.name,
+            avatar_url: profile.avatar_url ?? dto.avatar_url,
+          })
+          .eq('id', authUser.id);
       }
     }
 
@@ -1021,7 +1107,10 @@ export class AuthService {
         }),
       });
     } catch (mailError) {
-      this.logger.warn({ mailError }, 'Mail delivery failed during Supabase sync sign-in');
+      this.logger.warn(
+        { mailError },
+        'Mail delivery failed during Supabase sync sign-in',
+      );
     }
 
     return {

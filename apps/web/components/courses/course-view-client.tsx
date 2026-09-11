@@ -6,11 +6,14 @@ import {
   createPaymentOrder,
   enrollFreeCourse,
   PublicCourse,
+  validateCourseCoupon,
+  CouponValidationResult,
   verifyPayment,
 } from '@/server/student/courses.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
+import { Input } from '@repo/shadcn/input';
 import { Separator } from '@repo/shadcn/separator';
 import { toast } from '@repo/shadcn/sonner';
 import {
@@ -64,9 +67,37 @@ export function CourseViewClient({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidationResult | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   const effectivePrice = course.discount_price ?? course.price;
   const isFree = Number(effectivePrice) === 0;
+  const finalPrice = appliedCoupon ? appliedCoupon.final_price : effectivePrice;
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+    setValidatingCoupon(true);
+    const { error, result } = await validateCourseCoupon(couponCode, course.id);
+    setValidatingCoupon(false);
+
+    if (error || !result) {
+      toast.error(error ?? 'Invalid coupon code');
+      return;
+    }
+
+    setAppliedCoupon(result);
+    toast.success(`Coupon applied! You saved ₹${result.discount_amount}`);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    toast.info('Coupon removed');
+  };
 
   const handleEnrollFree = async () => {
     setLoading(true);
@@ -82,7 +113,10 @@ export function CourseViewClient({
 
   const handlePayment = async () => {
     setLoading(true);
-    const orderResult = await createPaymentOrder(course.id);
+    const orderResult = await createPaymentOrder(
+      course.id,
+      appliedCoupon?.code,
+    );
     if (orderResult.error || !orderResult.order) {
       setLoading(false);
       toast.error(orderResult.error ?? 'Unable to start payment');
@@ -181,9 +215,10 @@ export function CourseViewClient({
             {course.description && (
               <div>
                 <h2 className="text-base font-semibold mb-2">About this course</h2>
-                <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                  <p>{course.description}</p>
-                </div>
+                <div
+                  className="prose-article prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: course.description }}
+                />
               </div>
             )}
 
@@ -223,6 +258,23 @@ export function CourseViewClient({
                 <div>
                   {isFree ? (
                     <span className="text-3xl font-bold text-green-600">Free</span>
+                  ) : appliedCoupon ? (
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                          ₹{appliedCoupon.final_price}
+                        </span>
+                        <span className="text-lg text-muted-foreground line-through">
+                          ₹{effectivePrice}
+                        </span>
+                        <Badge variant="default" className="bg-emerald-600 text-white">
+                          {appliedCoupon.discount_percentage}% OFF
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        Coupon {appliedCoupon.code} applied (-₹{appliedCoupon.discount_amount})
+                      </p>
+                    </div>
                   ) : course.discount_price ? (
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl font-bold">₹{course.discount_price}</span>
@@ -235,6 +287,52 @@ export function CourseViewClient({
                     <span className="text-3xl font-bold">₹{course.price}</span>
                   )}
                 </div>
+
+                {/* Coupon input for enrolled/paying students */}
+                {!isFree && !isEnrolled && isLoggedIn && course.status !== 'archived' && (
+                  <div className="pt-1">
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300">
+                          <Tag className="size-3.5" />
+                          <span>Code: {appliedCoupon.code}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          onClick={handleRemoveCoupon}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Referral or coupon code"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            className="h-9 text-xs uppercase"
+                            disabled={validatingCoupon}
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-9 px-3 text-xs"
+                            onClick={handleApplyCoupon}
+                            disabled={validatingCoupon || !couponCode.trim()}
+                          >
+                            {validatingCoupon ? 'Checking...' : 'Apply'}
+                          </Button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Have a referral code from a friend? Enter it for an exclusive discount.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <Separator />
 
@@ -260,7 +358,7 @@ export function CourseViewClient({
                       </Button>
                     ) : (
                       <Button size="lg" className="w-full" onClick={handlePayment} disabled={loading}>
-                        {loading ? 'Processing...' : `Enroll — ₹${effectivePrice}`}
+                        {loading ? 'Processing...' : `Enroll — ₹${finalPrice}`}
                       </Button>
                     )
                   ) : (

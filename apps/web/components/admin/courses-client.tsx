@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@repo/shadcn/table';
 import { Textarea } from '@repo/shadcn/textarea';
+import { RichTextEditor } from '@repo/shadcn/rich-text-editor';
 import { sanitizeSlugInput, slugify } from '@repo/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -599,15 +600,18 @@ export function CoursesClient({
               </Select>
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="course-description">Description</Label>
-              <Textarea
-                id="course-description"
-                rows={4}
-                value={draft.description}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, description: event.target.value }))
-                }
-              />
+              <Label>Description</Label>
+              {dialogOpen && (
+                <RichTextEditor
+                  key={editingId ?? 'new-course'}
+                  value={draft.description}
+                  onChange={(html) =>
+                    setDraft((current) => ({ ...current, description: html }))
+                  }
+                  minHeight="min-h-[160px]"
+                  className="mt-1"
+                />
+              )}
             </div>
             <div className="space-y-1 sm:col-span-2">
               <Label htmlFor="course-thumbnail">Thumbnail</Label>

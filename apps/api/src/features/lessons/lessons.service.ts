@@ -1,4 +1,5 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { generateNotePdf } from '@/common/utils/pdf-generator.util';
 import {
   BadRequestException,
   Inject,
@@ -20,31 +21,54 @@ export class LessonsService {
   async uploadPdf(lessonId: string, request: FastifyRequest) {
     const { data: lesson } = await this.supabase
       .from('lessons')
-      .select('id, title, lesson_type, chapter_id, chapters(title, courses(slug))')
+      .select(
+        'id, title, lesson_type, chapter_id, chapters(title, courses(slug))',
+      )
       .eq('id', lessonId)
       .single();
     if (!lesson) throw new NotFoundException('Lesson not found');
     if (lesson.lesson_type !== 'pdf')
       throw new BadRequestException('Lesson type must be pdf');
 
-    const part = await (request as FastifyRequest & {
-      file: () => Promise<{ mimetype: string; toBuffer: () => Promise<Buffer> } | undefined>;
-    }).file();
+    const part = await (
+      request as FastifyRequest & {
+        file: () => Promise<
+          { mimetype: string; toBuffer: () => Promise<Buffer> } | undefined
+        >;
+      }
+    ).file();
     if (!part || part.mimetype !== 'application/pdf')
       throw new BadRequestException('A PDF file is required');
 
-    const chapter = lesson.chapters as unknown as { title: string; courses: { slug: string } };
-    const safe = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const chapter = lesson.chapters as unknown as {
+      title: string;
+      courses: { slug: string };
+    };
+    const safe = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
     const filePath = `${safe(chapter.courses.slug)}/${safe(chapter.title)}/${safe(lesson.title)}.pdf`;
     const buffer = await part.toBuffer();
     const { error: uploadError } = await this.supabase.storage
       .from('course-materials')
-      .upload(filePath, buffer, { contentType: 'application/pdf', upsert: true });
+      .upload(filePath, buffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
     if (uploadError) throw new BadRequestException(uploadError.message);
 
     const { data, error } = await this.supabase
       .from('pdf_notes')
-      .upsert({ lesson_id: lessonId, file_path: filePath, file_size_bytes: buffer.length }, { onConflict: 'lesson_id' })
+      .upsert(
+        {
+          lesson_id: lessonId,
+          file_path: filePath,
+          file_size_bytes: buffer.length,
+        },
+        { onConflict: 'lesson_id' },
+      )
       .select()
       .single();
     if (error) throw new BadRequestException(error.message);
@@ -75,7 +99,9 @@ export class LessonsService {
     // Verify lesson exists and is a PDF
     const { data: lesson, error: lessonError } = await this.supabase
       .from('lessons')
-      .select('id, lesson_type, is_published, chapter_id, chapters!inner(course_id)')
+      .select(
+        'id, title, description, lesson_type, is_published, chapter_id, chapters!inner(course_id, title, courses(title, status))',
+      )
       .eq('id', lessonId)
       .single();
     if (lessonError || !lesson || !lesson.is_published)
@@ -88,7 +114,11 @@ export class LessonsService {
     if (!user?.id) throw new NotFoundException('User not authenticated');
 
     // Verify enrollment
-    const chapter = lesson.chapters as unknown as { course_id: string };
+    const chapter = lesson.chapters as unknown as {
+      course_id: string;
+      title: string;
+      courses: { title: string; status?: string };
+    };
     const { data: enrollment, error: enrollmentError } = await this.supabase
       .from('enrollments')
       .select('id, courses(status)')
@@ -96,32 +126,55 @@ export class LessonsService {
       .eq('student_id', user.id)
       .in('status', ['active', 'completed'])
       .maybeSingle();
-    if (enrollmentError || !enrollment) 
+    if (enrollmentError || !enrollment)
       throw new BadRequestException('Not enrolled in this course');
 
-    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    const courseData = (enrollment.courses ?? chapter.courses) as unknown as {
+      status?: string;
+    } | null;
     if (courseData?.status === 'archived') {
       throw new BadRequestException('This course has been archived');
     }
 
-
-    // Get PDF file path
-    const { data: pdfNote, error: pdfError } = await this.supabase
+    // 1. Try to download uploaded PDF file from Supabase Storage if present
+    const { data: pdfNote } = await this.supabase
       .from('pdf_notes')
       .select('file_path')
       .eq('lesson_id', lessonId)
       .maybeSingle();
-    if (pdfError || !pdfNote?.file_path) 
-      throw new NotFoundException('PDF not available for this lesson');
 
-    // Download through the API so provider details never reach the browser.
-    const { data: pdfBlob, error: downloadError } = await this.supabase.storage
-      .from('course-materials')
-      .download(pdfNote.file_path as string);
-    if (downloadError || !pdfBlob)
-      throw new NotFoundException('PDF file not available');
+    if (pdfNote?.file_path) {
+      try {
+        const { data: pdfBlob, error: downloadError } =
+          await this.supabase.storage
+            .from('course-materials')
+            .download(pdfNote.file_path as string);
+        if (!downloadError && pdfBlob) {
+          const buffer = Buffer.from(await pdfBlob.arrayBuffer());
+          if (buffer.length > 50) {
+            return buffer;
+          }
+        }
+      } catch {
+        // Fallback to generating note PDF from database string
+      }
+    }
 
-    return Buffer.from(await pdfBlob.arrayBuffer());
+    // 2. Generate a standard, formatted PDF from the database string
+    const courseTitle = chapter.courses?.title || 'Technical Pilot';
+    const chapterTitle = chapter.title || 'Course Material';
+    const lessonTitle = lesson.title || 'Lesson Notes';
+    const content =
+      lesson.description && lesson.description.trim().length > 0
+        ? lesson.description
+        : 'No additional note content provided for this lesson.';
+
+    return generateNotePdf({
+      courseTitle,
+      chapterTitle,
+      lessonTitle,
+      content,
+    });
   }
 
   async create(dto: CreateLessonDto) {

@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { DoubtSessionsService } from './doubt-sessions.service';
 
 describe('DoubtSessionsService', () => {
@@ -24,7 +28,6 @@ describe('DoubtSessionsService', () => {
     };
   });
 
-
   describe('createSlot targeting & notification', () => {
     it('should create an all-student slot and broadcast notification', async () => {
       const mockSlot = {
@@ -45,9 +48,18 @@ describe('DoubtSessionsService', () => {
         from: jest.fn((table: string) => {
           if (table === 'doubt_slots') {
             return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    neq: jest.fn().mockResolvedValue({ data: [], error: null }),
+                  }),
+                }),
+              }),
               insert: jest.fn().mockReturnValue({
                 select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({ data: mockSlot, error: null }),
+                  single: jest
+                    .fn()
+                    .mockResolvedValue({ data: mockSlot, error: null }),
                 }),
               }),
             };
@@ -55,7 +67,15 @@ describe('DoubtSessionsService', () => {
           if (table === 'profiles') {
             return {
               select: jest.fn().mockReturnValue({
-                in: jest.fn().mockResolvedValue({ data: [{ id: 'admin-1', full_name: 'Admin', email: 'admin@tp.com' }] }),
+                in: jest.fn().mockResolvedValue({
+                  data: [
+                    {
+                      id: 'admin-1',
+                      full_name: 'Admin',
+                      email: 'admin@tp.com',
+                    },
+                  ],
+                }),
               }),
             };
           }
@@ -67,7 +87,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       const result = await service.createSlot(
         {
@@ -87,6 +112,8 @@ describe('DoubtSessionsService', () => {
         expect.stringContaining('General Q&A'),
         expect.stringContaining('2026-09-10'),
         'doubt_session',
+        undefined,
+        expect.any(Object),
       );
     });
 
@@ -118,9 +145,18 @@ describe('DoubtSessionsService', () => {
           }
           if (table === 'doubt_slots') {
             return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    neq: jest.fn().mockResolvedValue({ data: [], error: null }),
+                  }),
+                }),
+              }),
               insert: jest.fn().mockReturnValue({
                 select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({ data: mockSlot, error: null }),
+                  single: jest
+                    .fn()
+                    .mockResolvedValue({ data: mockSlot, error: null }),
                 }),
               }),
             };
@@ -133,7 +169,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       const result = await service.createSlot(
         {
@@ -150,18 +191,27 @@ describe('DoubtSessionsService', () => {
       );
 
       expect(result.id).toEqual('slot-2');
-      expect(result.courses).toEqual({ id: 'course-123', title: 'Air Navigation 101' });
+      expect(result.courses).toEqual({
+        id: 'course-123',
+        title: 'Air Navigation 101',
+      });
       expect(notificationsService.broadcast).toHaveBeenCalledWith(
         expect.stringContaining('Air Navigation 101'),
         expect.stringContaining('2026-09-11'),
         'doubt_session',
         'course-123',
+        expect.any(Object),
       );
     });
 
     it('should throw BadRequestException if target_type is course but course_id is missing', async () => {
       supabase = { from: jest.fn() };
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       await expect(
         service.createSlot(
@@ -175,6 +225,57 @@ describe('DoubtSessionsService', () => {
           'admin-1',
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException if duplicate slot exists on same date and time for course', async () => {
+      supabase = {
+        from: jest.fn((table: string) => {
+          if (table === 'doubt_slots') {
+            return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    neq: jest.fn().mockResolvedValue({
+                      data: [
+                        {
+                          id: 'slot-existing',
+                          date: '2026-09-11',
+                          start_time: '14:00:00',
+                          target_type: 'course',
+                          course_id: 'course-123',
+                        },
+                      ],
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            };
+          }
+          return {};
+        }),
+      };
+
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
+
+      await expect(
+        service.createSlot(
+          {
+            date: '2026-09-11',
+            start_time: '14:00',
+            end_time: '14:30',
+            duration_minutes: 30,
+            target_type: 'course',
+            course_id: 'course-123',
+          },
+          'admin-1',
+        ),
+      ).rejects.toThrow(ConflictException);
     });
 
     it('should create a 1-on-1 student-targeted slot and send direct notification', async () => {
@@ -196,9 +297,18 @@ describe('DoubtSessionsService', () => {
         from: jest.fn((table: string) => {
           if (table === 'doubt_slots') {
             return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  eq: jest.fn().mockReturnValue({
+                    neq: jest.fn().mockResolvedValue({ data: [], error: null }),
+                  }),
+                }),
+              }),
               insert: jest.fn().mockReturnValue({
                 select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({ data: mockSlot, error: null }),
+                  single: jest
+                    .fn()
+                    .mockResolvedValue({ data: mockSlot, error: null }),
                 }),
               }),
             };
@@ -207,7 +317,13 @@ describe('DoubtSessionsService', () => {
             return {
               select: jest.fn().mockReturnValue({
                 in: jest.fn().mockResolvedValue({
-                  data: [{ id: 'student-999', full_name: 'John Pilot', email: 'john@pilot.com' }],
+                  data: [
+                    {
+                      id: 'student-999',
+                      full_name: 'John Pilot',
+                      email: 'john@pilot.com',
+                    },
+                  ],
                 }),
               }),
             };
@@ -220,7 +336,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       const result = await service.createSlot(
         {
@@ -256,11 +377,41 @@ describe('DoubtSessionsService', () => {
   describe('getUpcomingSlots course-based filtering', () => {
     it('should filter out slots for courses the student is not enrolled in', async () => {
       const allSlots = [
-        { id: 's1', target_type: 'all', course_id: null, student_id: null, status: 'available' },
-        { id: 's2', target_type: 'course', course_id: 'course-enrolled', student_id: null, status: 'available' },
-        { id: 's3', target_type: 'course', course_id: 'course-other', student_id: null, status: 'available' },
-        { id: 's4', target_type: 'student', course_id: null, student_id: 'student-me', status: 'available' },
-        { id: 's5', target_type: 'student', course_id: null, student_id: 'student-other', status: 'available' },
+        {
+          id: 's1',
+          target_type: 'all',
+          course_id: null,
+          student_id: null,
+          status: 'available',
+        },
+        {
+          id: 's2',
+          target_type: 'course',
+          course_id: 'course-enrolled',
+          student_id: null,
+          status: 'available',
+        },
+        {
+          id: 's3',
+          target_type: 'course',
+          course_id: 'course-other',
+          student_id: null,
+          status: 'available',
+        },
+        {
+          id: 's4',
+          target_type: 'student',
+          course_id: null,
+          student_id: 'student-me',
+          status: 'available',
+        },
+        {
+          id: 's5',
+          target_type: 'student',
+          course_id: null,
+          student_id: 'student-other',
+          status: 'available',
+        },
       ];
 
       supabase = {
@@ -269,7 +420,7 @@ describe('DoubtSessionsService', () => {
             return {
               select: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
-                  eq: jest.fn().mockResolvedValue({
+                  in: jest.fn().mockResolvedValue({
                     data: [{ course_id: 'course-enrolled' }],
                     error: null,
                   }),
@@ -290,7 +441,9 @@ describe('DoubtSessionsService', () => {
             return {
               select: jest.fn().mockReturnValue({
                 in: jest.fn().mockResolvedValue({
-                  data: [{ id: 'student-me', full_name: 'Me', email: 'me@tp.com' }],
+                  data: [
+                    { id: 'student-me', full_name: 'Me', email: 'me@tp.com' },
+                  ],
                 }),
               }),
             };
@@ -312,7 +465,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       const slots = await service.getUpcomingSlots('student-me');
       const slotIds = slots.map((s) => s.id);
@@ -347,7 +505,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       await expect(
         service.bookSlot({ slot_id: 'slot-private' }, 'student-me'),
@@ -381,7 +544,7 @@ describe('DoubtSessionsService', () => {
               select: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
                   eq: jest.fn().mockReturnValue({
-                    eq: jest.fn().mockReturnValue({
+                    in: jest.fn().mockReturnValue({
                       maybeSingle: jest.fn().mockResolvedValue({
                         data: null, // Not enrolled!
                         error: null,
@@ -396,7 +559,12 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
       await expect(
         service.bookSlot({ slot_id: 'slot-course' }, 'student-me'),
@@ -437,7 +605,11 @@ describe('DoubtSessionsService', () => {
               insert: jest.fn().mockReturnValue({
                 select: jest.fn().mockReturnValue({
                   single: jest.fn().mockResolvedValue({
-                    data: { id: 'booking-1', slot_id: 'slot-valid', student_id: 'student-me' },
+                    data: {
+                      id: 'booking-1',
+                      slot_id: 'slot-valid',
+                      student_id: 'student-me',
+                    },
                     error: null,
                   }),
                 }),
@@ -460,9 +632,17 @@ describe('DoubtSessionsService', () => {
         }),
       };
 
-      service = new DoubtSessionsService(supabase, notificationsService, mailService, logger);
+      service = new DoubtSessionsService(
+        supabase,
+        notificationsService,
+        mailService,
+        logger,
+      );
 
-      const booking = await service.bookSlot({ slot_id: 'slot-valid' }, 'student-me');
+      const booking = await service.bookSlot(
+        { slot_id: 'slot-valid' },
+        'student-me',
+      );
       expect(booking).toBeDefined();
       expect(booking.id).toBe('booking-1');
       expect(notificationsService.notifyAdmins).toHaveBeenCalledWith(

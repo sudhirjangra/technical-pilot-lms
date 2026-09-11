@@ -39,6 +39,9 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   student_query: MessageSquare,
   extra_attempt_request: TicketPlus,
   doubt_booking: Calendar,
+  doubt_session: Calendar,
+  doubt_cancellation: Calendar,
+  alert: Megaphone,
 };
 
 function timeAgo(dateStr: string) {
@@ -89,11 +92,20 @@ export function NotificationBell({ isAdmin = false }: { isAdmin?: boolean }) {
     if (isAdmin) {
       if (n.type === 'student_query' || n.type === 'extra_attempt_request') {
         router.push('/admin/queries');
-      } else if (n.type === 'doubt_booking') {
+      } else if (
+        n.type === 'doubt_booking' ||
+        n.type === 'doubt_session' ||
+        n.type === 'doubt_cancellation'
+      ) {
         router.push('/admin/doubt-sessions');
       }
     } else {
-      if (n.type === 'query_reply') {
+      if (
+        n.type === 'query_reply' ||
+        n.type === 'doubt_session' ||
+        n.type === 'doubt_booking' ||
+        n.type === 'doubt_cancellation'
+      ) {
         router.push('/dashboard/doubt-sessions');
       } else if (n.type === 'course_added') {
         router.push('/dashboard/courses');

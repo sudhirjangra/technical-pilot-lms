@@ -15,6 +15,8 @@ export async function GET(_req: NextRequest, { params }: Context) {
     return NextResponse.json({ error: 'Lesson ID required' }, { status: 400 });
   }
 
+  const isDownload = _req.nextUrl.searchParams.get('download') === 'true' || _req.nextUrl.searchParams.get('download') === '1';
+
   try {
     // Proxy PDF bytes so the browser never receives a Supabase URL or object key.
     const apiRes = await fetch(`${env.API_URL}/lessons/${lessonId}/pdf-url`, {
@@ -31,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: Context) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'inline',
+        'Content-Disposition': isDownload ? 'attachment; filename="lesson-notes.pdf"' : 'inline',
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },

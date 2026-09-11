@@ -1,3 +1,6 @@
+import { MongoService } from '@/common/modules/mongodb.service';
+import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { AttemptMigrationService } from '@/common/services/attempt-migration.service';
 import {
   ImportedQuizQuestion,
   QuizQuestionOptionInput,
@@ -6,9 +9,6 @@ import {
   parseQuestionImportFile,
   validateQuestionOptions,
 } from '@/common/utils';
-import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
-import { MongoService } from '@/common/modules/mongodb.service';
-import { AttemptMigrationService } from '@/common/services/attempt-migration.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -29,11 +29,14 @@ import {
 } from './dto';
 
 type MultipartRequest = FastifyRequest & {
-  file: () => Promise<{
-    filename: string;
-    mimetype: string;
-    toBuffer: () => Promise<Buffer>;
-  } | undefined>;
+  file: () => Promise<
+    | {
+        filename: string;
+        mimetype: string;
+        toBuffer: () => Promise<Buffer>;
+      }
+    | undefined
+  >;
 };
 
 type QuestionRow = {
@@ -110,7 +113,8 @@ export class TestsService {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') throw new NotFoundException('Test not found');
+      if (error.code === 'PGRST116')
+        throw new NotFoundException('Test not found');
       throw new BadRequestException(error.message);
     }
 
@@ -162,8 +166,8 @@ export class TestsService {
     this.ensureQuestionBelongsToTest(existingQuestion);
     const currentOptions = (existingQuestion.question_options ??
       []) as QuestionOptionRow[];
-    const nextQuestionType =
-      (dto.question_type ?? existingQuestion.question_type) as QuizQuestionType;
+    const nextQuestionType = (dto.question_type ??
+      existingQuestion.question_type) as QuizQuestionType;
 
     const nextOptions =
       dto.options !== undefined
@@ -184,7 +188,9 @@ export class TestsService {
         question_type: dto.question_type,
         points: dto.points,
         explanation:
-          dto.explanation === undefined ? undefined : dto.explanation.trim() || null,
+          dto.explanation === undefined
+            ? undefined
+            : dto.explanation.trim() || null,
         topic: dto.topic === undefined ? undefined : dto.topic.trim() || null,
         sort_order: dto.sort_order,
         question_number: dto.question_number,
@@ -260,7 +266,8 @@ export class TestsService {
       .limit(1)
       .maybeSingle();
 
-    if (lastQuestionError) throw new BadRequestException(lastQuestionError.message);
+    if (lastQuestionError)
+      throw new BadRequestException(lastQuestionError.message);
 
     const questionNumberOffset = lastQuestion?.question_number ?? 0;
     const sortOrderOffset = lastQuestion?.sort_order ?? 0;
@@ -300,7 +307,9 @@ export class TestsService {
     // Fetch attempt count + latest attempt for this student
     const { data: rawAttempts } = await this.supabase
       .from('test_attempts')
-      .select('id, test_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds')
+      .select(
+        'id, test_id, student_id, started_at, completed_at, score, max_score, time_spent_seconds',
+      )
       .eq('test_id', test.id)
       .eq('student_id', studentId)
       .order('started_at', { ascending: false });
@@ -327,7 +336,11 @@ export class TestsService {
     const extraAttempts = grant?.extra_attempts ?? 0;
     const baseAttempts = test.max_attempts;
     let effectiveMaxAttempts: number | null = null;
-    if (baseAttempts !== null && baseAttempts !== undefined && baseAttempts > 0) {
+    if (
+      baseAttempts !== null &&
+      baseAttempts !== undefined &&
+      baseAttempts > 0
+    ) {
       effectiveMaxAttempts = baseAttempts + extraAttempts;
     } else if (extraAttempts > 0) {
       // Base was 0 / empty (infinite), but admin assigned a specific attempt limit to this student
@@ -380,7 +393,11 @@ export class TestsService {
     const baseAttempts = testRow.max_attempts;
     const extraAttempts = grant?.extra_attempts ?? 0;
     let allowedAttempts: number | null = null;
-    if (baseAttempts !== null && baseAttempts !== undefined && baseAttempts > 0) {
+    if (
+      baseAttempts !== null &&
+      baseAttempts !== undefined &&
+      baseAttempts > 0
+    ) {
       allowedAttempts = baseAttempts + extraAttempts;
     } else if (extraAttempts > 0) {
       allowedAttempts = extraAttempts;
@@ -412,12 +429,15 @@ export class TestsService {
     // Verify attempt belongs to student and is not completed
     const { data: attempt, error: attemptError } = await this.supabase
       .from('test_attempts')
-      .select('*, tests(id, title, passing_score_percent, lesson_id, lessons(id, title, chapter_id, chapters(id, title, course_id, courses(id, title))))')
+      .select(
+        '*, tests(id, title, passing_score_percent, lesson_id, lessons(id, title, chapter_id, chapters(id, title, course_id, courses(id, title))))',
+      )
       .eq('id', attemptId)
       .eq('student_id', studentId)
       .single();
 
-    if (attemptError || !attempt) throw new NotFoundException('Attempt not found');
+    if (attemptError || !attempt)
+      throw new NotFoundException('Attempt not found');
     if (attempt.completed_at) {
       throw new BadRequestException('Attempt already submitted');
     }
@@ -425,7 +445,9 @@ export class TestsService {
     // Fetch questions with correct answers for grading
     const { data: questions, error: questionsError } = await this.supabase
       .from('questions')
-      .select('id, question_type, points, explanation, correct_text_answer, topic, question_text')
+      .select(
+        'id, question_type, points, explanation, correct_text_answer, topic, question_text',
+      )
       .eq('test_id', attempt.test_id);
 
     if (questionsError) throw new BadRequestException(questionsError.message);
@@ -467,8 +489,11 @@ export class TestsService {
       let pointsEarned = 0;
 
       if (q.question_type === 'text') {
-        const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
-        const expected = q.correct_text_answer ? normalize(q.correct_text_answer as string) : null;
+        const normalize = (s: string) =>
+          s.trim().replace(/\s+/g, ' ').toLowerCase();
+        const expected = q.correct_text_answer
+          ? normalize(q.correct_text_answer as string)
+          : null;
         const given = answer?.textAnswer ? normalize(answer.textAnswer) : null;
         if (!expected) {
           // No expected answer configured – auto-award points if student submitted any text
@@ -481,7 +506,10 @@ export class TestsService {
           }
         } else if (given) {
           isCorrect = given === expected;
-          if (isCorrect) { pointsEarned = points; correctCount++; }
+          if (isCorrect) {
+            pointsEarned = points;
+            correctCount++;
+          }
         } else {
           isCorrect = false;
         }
@@ -530,7 +558,8 @@ export class TestsService {
     } | null;
 
     const passingPercent = testRel?.passing_score_percent ?? 60;
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const percentage =
+      maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     const passed = percentage >= passingPercent;
     const completedAt = new Date().toISOString();
 
@@ -583,7 +612,11 @@ export class TestsService {
           .filter((opt) => opt.question_id === q.id && opt.is_correct)
           .map((opt) => opt.option_text),
         selectedOptionTexts: (allOptions ?? [])
-          .filter((opt) => opt.question_id === q.id && (answer?.selectedOptionIds ?? []).includes(opt.id))
+          .filter(
+            (opt) =>
+              opt.question_id === q.id &&
+              (answer?.selectedOptionIds ?? []).includes(opt.id),
+          )
           .map((opt) => opt.option_text),
         options: qOptions,
         textAnswer: answer?.textAnswer ?? null,
@@ -595,10 +628,25 @@ export class TestsService {
     });
 
     // Build topic breakdown
-    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    const topicMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
     for (const q of questions ?? []) {
       const topic = (q as { topic?: string | null }).topic ?? 'General';
-      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const current = topicMap.get(topic) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
       const result = answerResults.find((r) => r.questionId === q.id)!;
       const answer = dto.answers.find((a) => a.questionId === q.id);
       current.total += 1;
@@ -608,13 +656,16 @@ export class TestsService {
       current.earnedPoints += result.pointsEarned;
       topicMap.set(topic, current);
     }
-    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({
-      topic,
-      ...stats,
-    }));
+    const topicBreakdown = Array.from(topicMap.entries()).map(
+      ([topic, stats]) => ({
+        topic,
+        ...stats,
+      }),
+    );
 
     const totalQCount = (questions ?? []).length;
-    const avgTimePerQuestion = totalQCount > 0 ? Math.round(totalTimeSeconds / totalQCount) : 0;
+    const avgTimePerQuestion =
+      totalQCount > 0 ? Math.round(totalTimeSeconds / totalQCount) : 0;
 
     // Save complete attempt document into MongoDB
     await this.mongoService.saveAttempt({
@@ -659,7 +710,9 @@ export class TestsService {
 
     // Upsert test_answers
     for (const answer of dto.answers) {
-      const result = answerResults.find((r) => r.questionId === answer.questionId);
+      const result = answerResults.find(
+        (r) => r.questionId === answer.questionId,
+      );
       const q = (questions ?? []).find((qq) => qq.id === answer.questionId);
 
       const { data: upsertedAnswer, error: answerError } = await this.supabase
@@ -781,14 +834,21 @@ export class TestsService {
 
     const { data: attempts, error } = await this.supabase
       .from('test_attempts')
-      .select('id, student_id, started_at, completed_at, score, max_score, time_spent_seconds')
+      .select(
+        'id, student_id, started_at, completed_at, score, max_score, time_spent_seconds',
+      )
       .eq('test_id', testId)
       .order('started_at', { ascending: false });
 
     if (error) throw new BadRequestException(error.message);
 
-    const studentIds = [...new Set((attempts ?? []).map((a) => a.student_id).filter(Boolean))];
-    const profileMap = new Map<string, { full_name?: string; email?: string }>();
+    const studentIds = [
+      ...new Set((attempts ?? []).map((a) => a.student_id).filter(Boolean)),
+    ];
+    const profileMap = new Map<
+      string,
+      { full_name?: string; email?: string }
+    >();
     if (studentIds.length > 0) {
       const { data: profiles } = await this.supabase
         .from('profiles')
@@ -834,7 +894,10 @@ export class TestsService {
       .order('started_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
 
-    const mongoAttempts = await this.mongoService.getAttemptsByStudent(studentId, 'test');
+    const mongoAttempts = await this.mongoService.getAttemptsByStudent(
+      studentId,
+      'test',
+    );
     const mongoMap = new Map(mongoAttempts.map((m) => [m.attempt_id, m]));
 
     return (attempts ?? []).map((a: any) => {
@@ -847,7 +910,8 @@ export class TestsService {
       const score = mongo?.score ?? a.score;
       const max_score = mongo?.max_score ?? a.max_score;
       const percentage =
-        mongo?.percentage ?? (max_score && max_score > 0
+        mongo?.percentage ??
+        (max_score && max_score > 0
           ? Math.round(((score ?? 0) / max_score) * 100)
           : null);
       return {
@@ -863,7 +927,9 @@ export class TestsService {
         max_score,
         time_spent_seconds: a.time_spent_seconds ?? mongo?.time_spent_seconds,
         percentage,
-        passed: mongo?.passed ?? (percentage !== null ? percentage >= passingPct : null),
+        passed:
+          mongo?.passed ??
+          (percentage !== null ? percentage >= passingPct : null),
       };
     });
   }
@@ -959,7 +1025,12 @@ export class TestsService {
     const { data: answerOptions } = await this.supabase
       .from('test_answer_options')
       .select('test_answer_id, option_id')
-      .in('test_answer_id', answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000']);
+      .in(
+        'test_answer_id',
+        answerIds.length > 0
+          ? answerIds
+          : ['00000000-0000-0000-0000-000000000000'],
+      );
 
     const selectedOptionsMap = new Map<string, string[]>();
     for (const ao of answerOptions ?? []) {
@@ -977,13 +1048,26 @@ export class TestsService {
     const { data: allOptions } = await this.supabase
       .from('question_options')
       .select('id, question_id, option_text, is_correct')
-      .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
+      .in(
+        'question_id',
+        questionIds.length > 0
+          ? questionIds
+          : ['00000000-0000-0000-0000-000000000000'],
+      );
 
     const optionTextMap = new Map<string, string>();
     const correctOptionsMap = new Map<string, string[]>();
-    const optionsByQuestion = new Map<string, { id: string; text: string; isCorrect: boolean }[]>();
+    const optionsByQuestion = new Map<
+      string,
+      { id: string; text: string; isCorrect: boolean }[]
+    >();
     for (const opt of allOptions ?? []) {
-      const option = opt as unknown as { id: string; question_id: string; option_text: string; is_correct: boolean };
+      const option = opt as unknown as {
+        id: string;
+        question_id: string;
+        option_text: string;
+        is_correct: boolean;
+      };
       optionTextMap.set(option.id, option.option_text);
       if (option.is_correct) {
         const current = correctOptionsMap.get(option.question_id) ?? [];
@@ -991,13 +1075,19 @@ export class TestsService {
         correctOptionsMap.set(option.question_id, current);
       }
       const list = optionsByQuestion.get(option.question_id) ?? [];
-      list.push({ id: option.id, text: option.option_text, isCorrect: option.is_correct });
+      list.push({
+        id: option.id,
+        text: option.option_text,
+        isCorrect: option.is_correct,
+      });
       optionsByQuestion.set(option.question_id, list);
     }
 
     const questionReview = (questions ?? []).map((q) => {
       const answer = (answers ?? []).find((a) => a.question_id === q.id);
-      const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
+      const selectedOptionIds = answer
+        ? (selectedOptionsMap.get(answer.id) ?? [])
+        : [];
       const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
       const selectedSet = new Set(selectedOptionIds);
       return {
@@ -1008,12 +1098,16 @@ export class TestsService {
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: answer?.time_spent_seconds ?? 0,
         points: q.points ?? 1,
-        pointsEarned: answer?.is_correct === true ? q.points ?? 1 : 0,
+        pointsEarned: answer?.is_correct === true ? (q.points ?? 1) : 0,
         explanation: (q as { explanation?: string | null }).explanation ?? null,
         correctOptionIds,
         selectedOptionIds,
-        correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) ?? id),
-        selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        correctOptionTexts: correctOptionIds.map(
+          (id) => optionTextMap.get(id) ?? id,
+        ),
+        selectedOptionTexts: selectedOptionIds.map(
+          (id) => optionTextMap.get(id) ?? id,
+        ),
         options: (optionsByQuestion.get(q.id) ?? []).map((opt) => ({
           ...opt,
           isSelected: selectedSet.has(opt.id),
@@ -1023,10 +1117,25 @@ export class TestsService {
     });
 
     // Build topic breakdown
-    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    const topicMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
     for (const q of questions ?? []) {
       const topic = (q as { topic?: string | null }).topic ?? 'General';
-      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const current = topicMap.get(topic) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
       const rev = questionReview.find((r) => r.questionId === q.id);
       current.total += 1;
       if (rev?.isCorrect === true) current.correct += 1;
@@ -1035,12 +1144,17 @@ export class TestsService {
       current.earnedPoints += rev?.pointsEarned ?? 0;
       topicMap.set(topic, current);
     }
-    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({ topic, ...stats }));
+    const topicBreakdown = Array.from(topicMap.entries()).map(
+      ([topic, stats]) => ({ topic, ...stats }),
+    );
 
     const totalCount = questionReview.length;
-    const correctCount = questionReview.filter((q) => q.isCorrect === true).length;
+    const correctCount = questionReview.filter(
+      (q) => q.isCorrect === true,
+    ).length;
     const totalTimeSeconds = attempt.time_spent_seconds ?? 0;
-    const avgTimePerQuestion = totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
+    const avgTimePerQuestion =
+      totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
     const maxScore = attempt.max_score ?? 0;
 
     const result = {
@@ -1104,7 +1218,10 @@ export class TestsService {
 
     const passedAny = (attempts ?? []).some((a) => {
       if (!a.completed_at) return false;
-      const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
+      const pct =
+        a.max_score && a.max_score > 0
+          ? ((a.score ?? 0) / a.max_score) * 100
+          : 0;
       return pct >= passingPercent;
     });
 
@@ -1128,7 +1245,8 @@ export class TestsService {
       .select('id, chapters(course_id)')
       .eq('id', lessonId)
       .single();
-    const courseId = (lesson?.chapters as unknown as { course_id: string })?.course_id;
+    const courseId = (lesson?.chapters as unknown as { course_id: string })
+      ?.course_id;
     if (!courseId) return;
 
     const { data: chapters } = await this.supabase
@@ -1201,7 +1319,12 @@ export class TestsService {
     const { data: answerOptions } = await this.supabase
       .from('assignment_answer_options')
       .select('assignment_answer_id, option_id')
-      .in('assignment_answer_id', answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000']);
+      .in(
+        'assignment_answer_id',
+        answerIds.length > 0
+          ? answerIds
+          : ['00000000-0000-0000-0000-000000000000'],
+      );
 
     const selectedOptionsMap = new Map<string, string[]>();
     for (const ao of answerOptions ?? []) {
@@ -1219,13 +1342,26 @@ export class TestsService {
     const { data: allOptions } = await this.supabase
       .from('question_options')
       .select('id, question_id, option_text, is_correct')
-      .in('question_id', questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000']);
+      .in(
+        'question_id',
+        questionIds.length > 0
+          ? questionIds
+          : ['00000000-0000-0000-0000-000000000000'],
+      );
 
     const optionTextMap = new Map<string, string>();
     const correctOptionsMap = new Map<string, string[]>();
-    const optionsByQuestion = new Map<string, { id: string; text: string; isCorrect: boolean }[]>();
+    const optionsByQuestion = new Map<
+      string,
+      { id: string; text: string; isCorrect: boolean }[]
+    >();
     for (const opt of allOptions ?? []) {
-      const option = opt as unknown as { id: string; question_id: string; option_text: string; is_correct: boolean };
+      const option = opt as unknown as {
+        id: string;
+        question_id: string;
+        option_text: string;
+        is_correct: boolean;
+      };
       optionTextMap.set(option.id, option.option_text);
       if (option.is_correct) {
         const current = correctOptionsMap.get(option.question_id) ?? [];
@@ -1233,13 +1369,19 @@ export class TestsService {
         correctOptionsMap.set(option.question_id, current);
       }
       const list = optionsByQuestion.get(option.question_id) ?? [];
-      list.push({ id: option.id, text: option.option_text, isCorrect: option.is_correct });
+      list.push({
+        id: option.id,
+        text: option.option_text,
+        isCorrect: option.is_correct,
+      });
       optionsByQuestion.set(option.question_id, list);
     }
 
     const questionReview = (questions ?? []).map((q) => {
       const answer = (answers ?? []).find((a) => a.question_id === q.id);
-      const selectedOptionIds = answer ? (selectedOptionsMap.get(answer.id) ?? []) : [];
+      const selectedOptionIds = answer
+        ? (selectedOptionsMap.get(answer.id) ?? [])
+        : [];
       const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
       const selectedSet = new Set(selectedOptionIds);
       return {
@@ -1250,12 +1392,16 @@ export class TestsService {
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: answer?.time_spent_seconds ?? 0,
         points: q.points ?? 1,
-        pointsEarned: answer?.is_correct === true ? q.points ?? 1 : 0,
+        pointsEarned: answer?.is_correct === true ? (q.points ?? 1) : 0,
         explanation: (q as { explanation?: string | null }).explanation ?? null,
         correctOptionIds,
         selectedOptionIds,
-        correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) ?? id),
-        selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) ?? id),
+        correctOptionTexts: correctOptionIds.map(
+          (id) => optionTextMap.get(id) ?? id,
+        ),
+        selectedOptionTexts: selectedOptionIds.map(
+          (id) => optionTextMap.get(id) ?? id,
+        ),
         options: (optionsByQuestion.get(q.id) ?? []).map((opt) => ({
           ...opt,
           isSelected: selectedSet.has(opt.id),
@@ -1264,10 +1410,25 @@ export class TestsService {
       };
     });
 
-    const topicMap = new Map<string, { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }>();
+    const topicMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
     for (const q of questions ?? []) {
       const topic = (q as { topic?: string | null }).topic ?? 'General';
-      const current = topicMap.get(topic) ?? { total: 0, correct: 0, totalTime: 0, points: 0, earnedPoints: 0 };
+      const current = topicMap.get(topic) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
       const rev = questionReview.find((r) => r.questionId === q.id);
       current.total += 1;
       if (rev?.isCorrect === true) current.correct += 1;
@@ -1276,12 +1437,17 @@ export class TestsService {
       current.earnedPoints += rev?.pointsEarned ?? 0;
       topicMap.set(topic, current);
     }
-    const topicBreakdown = Array.from(topicMap.entries()).map(([topic, stats]) => ({ topic, ...stats }));
+    const topicBreakdown = Array.from(topicMap.entries()).map(
+      ([topic, stats]) => ({ topic, ...stats }),
+    );
 
     const totalCount = questionReview.length;
-    const correctCount = questionReview.filter((q) => q.isCorrect === true).length;
+    const correctCount = questionReview.filter(
+      (q) => q.isCorrect === true,
+    ).length;
     const totalTimeSeconds = attempt.time_spent_seconds ?? 0;
-    const avgTimePerQuestion = totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
+    const avgTimePerQuestion =
+      totalCount > 0 ? Math.round(totalTimeSeconds / totalCount) : 0;
     const maxScore = attempt.max_score ?? 0;
 
     return {
@@ -1308,8 +1474,14 @@ export class TestsService {
     };
   }
 
-  async findAttemptForStudent(attemptId: string, studentId: string, role?: string) {
-    const isAdmin = (role ?? '').toUpperCase() === 'ADMIN' || (role ?? '').toUpperCase() === 'SUB_ADMIN';
+  async findAttemptForStudent(
+    attemptId: string,
+    studentId: string,
+    role?: string,
+  ) {
+    const isAdmin =
+      (role ?? '').toUpperCase() === 'ADMIN' ||
+      (role ?? '').toUpperCase() === 'SUB_ADMIN';
     return this.getAttemptDetail(attemptId, isAdmin ? undefined : studentId);
   }
 
@@ -1382,17 +1554,20 @@ export class TestsService {
       );
     }
 
-    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    const courseData = enrollment.courses as unknown as {
+      status?: string;
+    } | null;
     if (courseData?.status === 'archived') {
       throw new ForbiddenException('This course has been archived');
     }
   }
 
-
   private async getStudentQuestionsWithOptions(testId: string) {
     const { data: questions, error } = await this.supabase
       .from('questions')
-      .select('id, test_id, question_text, question_type, points, explanation, sort_order, question_number, topic')
+      .select(
+        'id, test_id, question_text, question_type, points, explanation, sort_order, question_number, topic',
+      )
       .eq('test_id', testId)
       .order('sort_order', { ascending: true });
 
@@ -1408,7 +1583,15 @@ export class TestsService {
 
     if (optionsError) throw new BadRequestException(optionsError.message);
 
-    const optionMap = new Map<string, { id: string; question_id: string; option_text: string; sort_order: number }[]>();
+    const optionMap = new Map<
+      string,
+      {
+        id: string;
+        question_id: string;
+        option_text: string;
+        sort_order: number;
+      }[]
+    >();
     for (const opt of options ?? []) {
       const current = optionMap.get(opt.question_id) ?? [];
       current.push(opt);
@@ -1546,8 +1729,9 @@ export class TestsService {
     testId: string,
     offsets: { questionNumberOffset: number; sortOrderOffset: number },
   ) {
-    const insertedQuestions: Array<QuestionRow & { question_options: unknown[] }> =
-      [];
+    const insertedQuestions: Array<
+      QuestionRow & { question_options: unknown[] }
+    > = [];
 
     for (const [index, question] of questions.entries()) {
       const { data: insertedQuestion, error } = await this.supabase
@@ -1561,7 +1745,8 @@ export class TestsService {
           explanation: question.explanation ?? null,
           topic: (question as { topic?: string | null }).topic ?? null,
           sort_order: offsets.sortOrderOffset + index + 1,
-          question_number: offsets.questionNumberOffset + question.question_number,
+          question_number:
+            offsets.questionNumberOffset + question.question_number,
           correct_text_answer: question.correct_text_answer,
         })
         .select()

@@ -1,6 +1,6 @@
 import Page from '@/app/(home)/page';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
@@ -19,6 +19,22 @@ vi.mock('@/components/logo-icon', () => ({
 }));
 
 describe('Page Component', () => {
+  beforeAll(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
   it('renders the home page with sign-in links for guests', async () => {
     const PageResolved = await Page();
     render(PageResolved);

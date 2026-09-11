@@ -11,7 +11,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateContactQueryDto, CreateQueryDto, GrantExtraAttemptDto, ReplyQueryDto, RequestExtraAttemptDto } from './dto';
+import {
+  CreateContactQueryDto,
+  CreateQueryDto,
+  GrantExtraAttemptDto,
+  ReplyQueryDto,
+  RequestExtraAttemptDto,
+} from './dto';
 import { StudentQueriesService } from './student-queries.service';
 
 @ApiTags('Student Queries')
@@ -29,10 +35,7 @@ export class StudentQueriesController {
   // ── Student endpoints ──
 
   @Post()
-  create(
-    @Body() dto: CreateQueryDto,
-    @Req() req: { user: { id: string } },
-  ) {
+  create(@Body() dto: CreateQueryDto, @Req() req: { user: { id: string } }) {
     return this.service.create(req.user.id, dto.subject, dto.body);
   }
 

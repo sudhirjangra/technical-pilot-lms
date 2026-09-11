@@ -67,7 +67,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         const res = exceptionResponse as Record<string, unknown>;
         const rawMessage = res.message ?? exception.message;
-        message = isSafeMessage(rawMessage) ? rawMessage : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
+        message = isSafeMessage(rawMessage)
+          ? rawMessage
+          : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
         errorCode = (res.errorCode as string) ?? exception.constructor.name;
         responseData = {
           ...(typeof res.code === 'string' && { code: res.code }),
@@ -75,7 +77,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         };
       } else {
         const rawMessage = exception.message;
-        message = isSafeMessage(rawMessage) ? rawMessage : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
+        message = isSafeMessage(rawMessage)
+          ? rawMessage
+          : (SAFE_CLIENT_MESSAGES[status] ?? 'Request failed');
         errorCode = exception.constructor.name;
       }
     } else if (exception instanceof PostgrestError) {
@@ -83,7 +87,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = SAFE_CLIENT_MESSAGES[400]!;
       errorCode = 'QUERY_FAILED';
       this.logger.error(
-        { error: exception.message, code: exception.code, details: exception.details, hint: exception.hint },
+        {
+          error: exception.message,
+          code: exception.code,
+          details: exception.details,
+          hint: exception.hint,
+        },
         'Database query failed',
       );
     } else if (exception instanceof Error) {

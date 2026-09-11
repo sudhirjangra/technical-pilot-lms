@@ -92,8 +92,17 @@ export class CoursesController {
   @Permissions('courses:write')
   @Post(':id/thumbnail')
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } }, required: ['file'] } })
-  async uploadThumbnail(@Param('id', ParseUUIDPipe) id: string, @Req() request: FastifyRequest) {
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  async uploadThumbnail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: FastifyRequest,
+  ) {
     const data = await this.coursesService.uploadThumbnail(id, request);
     return { message: 'Thumbnail uploaded successfully', data };
   }

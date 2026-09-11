@@ -104,7 +104,11 @@ export default async function LessonPage({
             {lessonType === 'video' ? (
               <VideoPlayer lessonId={lessonId} />
             ) : lessonType === 'pdf' ? (
-              <PDFViewer lessonId={lessonId} studentEmail={session.user?.email} />
+              <PDFViewer
+                lessonId={lessonId}
+                studentEmail={session.user?.email}
+                lessonTitle={lesson?.title}
+              />
             ) : lessonType === 'test' ? (
               <TestViewer lessonId={lessonId} courseId={courseId} mode="test" />
             ) : lessonType === 'assignment' ? (

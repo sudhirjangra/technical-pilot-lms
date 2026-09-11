@@ -34,7 +34,8 @@ export const uploadPublicImage = async (
     ({ error } = await upload());
   }
 
-  if (error) throw new BadRequestException(`Thumbnail upload failed: ${error.message}`);
+  if (error)
+    throw new BadRequestException(`Thumbnail upload failed: ${error.message}`);
 
   const { data } = supabase.storage
     .from(COURSE_MEDIA_BUCKET)

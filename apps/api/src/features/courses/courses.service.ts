@@ -19,7 +19,9 @@ import { LessonsService } from '../lessons/lessons.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
 type MultipartRequest = FastifyRequest & {
-  file: () => Promise<{ mimetype: string; toBuffer: () => Promise<Buffer> } | undefined>;
+  file: () => Promise<
+    { mimetype: string; toBuffer: () => Promise<Buffer> } | undefined
+  >;
 };
 
 @Injectable()
@@ -48,10 +50,16 @@ export class CoursesService {
       this.notificationsService
         .notifyCourseAdded(data.id, data.title)
         .catch((err) => {
-          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course added in-app notification');
+          this.logger.warn(
+            { err, courseId: data.id },
+            'Failed to broadcast course added in-app notification',
+          );
         });
       this.notifyStudentsCoursePublished(data).catch((err) => {
-        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course published emails');
+        this.logger.warn(
+          { err, courseId: data.id },
+          'Failed to broadcast course published emails',
+        );
       });
     }
 
@@ -138,10 +146,16 @@ export class CoursesService {
       this.notificationsService
         .notifyCourseAdded(data.id, data.title)
         .catch((err) => {
-          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course added in-app notification');
+          this.logger.warn(
+            { err, courseId: data.id },
+            'Failed to broadcast course added in-app notification',
+          );
         });
       this.notifyStudentsCoursePublished(data).catch((err) => {
-        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course published emails');
+        this.logger.warn(
+          { err, courseId: data.id },
+          'Failed to broadcast course published emails',
+        );
       });
     }
 
@@ -155,10 +169,16 @@ export class CoursesService {
           data.id,
         )
         .catch((err) => {
-          this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course archived in-app notification');
+          this.logger.warn(
+            { err, courseId: data.id },
+            'Failed to broadcast course archived in-app notification',
+          );
         });
       this.notifyStudentsCourseArchived(data).catch((err) => {
-        this.logger.warn({ err, courseId: data.id }, 'Failed to broadcast course archived emails');
+        this.logger.warn(
+          { err, courseId: data.id },
+          'Failed to broadcast course archived emails',
+        );
       });
     }
 
@@ -262,7 +282,6 @@ export class CoursesService {
     }
   }
 
-
   async remove(id: string) {
     const { data: chapters } = await this.supabase
       .from('chapters')
@@ -295,7 +314,8 @@ export class CoursesService {
     if (!course) throw new NotFoundException('Course not found');
 
     const part = await (request as MultipartRequest).file();
-    if (!part) throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
+    if (!part)
+      throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
 
     const ext = part.mimetype.split('/')[1];
     const publicUrl = await uploadPublicImage(
@@ -345,7 +365,9 @@ export class CoursesService {
       .eq('course_id', courseId)
       .eq('is_published', true);
 
-    const publishedChapters = (chapters ?? []).filter((ch: { is_published?: boolean }) => ch.is_published !== false);
+    const publishedChapters = (chapters ?? []).filter(
+      (ch: { is_published?: boolean }) => ch.is_published !== false,
+    );
     const allLessons = publishedChapters.flatMap((ch: any) =>
       (ch.lessons ?? []).filter((l: any) => l.is_published !== false),
     );
@@ -353,13 +375,14 @@ export class CoursesService {
     const totalLessons = lessonIds.length;
 
     // 4. Fetch progress rows for enrolled students
-    const { data: progressRows } = lessonIds.length && studentIds.length
-      ? await this.supabase
-          .from('progress')
-          .select('student_id, lesson_id, status, progress_percent')
-          .in('lesson_id', lessonIds)
-          .in('student_id', studentIds)
-      : { data: [] };
+    const { data: progressRows } =
+      lessonIds.length && studentIds.length
+        ? await this.supabase
+            .from('progress')
+            .select('student_id, lesson_id, status, progress_percent')
+            .in('lesson_id', lessonIds)
+            .in('student_id', studentIds)
+        : { data: [] };
 
     const progressByStudent = new Map<string, any[]>();
     for (const p of progressRows ?? []) {
@@ -369,33 +392,50 @@ export class CoursesService {
     }
 
     // 5. Fetch tests & assignments best attempts for tie-breaking
-    const testLessonIds = allLessons.filter((l: any) => l.lesson_type === 'test').map((l: any) => l.id);
-    const assignmentLessonIds = allLessons.filter((l: any) => l.lesson_type === 'assignment').map((l: any) => l.id);
+    const testLessonIds = allLessons
+      .filter((l: any) => l.lesson_type === 'test')
+      .map((l: any) => l.id);
+    const assignmentLessonIds = allLessons
+      .filter((l: any) => l.lesson_type === 'assignment')
+      .map((l: any) => l.id);
 
     const [testsRes, assignmentsRes] = await Promise.all([
       testLessonIds.length && studentIds.length
         ? this.supabase
             .from('tests')
-            .select('id, lesson_id, test_attempts(student_id, score, max_score)')
+            .select(
+              'id, lesson_id, test_attempts(student_id, score, max_score)',
+            )
             .in('lesson_id', testLessonIds)
             .in('test_attempts.student_id', studentIds)
         : Promise.resolve({ data: [] }),
       assignmentLessonIds.length && studentIds.length
         ? this.supabase
             .from('assignments')
-            .select('id, lesson_id, assignment_attempts(student_id, score, max_score)')
+            .select(
+              'id, lesson_id, assignment_attempts(student_id, score, max_score)',
+            )
             .in('lesson_id', assignmentLessonIds)
             .in('assignment_attempts.student_id', studentIds)
         : Promise.resolve({ data: [] }),
     ]);
 
-    const studentScoreTotals = new Map<string, { totalPct: number; count: number }>();
+    const studentScoreTotals = new Map<
+      string,
+      { totalPct: number; count: number }
+    >();
     for (const t of (testsRes as any).data ?? []) {
       for (const a of t.test_attempts ?? []) {
         if (a.max_score > 0) {
           const pct = Math.round((a.score / a.max_score) * 100);
-          const curr = studentScoreTotals.get(a.student_id) ?? { totalPct: 0, count: 0 };
-          studentScoreTotals.set(a.student_id, { totalPct: curr.totalPct + pct, count: curr.count + 1 });
+          const curr = studentScoreTotals.get(a.student_id) ?? {
+            totalPct: 0,
+            count: 0,
+          };
+          studentScoreTotals.set(a.student_id, {
+            totalPct: curr.totalPct + pct,
+            count: curr.count + 1,
+          });
         }
       }
     }
@@ -403,8 +443,14 @@ export class CoursesService {
       for (const a of asgn.assignment_attempts ?? []) {
         if (a.max_score > 0) {
           const pct = Math.round((a.score / a.max_score) * 100);
-          const curr = studentScoreTotals.get(a.student_id) ?? { totalPct: 0, count: 0 };
-          studentScoreTotals.set(a.student_id, { totalPct: curr.totalPct + pct, count: curr.count + 1 });
+          const curr = studentScoreTotals.get(a.student_id) ?? {
+            totalPct: 0,
+            count: 0,
+          };
+          studentScoreTotals.set(a.student_id, {
+            totalPct: curr.totalPct + pct,
+            count: curr.count + 1,
+          });
         }
       }
     }
@@ -413,10 +459,18 @@ export class CoursesService {
     const entries = enrollments.map((e) => {
       const p = profileMap.get(e.student_id);
       const studentProgress = progressByStudent.get(e.student_id) ?? [];
-      const completedLessons = studentProgress.filter((row: any) => row.status === 'completed').length;
-      const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+      const completedLessons = studentProgress.filter(
+        (row: any) => row.status === 'completed',
+      ).length;
+      const progressPercent =
+        totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : 0;
       const scoreData = studentScoreTotals.get(e.student_id);
-      const avgScore = scoreData && scoreData.count > 0 ? Math.round(scoreData.totalPct / scoreData.count) : null;
+      const avgScore =
+        scoreData && scoreData.count > 0
+          ? Math.round(scoreData.totalPct / scoreData.count)
+          : null;
 
       return {
         studentId: e.student_id,
@@ -442,7 +496,9 @@ export class CoursesService {
       if (scoreB !== scoreA) {
         return scoreB - scoreA;
       }
-      return new Date(a.enrolledAt).getTime() - new Date(b.enrolledAt).getTime();
+      return (
+        new Date(a.enrolledAt).getTime() - new Date(b.enrolledAt).getTime()
+      );
     });
 
     const leaderboard = entries.map((entry, index) => ({
@@ -450,7 +506,8 @@ export class CoursesService {
       ...entry,
     }));
 
-    const currentUserRank = leaderboard.find((item) => item.isCurrentUser) ?? null;
+    const currentUserRank =
+      leaderboard.find((item) => item.isCurrentUser) ?? null;
 
     return {
       leaderboard,

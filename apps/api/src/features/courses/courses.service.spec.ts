@@ -38,7 +38,10 @@ describe('CoursesService', () => {
       providers: [
         CoursesService,
         { provide: SUPABASE_ADMIN, useValue: mockSupabase },
-        { provide: LessonsService, useValue: { cleanupExternalContent: jest.fn() } },
+        {
+          provide: LessonsService,
+          useValue: { cleanupExternalContent: jest.fn() },
+        },
         { provide: MailService, useValue: mockMailService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         {
@@ -78,7 +81,9 @@ describe('CoursesService', () => {
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               eq: jest.fn().mockResolvedValue({
-                data: [{ id: 's1', full_name: 'Student One', email: 's1@test.com' }],
+                data: [
+                  { id: 's1', full_name: 'Student One', email: 's1@test.com' },
+                ],
                 error: null,
               }),
             }),
@@ -91,7 +96,10 @@ describe('CoursesService', () => {
     const result = await service.update(courseId, { status: 'published' });
 
     expect(result.status).toBe('published');
-    expect(mockNotificationsService.notifyCourseAdded).toHaveBeenCalledWith(courseId, 'Aviation 101');
+    expect(mockNotificationsService.notifyCourseAdded).toHaveBeenCalledWith(
+      courseId,
+      'Aviation 101',
+    );
   });
 
   it('should notify and send emails when a course is updated to archived', async () => {
@@ -120,7 +128,11 @@ describe('CoursesService', () => {
               data: [
                 {
                   student_id: 's2',
-                  profiles: { id: 's2', full_name: 'Student Two', email: 's2@test.com' },
+                  profiles: {
+                    id: 's2',
+                    full_name: 'Student Two',
+                    email: 's2@test.com',
+                  },
                 },
               ],
               error: null,

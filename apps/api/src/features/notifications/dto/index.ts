@@ -14,6 +14,13 @@ const NOTIFICATION_TYPES = [
   'announcement',
   'assignment_due',
   'query_reply',
+  'student_query',
+  'extra_attempt_request',
+  'doubt_booking',
+  'doubt_session',
+  'doubt_cancellation',
+  'alert',
+  'system',
 ] as const;
 
 export class BroadcastNotificationDto {

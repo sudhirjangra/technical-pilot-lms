@@ -20,6 +20,7 @@ import {
   CalendarDays,
   ChevronsUpDown,
   ClipboardList,
+  Gift,
   GraduationCap,
   LogOut,
   Settings,
@@ -64,6 +65,7 @@ const navGroups = [
     group: 'Connect',
     items: [
       { label: 'Doubt Sessions', href: '/dashboard/doubt-sessions', icon: CalendarDays, exact: false },
+      { label: 'Refer & Earn', href: '/dashboard/referrals', icon: Gift, exact: false },
     ],
   },
 ];

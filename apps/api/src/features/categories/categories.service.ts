@@ -11,7 +11,9 @@ import type { FastifyRequest } from 'fastify';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 
 type MultipartRequest = FastifyRequest & {
-  file: () => Promise<{ mimetype: string; toBuffer: () => Promise<Buffer> } | undefined>;
+  file: () => Promise<
+    { mimetype: string; toBuffer: () => Promise<Buffer> } | undefined
+  >;
 };
 
 @Injectable()
@@ -101,7 +103,8 @@ export class CategoriesService {
     if (!category) throw new NotFoundException('Category not found');
 
     const part = await (request as MultipartRequest).file();
-    if (!part) throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
+    if (!part)
+      throw new BadRequestException('A PNG, JPEG, or WEBP image is required');
 
     const ext = part.mimetype.split('/')[1];
     const publicUrl = await uploadPublicImage(

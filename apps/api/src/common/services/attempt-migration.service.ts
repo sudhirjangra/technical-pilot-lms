@@ -1,6 +1,3 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import {
   MongoAttemptDocument,
   MongoService,
@@ -8,6 +5,9 @@ import {
   QuestionReviewOption,
   TopicBreakdownItem,
 } from '@/common/modules/mongodb.service';
+import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface MigrationSummary {
   totalEvaluated: number;
@@ -102,7 +102,9 @@ export class AttemptMigrationService {
     for (const q of questions) {
       questionIdsSeen.add(q.id);
       const answer = answers.find((a) => a.question_id === q.id);
-      const selectedOptionIds = answer ? selectedOptionsMap.get(answer.id) ?? [] : [];
+      const selectedOptionIds = answer
+        ? (selectedOptionsMap.get(answer.id) ?? [])
+        : [];
       const correctOptionIds = correctOptionsMap.get(q.id) ?? [];
       const selectedSet = new Set(selectedOptionIds);
       const qOptions = (optionsByQuestion.get(q.id) ?? []).map((opt) => ({
@@ -110,7 +112,8 @@ export class AttemptMigrationService {
         isSelected: selectedSet.has(opt.id),
       }));
 
-      const points = q.points !== null && q.points !== undefined ? Number(q.points) : 1;
+      const points =
+        q.points !== null && q.points !== undefined ? Number(q.points) : 1;
       const pointsEarned = answer?.is_correct === true ? points : 0;
 
       questionReview.push({
@@ -125,8 +128,12 @@ export class AttemptMigrationService {
         explanation: q.explanation ?? null,
         correctOptionIds,
         selectedOptionIds,
-        correctOptionTexts: correctOptionIds.map((id) => optionTextMap.get(id) || id),
-        selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) || id),
+        correctOptionTexts: correctOptionIds.map(
+          (id) => optionTextMap.get(id) || id,
+        ),
+        selectedOptionTexts: selectedOptionIds.map(
+          (id) => optionTextMap.get(id) || id,
+        ),
         options: qOptions,
         textAnswer: answer?.text_answer ?? null,
       });
@@ -153,7 +160,9 @@ export class AttemptMigrationService {
           correctOptionIds: [],
           selectedOptionIds,
           correctOptionTexts: [],
-          selectedOptionTexts: selectedOptionIds.map((id) => optionTextMap.get(id) || id),
+          selectedOptionTexts: selectedOptionIds.map(
+            (id) => optionTextMap.get(id) || id,
+          ),
           options: selectedOptionIds.map((id) => ({
             id,
             text: optionTextMap.get(id) || 'Option (Archived)',
@@ -168,7 +177,13 @@ export class AttemptMigrationService {
     // Build topic breakdown
     const topicMap = new Map<
       string,
-      { total: number; correct: number; totalTime: number; points: number; earnedPoints: number }
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
     >();
 
     for (const item of questionReview) {
@@ -188,19 +203,29 @@ export class AttemptMigrationService {
       topicMap.set(topic, current);
     }
 
-    const topicBreakdown: TopicBreakdownItem[] = Array.from(topicMap.entries()).map(
-      ([topic, stats]) => ({ topic, ...stats }),
-    );
+    const topicBreakdown: TopicBreakdownItem[] = Array.from(
+      topicMap.entries(),
+    ).map(([topic, stats]) => ({ topic, ...stats }));
 
     const totalCount = questionReview.length;
-    const correctCount = questionReview.filter((q) => q.isCorrect === true).length;
-    const calculatedMaxScore = questionReview.reduce((acc, q) => acc + q.points, 0);
+    const correctCount = questionReview.filter(
+      (q) => q.isCorrect === true,
+    ).length;
+    const calculatedMaxScore = questionReview.reduce(
+      (acc, q) => acc + q.points,
+      0,
+    );
     const maxScore =
-      attempt.max_score !== null && attempt.max_score !== undefined && attempt.max_score > 0
+      attempt.max_score !== null &&
+      attempt.max_score !== undefined &&
+      attempt.max_score > 0
         ? Number(attempt.max_score)
         : calculatedMaxScore;
 
-    const calculatedScore = questionReview.reduce((acc, q) => acc + q.pointsEarned, 0);
+    const calculatedScore = questionReview.reduce(
+      (acc, q) => acc + q.pointsEarned,
+      0,
+    );
     // Prefer the larger of Supabase and calculated scores to avoid stale 0 from un-graded submissions
     const supabaseScore =
       attempt.score !== null && attempt.score !== undefined
@@ -213,15 +238,18 @@ export class AttemptMigrationService {
 
     const startedAt =
       attempt.started_at || attempt.created_at || new Date().toISOString();
-    const completedAt =
-      attempt.completed_at || attempt.updated_at || startedAt;
+    const completedAt = attempt.completed_at || attempt.updated_at || startedAt;
 
     let timeSpentSeconds = Number(attempt.time_spent_seconds) || 0;
     if (timeSpentSeconds <= 0 && startedAt && completedAt) {
       const diff = Math.round(
-        (new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000,
+        (new Date(completedAt).getTime() - new Date(startedAt).getTime()) /
+          1000,
       );
-      timeSpentSeconds = diff > 0 ? diff : questionReview.reduce((acc, q) => acc + q.timeSpentSeconds, 0);
+      timeSpentSeconds =
+        diff > 0
+          ? diff
+          : questionReview.reduce((acc, q) => acc + q.timeSpentSeconds, 0);
     }
 
     const avgTimePerQuestion =
@@ -269,7 +297,9 @@ export class AttemptMigrationService {
         .maybeSingle();
 
       if (attemptErr || !attempt) {
-        this.logger.warn(`Assignment attempt ${attemptId} not found in Supabase`);
+        this.logger.warn(
+          `Assignment attempt ${attemptId} not found in Supabase`,
+        );
         return false;
       }
 
@@ -296,7 +326,9 @@ export class AttemptMigrationService {
         .select('assignment_answer_id, option_id')
         .in(
           'assignment_answer_id',
-          answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000'],
+          answerIds.length > 0
+            ? answerIds
+            : ['00000000-0000-0000-0000-000000000000'],
         );
 
       // Fetch questions and question options
@@ -311,7 +343,9 @@ export class AttemptMigrationService {
         .select('id, question_id, option_text, is_correct')
         .in(
           'question_id',
-          questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000'],
+          questionIds.length > 0
+            ? questionIds
+            : ['00000000-0000-0000-0000-000000000000'],
         );
 
       const doc = this.mapSupabaseAttemptToMongoDoc({
@@ -376,7 +410,9 @@ export class AttemptMigrationService {
         .select('test_answer_id, option_id')
         .in(
           'test_answer_id',
-          answerIds.length > 0 ? answerIds : ['00000000-0000-0000-0000-000000000000'],
+          answerIds.length > 0
+            ? answerIds
+            : ['00000000-0000-0000-0000-000000000000'],
         );
 
       // Fetch questions and question options
@@ -391,7 +427,9 @@ export class AttemptMigrationService {
         .select('id, question_id, option_text, is_correct')
         .in(
           'question_id',
-          questionIds.length > 0 ? questionIds : ['00000000-0000-0000-0000-000000000000'],
+          questionIds.length > 0
+            ? questionIds
+            : ['00000000-0000-0000-0000-000000000000'],
         );
 
       const doc = this.mapSupabaseAttemptToMongoDoc({
@@ -443,7 +481,9 @@ export class AttemptMigrationService {
         .range(offset, offset + limit - 1);
 
       if (aErr) {
-        this.logger.error(`Error querying assignment_attempts for migration: ${aErr.message}`);
+        this.logger.error(
+          `Error querying assignment_attempts for migration: ${aErr.message}`,
+        );
       } else {
         for (const a of assignmentAttempts ?? []) {
           summary.totalEvaluated += 1;
@@ -474,7 +514,9 @@ export class AttemptMigrationService {
         .range(offset, offset + limit - 1);
 
       if (tErr) {
-        this.logger.error(`Error querying test_attempts for migration: ${tErr.message}`);
+        this.logger.error(
+          `Error querying test_attempts for migration: ${tErr.message}`,
+        );
       } else {
         for (const t of testAttempts ?? []) {
           summary.totalEvaluated += 1;

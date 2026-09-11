@@ -1,4 +1,4 @@
-import { Permissions, Roles } from '@/common/decorators';
+import { Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -80,9 +80,7 @@ export class TestsController {
 
   @Roles('ADMIN', 'SUB_ADMIN')
   @Delete('questions/:questionId')
-  async removeQuestion(
-    @Param('questionId', ParseUUIDPipe) questionId: string,
-  ) {
+  async removeQuestion(@Param('questionId', ParseUUIDPipe) questionId: string) {
     await this.testsService.removeQuestion(questionId);
     return { message: 'Question deleted' };
   }
@@ -147,12 +145,7 @@ export class TestsController {
     @Body() dto: SaveAnswerDto,
     @Req() req: { user: { id: string } },
   ) {
-    await this.testsService.saveAnswer(
-      attemptId,
-      questionId,
-      req.user.id,
-      dto,
-    );
+    await this.testsService.saveAnswer(attemptId, questionId, req.user.id, dto);
     return { message: 'Answer saved' };
   }
 
@@ -199,13 +192,16 @@ export class TestsController {
 
   // ── End admin analytics routes ────────────────────────────────────────────
 
-
   @Get('student/attempts/:attemptId')
   async getStudentAttemptDetail(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
     @Req() req: { user: { id: string; role?: string } },
   ) {
-    const data = await this.testsService.findAttemptForStudent(attemptId, req.user.id, req.user.role);
+    const data = await this.testsService.findAttemptForStudent(
+      attemptId,
+      req.user.id,
+      req.user.role,
+    );
     return { message: 'Attempt detail fetched', data };
   }
 

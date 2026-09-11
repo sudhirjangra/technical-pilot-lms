@@ -23,8 +23,14 @@ describe('question-import.util', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].options).toHaveLength(2);
-      expect(result[0].options[0]).toEqual({ option_text: 'True', is_correct: false });
-      expect(result[0].options[1]).toEqual({ option_text: 'False', is_correct: true });
+      expect(result[0].options[0]).toEqual({
+        option_text: 'True',
+        is_correct: false,
+      });
+      expect(result[0].options[1]).toEqual({
+        option_text: 'False',
+        is_correct: true,
+      });
     });
 
     it('should parse 3-option MCQ when option_D is omitted', () => {
@@ -47,15 +53,25 @@ describe('question-import.util', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].options).toHaveLength(3);
-      expect(result[0].options[0]).toEqual({ option_text: '1013.25 hPa', is_correct: true });
-      expect(result[0].options[1]).toEqual({ option_text: '1000.00 hPa', is_correct: false });
-      expect(result[0].options[2]).toEqual({ option_text: '1020.50 hPa', is_correct: false });
+      expect(result[0].options[0]).toEqual({
+        option_text: '1013.25 hPa',
+        is_correct: true,
+      });
+      expect(result[0].options[1]).toEqual({
+        option_text: '1000.00 hPa',
+        is_correct: false,
+      });
+      expect(result[0].options[2]).toEqual({
+        option_text: '1020.50 hPa',
+        is_correct: false,
+      });
     });
 
     it('should parse 4-option MSQ with multiple correct answers', () => {
       const json = JSON.stringify([
         {
-          question_text: 'Which instruments operate on the pitot-static system?',
+          question_text:
+            'Which instruments operate on the pitot-static system?',
           question_type: 'msq',
           points: 3,
           option_a: 'Airspeed Indicator',

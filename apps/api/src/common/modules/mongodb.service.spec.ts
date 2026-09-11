@@ -1,5 +1,5 @@
-import { MongoService, MongoAttemptDocument } from './mongodb.service';
 import { ConfigService } from '@nestjs/config';
+import { MongoAttemptDocument, MongoService } from './mongodb.service';
 
 describe('MongoService', () => {
   let service: MongoService;

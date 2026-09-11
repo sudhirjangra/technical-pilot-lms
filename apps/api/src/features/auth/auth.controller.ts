@@ -1,5 +1,4 @@
 import { Public } from '@/common/decorators';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { JwtRefreshGuard } from '@/common/guards/jwt-refresh.guard';
 import {
   MessageResponse,
@@ -24,6 +23,7 @@ import {
   SupabaseSyncDto,
 } from '@/features/auth/dto';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -33,6 +33,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -128,7 +129,10 @@ export class AuthController {
    * @returns {Promise<MessageResponse>} Response message.
    */
   @Patch('complete-profile')
-  async completeProfile(@Req() req: any, @Body() dto: CompleteProfileDto): Promise<MessageResponse> {
+  async completeProfile(
+    @Req() req: any,
+    @Body() dto: CompleteProfileDto,
+  ): Promise<MessageResponse> {
     await this.authService.completeProfile(req.user.id, dto);
     return { message: 'Profile completed successfully' };
   }
@@ -214,6 +218,18 @@ export class AuthController {
     return { message: 'OTP sent successfully' };
   }
 
+  /**
+   * Checks if an email has already been confirmed.
+   */
+  @Public()
+  @Throttle({ short: { limit: 60, ttl: 60000 } })
+  @Get('email-status')
+  async getEmailStatus(@Query('email') email: string) {
+    if (!email) throw new BadRequestException('Email is required');
+    const data = await this.authService.checkEmailStatus(email);
+    return { message: 'Email status fetched', data };
+  }
+
   @Public()
   @Patch('confirm-email')
   async confirmEmail(
@@ -267,7 +283,10 @@ export class AuthController {
     @Req() req: any,
     @Body() dto: ChangePasswordDto,
   ): Promise<MessageResponse> {
-    await this.authService.changePassword({ ...dto, identifier: req.user.email });
+    await this.authService.changePassword({
+      ...dto,
+      identifier: req.user.email,
+    });
     return { message: 'Password changed successfully' };
   }
 

@@ -16,15 +16,22 @@ const VDOCIPHER_BASE = 'https://dev.vdocipher.com/api';
 const MAX_CONCURRENT_SESSIONS = 2;
 
 type MultipartRequest = FastifyRequest & {
-  file: () => Promise<{
-    filename: string;
-    mimetype: string;
-    toBuffer: () => Promise<Buffer>;
-  } | undefined>;
+  file: () => Promise<
+    | {
+        filename: string;
+        mimetype: string;
+        toBuffer: () => Promise<Buffer>;
+      }
+    | undefined
+  >;
 };
 
 function slug(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 /**
@@ -136,8 +143,7 @@ export class VideosService {
 
     const videoId = response.data.videoId as string;
     const clientPayload = response.data.clientPayload as
-      | Record<string, string>
-      | undefined;
+      Record<string, string> | undefined;
     const uploadLink = clientPayload?.uploadLink;
     if (!videoId || !clientPayload || !uploadLink)
       throw new BadRequestException('VdoCipher did not return an upload link');
@@ -154,7 +160,9 @@ export class VideosService {
     form.append('success_action_redirect', '');
     form.append(
       'file',
-      new Blob([new Uint8Array(await part.toBuffer())], { type: part.mimetype }),
+      new Blob([new Uint8Array(await part.toBuffer())], {
+        type: part.mimetype,
+      }),
       part.filename,
     );
 
@@ -171,11 +179,17 @@ export class VideosService {
 
     const { data, error } = await this.supabase
       .from('video_lessons')
-      .upsert({ lesson_id: lessonId, vdocipher_video_id: videoId }, { onConflict: 'lesson_id' })
+      .upsert(
+        { lesson_id: lessonId, vdocipher_video_id: videoId },
+        { onConflict: 'lesson_id' },
+      )
       .select()
       .single();
     if (error) throw new BadRequestException(error.message);
-    return { ...data, folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}` };
+    return {
+      ...data,
+      folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}`,
+    };
   }
 
   /**
@@ -233,9 +247,12 @@ export class VideosService {
     headers: Record<string, string>,
   ): Promise<string | undefined> {
     try {
-      const { data } = await axios.get(`${VDOCIPHER_BASE}/videos/folders/${parent}`, {
-        headers,
-      });
+      const { data } = await axios.get(
+        `${VDOCIPHER_BASE}/videos/folders/${parent}`,
+        {
+          headers,
+        },
+      );
       const children: Array<Record<string, unknown>> =
         data?.folderList ?? data?.folders ?? data?.children ?? [];
       const match = children.find(
@@ -295,7 +312,9 @@ export class VideosService {
         params: { videos: videoId },
       });
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: unknown; status?: number } };
+      const axiosErr = err as {
+        response?: { data?: unknown; status?: number };
+      };
       console.error(
         'VdoCipher delete error:',
         axiosErr.response?.status,
@@ -311,7 +330,11 @@ export class VideosService {
     userId: string,
     ip: string,
     userAgent: string,
-  ): Promise<{ otp: string; playbackInfo: string; thumbnailUrl: string | null }> {
+  ): Promise<{
+    otp: string;
+    playbackInfo: string;
+    thumbnailUrl: string | null;
+  }> {
     // 1. Fetch video_lesson — lesson must exist and be a video
     const { data: videoLesson } = await this.supabase
       .from('video_lessons')
@@ -341,11 +364,12 @@ export class VideosService {
       .maybeSingle();
     if (!enrollment) throw new ForbiddenException('Active enrollment required');
 
-    const courseData = enrollment.courses as unknown as { status?: string } | null;
+    const courseData = enrollment.courses as unknown as {
+      status?: string;
+    } | null;
     if (courseData?.status === 'archived') {
       throw new ForbiddenException('COURSE_ACCESS_REVOKED');
     }
-
 
     // 3. Concurrent session management — rotate stale sessions for smooth device switching
     const now = new Date().toISOString();
@@ -428,7 +452,9 @@ export class VideosService {
     return {
       otp: response.data.otp,
       playbackInfo: response.data.playbackInfo,
-      thumbnailUrl: (videoLesson as unknown as { thumbnail_url?: string | null }).thumbnail_url ?? null,
+      thumbnailUrl:
+        (videoLesson as unknown as { thumbnail_url?: string | null })
+          .thumbnail_url ?? null,
     };
   }
 
@@ -472,7 +498,10 @@ export class VideosService {
    * Upload a custom thumbnail image directly to VdoCipher as a poster.
    * Does NOT store in Supabase Storage. Saves the VdoCipher poster URL in video_lessons.
    */
-  async uploadThumbnail(lessonId: string, request: FastifyRequest): Promise<{ thumbnail_url: string }> {
+  async uploadThumbnail(
+    lessonId: string,
+    request: FastifyRequest,
+  ): Promise<{ thumbnail_url: string }> {
     const { data: videoLesson } = await this.supabase
       .from('video_lessons')
       .select('vdocipher_video_id, lesson_id')
@@ -480,7 +509,9 @@ export class VideosService {
       .maybeSingle();
     if (!videoLesson) throw new NotFoundException('Video lesson not found');
     if (!videoLesson.vdocipher_video_id)
-      throw new BadRequestException('Please upload a video to VdoCipher first before adding a thumbnail');
+      throw new BadRequestException(
+        'Please upload a video to VdoCipher first before adding a thumbnail',
+      );
 
     const part = await (request as MultipartRequest).file();
     if (!part || !part.mimetype.startsWith('image/'))
@@ -513,34 +544,55 @@ export class VideosService {
         vdoPosterUrl = uploadRes.data.url;
       }
     } catch (err) {
-      throw new BadRequestException(describeAxiosError('poster upload to VdoCipher', err));
+      throw new BadRequestException(
+        describeAxiosError('poster upload to VdoCipher', err),
+      );
     }
 
     // If url was not in the immediate response, fetch files or video details from VdoCipher
     if (!vdoPosterUrl) {
       try {
-        const filesRes = await axios.get(`${VDOCIPHER_BASE}/videos/${videoId}/files/`, { headers });
-        const files: Array<{ poster?: boolean; url?: string; type?: string }> = Array.isArray(filesRes.data)
-          ? filesRes.data
-          : filesRes.data?.files ?? [];
-        const posterFile = [...files].reverse().find((f) => f.poster || f.type === 'poster' || f.url?.includes('poster') || f.url?.includes('thumb'));
+        const filesRes = await axios.get(
+          `${VDOCIPHER_BASE}/videos/${videoId}/files/`,
+          { headers },
+        );
+        const files: Array<{ poster?: boolean; url?: string; type?: string }> =
+          Array.isArray(filesRes.data)
+            ? filesRes.data
+            : (filesRes.data?.files ?? []);
+        const posterFile = [...files]
+          .reverse()
+          .find(
+            (f) =>
+              f.poster ||
+              f.type === 'poster' ||
+              f.url?.includes('poster') ||
+              f.url?.includes('thumb'),
+          );
         if (posterFile?.url) {
           vdoPosterUrl = posterFile.url;
         }
       } catch (err) {
-        console.warn(describeAxiosError('fetching poster files from VdoCipher', err));
+        console.warn(
+          describeAxiosError('fetching poster files from VdoCipher', err),
+        );
       }
     }
 
     if (!vdoPosterUrl) {
       try {
-        const videoRes = await axios.get(`${VDOCIPHER_BASE}/videos/${videoId}`, { headers });
+        const videoRes = await axios.get(
+          `${VDOCIPHER_BASE}/videos/${videoId}`,
+          { headers },
+        );
         const posters: Array<{ url?: string }> = videoRes.data?.posters ?? [];
         if (posters.length > 0 && posters[posters.length - 1]?.url) {
           vdoPosterUrl = posters[posters.length - 1].url!;
         }
       } catch (err) {
-        console.warn(describeAxiosError('fetching video details from VdoCipher', err));
+        console.warn(
+          describeAxiosError('fetching video details from VdoCipher', err),
+        );
       }
     }
 

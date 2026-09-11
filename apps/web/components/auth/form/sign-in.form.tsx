@@ -27,7 +27,7 @@ import { Label } from '@repo/shadcn/label';
 import { cn } from '@repo/shadcn/lib/utils';
 import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
-import { Laptop, Loader2, LogOut, Smartphone, Monitor } from '@repo/shadcn/lucide';
+import { CheckCircle2, Laptop, Loader2, LogOut, Smartphone, Monitor } from '@repo/shadcn/lucide';
 import { Google } from '@repo/shadcn/google';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
@@ -46,13 +46,21 @@ const SignInForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const accountDisabled = searchParams.get('disabled') === '1';
+  const emailParam = searchParams.get('email') ?? '';
+  const isConfirmed = searchParams.get('confirmed') === '1';
   const [formData, setFormData] = useState({
-    identifier: '',
+    identifier: emailParam,
     password: '',
   });
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [deviceLimitOpen, setDeviceLimitOpen] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (emailParam) {
+      setFormData((prev) => ({ ...prev, identifier: emailParam }));
+    }
+  }, [emailParam]);
 
   const cardMaxWidth = 'w-full';
   const cardPadding = 'pt-3 sm:pt-4 px-4 sm:px-6';
@@ -144,6 +152,12 @@ const SignInForm = () => {
                 ? serverError
                 : `Sign in to your ${APP_NAME} account`}
           </CardDescription>
+          {isConfirmed && !serverError && (
+            <div className="mx-auto mt-2 flex max-w-sm items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2 text-xs font-medium text-green-600 dark:text-green-400 text-start">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>Email confirmed! Please enter your password to sign in.</span>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className={cardPadding}>
@@ -165,7 +179,8 @@ const SignInForm = () => {
                   type="email"
                   placeholder="you@example.com"
                   autoComplete="email"
-                  autoFocus
+                  autoFocus={!emailParam}
+                  value={formData.identifier}
                   required
                   disabled={isExecuting}
                   onChange={handleChange}
@@ -194,6 +209,7 @@ const SignInForm = () => {
                 <PasswordInput
                   id="password"
                   name="password"
+                  autoFocus={Boolean(emailParam)}
                   required
                   disabled={isExecuting}
                   onChange={handleChange}

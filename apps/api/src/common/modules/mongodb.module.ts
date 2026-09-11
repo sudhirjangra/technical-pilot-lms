@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
-import { MongoService } from './mongodb.service';
 import { AttemptMigrationService } from '../services/attempt-migration.service';
+import { MongoService } from './mongodb.service';
 
 @Global()
 @Module({
@@ -8,4 +8,3 @@ import { AttemptMigrationService } from '../services/attempt-migration.service';
   exports: [MongoService, AttemptMigrationService],
 })
 export class MongoModule {}
-

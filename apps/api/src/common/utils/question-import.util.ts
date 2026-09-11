@@ -42,7 +42,10 @@ function getFileExtension(filename?: string): string {
  * removed (`question number` -> `questionnumber`).
  */
 function canonicalKey(key: string): string {
-  return key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  return key
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 function normalizeRow(row: RawRow): RawRow {

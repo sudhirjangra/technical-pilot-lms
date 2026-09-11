@@ -16,7 +16,8 @@ import { CreateContactQueryDto } from './dto';
 function formatQueryRecord(row: any) {
   if (!row) return row;
   const meta = (row.metadata as Record<string, any>) || {};
-  const queryNumber = meta.query_number || `Q-${row.id.slice(0, 6).toUpperCase()}`;
+  const queryNumber =
+    meta.query_number || `Q-${row.id.slice(0, 6).toUpperCase()}`;
   const student = row.profiles
     ? {
         ...row.profiles,
@@ -48,7 +49,6 @@ export class StudentQueriesService {
     private readonly mailService: MailService,
     private readonly logger: Logger,
   ) {}
-
 
   async submitContact(dto: CreateContactQueryDto) {
     const queryNumber = generateQueryNumber();
@@ -107,16 +107,19 @@ export class StudentQueriesService {
             }),
           })
           .catch((err) => {
-            this.logger.warn({ err, email: dto.email }, 'Failed to send contact inquiry acknowledgment email');
+            this.logger.warn(
+              { err, email: dto.email },
+              'Failed to send contact inquiry acknowledgment email',
+            );
           });
       }
     } catch {
       // Non-blocking notification
     }
 
-
     return {
-      message: 'Your inquiry has been submitted successfully. Our team will contact you shortly.',
+      message:
+        'Your inquiry has been submitted successfully. Our team will contact you shortly.',
       query_number: queryNumber,
       query: formatQueryRecord(data),
     };
@@ -204,14 +207,19 @@ export class StudentQueriesService {
     reason?: string,
   ) {
     const table = assessmentType === 'assignment' ? 'assignments' : 'tests';
-    const attemptsTable = assessmentType === 'assignment' ? 'assignment_attempts' : 'test_attempts';
-    const targetColumn = assessmentType === 'assignment' ? 'assignment_id' : 'test_id';
+    const attemptsTable =
+      assessmentType === 'assignment' ? 'assignment_attempts' : 'test_attempts';
+    const targetColumn =
+      assessmentType === 'assignment' ? 'assignment_id' : 'test_id';
     const { data: assessment } = await this.supabase
       .from(table)
       .select('id, title, lesson_id, max_attempts, passing_score_percent')
       .eq('id', assessmentId)
       .single();
-    if (!assessment) throw new NotFoundException(`${assessmentType === 'assignment' ? 'Assignment' : 'Test'} not found`);
+    if (!assessment)
+      throw new NotFoundException(
+        `${assessmentType === 'assignment' ? 'Assignment' : 'Test'} not found`,
+      );
 
     const { data: attempts } = await this.supabase
       .from(attemptsTable)
@@ -314,7 +322,9 @@ export class StudentQueriesService {
       .single();
     if (!query) throw new NotFoundException('Query not found');
     if (query.type !== 'extra_attempt_request') {
-      throw new BadRequestException('This query is not an extra-attempt request');
+      throw new BadRequestException(
+        'This query is not an extra-attempt request',
+      );
     }
 
     const metadata = query.metadata as {
@@ -322,12 +332,17 @@ export class StudentQueriesService {
       test_id?: string;
       assessment_type?: 'assignment' | 'test';
     } | null;
-    const assessmentType = metadata?.assessment_type ?? (metadata?.test_id ? 'test' : 'assignment');
-    const assessmentId = assessmentType === 'test' ? metadata?.test_id : metadata?.assignment_id;
+    const assessmentType =
+      metadata?.assessment_type ?? (metadata?.test_id ? 'test' : 'assignment');
+    const assessmentId =
+      assessmentType === 'test' ? metadata?.test_id : metadata?.assignment_id;
     if (!assessmentId) {
-      throw new BadRequestException('Request is missing its assignment reference');
+      throw new BadRequestException(
+        'Request is missing its assignment reference',
+      );
     }
-    const targetColumn = assessmentType === 'test' ? 'test_id' : 'assignment_id';
+    const targetColumn =
+      assessmentType === 'test' ? 'test_id' : 'assignment_id';
 
     const { data: existing } = await this.supabase
       .from('assessment_attempt_grants')

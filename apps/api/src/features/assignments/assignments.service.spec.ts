@@ -26,7 +26,15 @@ describe('AssignmentsService', () => {
             error: null,
           }),
           assignment_answers: buildRequest({
-            data: [{ id: 'answer-1', question_id: 'q-1', text_answer: null, is_correct: true, time_spent_seconds: 120 }],
+            data: [
+              {
+                id: 'answer-1',
+                question_id: 'q-1',
+                text_answer: null,
+                is_correct: true,
+                time_spent_seconds: 120,
+              },
+            ],
             error: null,
           }),
           assignment_answer_options: buildRequest({
@@ -34,7 +42,16 @@ describe('AssignmentsService', () => {
             error: null,
           }),
           questions: buildRequest({
-            data: [{ id: 'q-1', question_type: 'mcq', points: 10, explanation: 'Why', topic: 'Topic 1', question_text: 'What?' }],
+            data: [
+              {
+                id: 'q-1',
+                question_type: 'mcq',
+                points: 10,
+                explanation: 'Why',
+                topic: 'Topic 1',
+                question_text: 'What?',
+              },
+            ],
             error: null,
           }),
           question_options: buildRequest({
@@ -43,7 +60,8 @@ describe('AssignmentsService', () => {
           }),
         };
 
-        const request = requests[table] ?? buildRequest({ data: [], error: null });
+        const request =
+          requests[table] ?? buildRequest({ data: [], error: null });
         const chain = {
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
@@ -65,13 +83,24 @@ describe('AssignmentsService', () => {
     const attemptMigrationService = {
       migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
       migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
-      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+      migrateAllAttempts: jest.fn().mockResolvedValue({
+        totalEvaluated: 0,
+        migratedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        errors: [],
+      }),
     };
 
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-
-    await expect(service.findAttemptForStudent('attempt-1', 'student-1')).resolves.toEqual(
+    await expect(
+      service.findAttemptForStudent('attempt-1', 'student-1'),
+    ).resolves.toEqual(
       expect.objectContaining({
         id: 'attempt-1',
         assignment_id: 'assignment-1',
@@ -128,13 +157,24 @@ describe('AssignmentsService', () => {
     const attemptMigrationService = {
       migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
       migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
-      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+      migrateAllAttempts: jest.fn().mockResolvedValue({
+        totalEvaluated: 0,
+        migratedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        errors: [],
+      }),
     };
 
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-
-    await expect(service.findAttemptForStudent('attempt-1', 'student-2', 'ADMIN')).resolves.toEqual(
+    await expect(
+      service.findAttemptForStudent('attempt-1', 'student-2', 'ADMIN'),
+    ).resolves.toEqual(
       expect.objectContaining({
         id: 'attempt-1',
         assignment_id: 'assignment-1',
@@ -177,12 +217,25 @@ describe('AssignmentsService', () => {
     const attemptMigrationService = {
       migrateSingleAssignmentAttempt: jest.fn().mockResolvedValue(true),
       migrateSingleTestAttempt: jest.fn().mockResolvedValue(true),
-      migrateAllAttempts: jest.fn().mockResolvedValue({ totalEvaluated: 0, migratedCount: 0, skippedCount: 0, failedCount: 0, errors: [] }),
+      migrateAllAttempts: jest.fn().mockResolvedValue({
+        totalEvaluated: 0,
+        migratedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        errors: [],
+      }),
     };
 
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-    const result = await service.findAttemptForStudent('attempt-mongo-1', 'student-1');
+    const result = await service.findAttemptForStudent(
+      'attempt-mongo-1',
+      'student-1',
+    );
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -224,9 +277,15 @@ describe('AssignmentsService', () => {
     };
 
     const attemptMigrationService = {};
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-    await expect(service.findAttemptForStudent('attempt-mongo-2', 'student-a')).rejects.toThrow('Access denied');
+    await expect(
+      service.findAttemptForStudent('attempt-mongo-2', 'student-a'),
+    ).rejects.toThrow('Access denied');
   });
 
   it('should prevent Student A from reading Student B assignment attempt in Supabase fallback', async () => {
@@ -250,9 +309,15 @@ describe('AssignmentsService', () => {
     };
 
     const attemptMigrationService = {};
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-    await expect(service.findAttemptForStudent('attempt-supa-2', 'student-a')).rejects.toThrow('Access denied');
+    await expect(
+      service.findAttemptForStudent('attempt-supa-2', 'student-a'),
+    ).rejects.toThrow('Access denied');
   });
 
   it('should throw NotFoundException when attempt does not exist anywhere', async () => {
@@ -272,9 +337,15 @@ describe('AssignmentsService', () => {
     };
 
     const attemptMigrationService = {};
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-    await expect(service.findAttemptForStudent('non-existent-attempt', 'student-a')).rejects.toThrow('Attempt not found');
+    await expect(
+      service.findAttemptForStudent('non-existent-attempt', 'student-a'),
+    ).rejects.toThrow('Attempt not found');
   });
 
   it('should submit an attempt with consistent MongoDB snapshot, Supabase reference, and lesson sync', async () => {
@@ -343,7 +414,14 @@ describe('AssignmentsService', () => {
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockResolvedValue({
               data: [
-                { id: 'q-1', question_type: 'mcq', points: 10, explanation: 'Exp 1', topic: 'Navigation', question_text: 'Heading?' },
+                {
+                  id: 'q-1',
+                  question_type: 'mcq',
+                  points: 10,
+                  explanation: 'Exp 1',
+                  topic: 'Navigation',
+                  question_text: 'Heading?',
+                },
               ],
               error: null,
             }),
@@ -355,8 +433,18 @@ describe('AssignmentsService', () => {
             select: jest.fn().mockReturnThis(),
             in: jest.fn().mockResolvedValue({
               data: [
-                { id: 'opt-1', question_id: 'q-1', option_text: '360', is_correct: true },
-                { id: 'opt-2', question_id: 'q-1', option_text: '180', is_correct: false },
+                {
+                  id: 'opt-1',
+                  question_id: 'q-1',
+                  option_text: '360',
+                  is_correct: true,
+                },
+                {
+                  id: 'opt-2',
+                  question_id: 'q-1',
+                  option_text: '180',
+                  is_correct: false,
+                },
               ],
               error: null,
             }),
@@ -380,7 +468,9 @@ describe('AssignmentsService', () => {
               upsertedAnswers.push(data);
               return {
                 select: jest.fn().mockReturnThis(),
-                single: jest.fn().mockResolvedValue({ data: { id: 'ans-1' }, error: null }),
+                single: jest
+                  .fn()
+                  .mockResolvedValue({ data: { id: 'ans-1' }, error: null }),
               };
             }),
           };
@@ -402,7 +492,10 @@ describe('AssignmentsService', () => {
             }),
             select: jest.fn().mockReturnThis(),
             eq: jest.fn().mockReturnThis(),
-            in: jest.fn().mockResolvedValue({ data: [{ lesson_id: 'lesson-1', status: 'completed' }], error: null }),
+            in: jest.fn().mockResolvedValue({
+              data: [{ lesson_id: 'lesson-1', status: 'completed' }],
+              error: null,
+            }),
           };
         }
 
@@ -418,10 +511,16 @@ describe('AssignmentsService', () => {
               data: { id: 'lesson-1', chapters: { course_id: 'course-1' } },
               error: null,
             }),
-            then: (resolve: (val: any) => void) => resolve({
-              data: [{ id: 'chapter-1', lessons: [{ id: 'lesson-1', is_published: true }] }],
-              error: null,
-            }),
+            then: (resolve: (val: any) => void) =>
+              resolve({
+                data: [
+                  {
+                    id: 'chapter-1',
+                    lessons: [{ id: 'lesson-1', is_published: true }],
+                  },
+                ],
+                error: null,
+              }),
           };
         }
 
@@ -452,11 +551,25 @@ describe('AssignmentsService', () => {
     };
 
     const attemptMigrationService = {};
-    const service = new AssignmentsService(supabase as any, mongoService as any, attemptMigrationService as any);
+    const service = new AssignmentsService(
+      supabase as any,
+      mongoService as any,
+      attemptMigrationService as any,
+    );
 
-    const result = await service.submitAttempt('attempt-submit-1', 'student-1', {
-      answers: [{ questionId: 'q-1', selectedOptionIds: ['opt-1'], timeSpentSeconds: 45 }],
-    });
+    const result = await service.submitAttempt(
+      'attempt-submit-1',
+      'student-1',
+      {
+        answers: [
+          {
+            questionId: 'q-1',
+            selectedOptionIds: ['opt-1'],
+            timeSpentSeconds: 45,
+          },
+        ],
+      },
+    );
 
     expect(result.score).toBe(10);
     expect(result.passed).toBe(true);
@@ -469,4 +582,3 @@ describe('AssignmentsService', () => {
     expect(progressUpsert.status).toBe('completed');
   });
 });
-

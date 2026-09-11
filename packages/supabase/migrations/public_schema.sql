@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SFQLGglcEw7TqBWkTdaaTmXpd3XNNu7nnn5caQYdxcgg0bE0zWMwbh9bYDR5WLy
+\restrict tuWaW2NsbNyULEk5aWjGfZRSr8FvfTqVm6ZbmTseU7QkVhidOsGYKz9rmvDcwbc
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-1.pgdg24.04+2)
@@ -125,6 +125,34 @@ CREATE TYPE public.user_role AS ENUM (
 
 
 --
+-- Name: generate_unique_tp_referral_code(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.generate_unique_tp_referral_code() RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  new_code TEXT;
+  chars TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  i INTEGER;
+  code_exists BOOLEAN;
+BEGIN
+  LOOP
+    new_code := 'TP';
+    FOR i IN 1..6 LOOP
+      new_code := new_code || SUBSTR(chars, FLOOR(RANDOM() * LENGTH(chars) + 1)::INTEGER, 1);
+    END LOOP;
+
+    SELECT EXISTS(SELECT 1 FROM public.profiles WHERE referral_code = new_code) INTO code_exists;
+    IF NOT code_exists THEN
+      RETURN new_code;
+    END IF;
+  END LOOP;
+END;
+$$;
+
+
+--
 -- Name: get_my_role(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -165,6 +193,22 @@ begin
   new.updated_at = now();
   return new;
 end;
+$$;
+
+
+--
+-- Name: set_profile_referral_code(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_profile_referral_code() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.referral_code IS NULL THEN
+    NEW.referral_code := public.generate_unique_tp_referral_code();
+  END IF;
+  RETURN NEW;
+END;
 $$;
 
 
@@ -307,6 +351,30 @@ CREATE TABLE public.audit_logs (
 
 
 --
+-- Name: cash_conversion_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cash_conversion_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    points_requested integer NOT NULL,
+    inr_amount numeric(10,2) NOT NULL,
+    points_per_rupee numeric(10,2) NOT NULL,
+    status character varying(32) DEFAULT 'pending'::character varying NOT NULL,
+    student_notes text,
+    admin_notes text,
+    processed_at timestamp with time zone,
+    processed_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT cash_conversion_requests_inr_amount_check CHECK ((inr_amount > (0)::numeric)),
+    CONSTRAINT cash_conversion_requests_points_per_rupee_check CHECK ((points_per_rupee > (0)::numeric)),
+    CONSTRAINT cash_conversion_requests_points_requested_check CHECK ((points_requested > 0)),
+    CONSTRAINT cash_conversion_requests_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'paid'::character varying])::text[])))
+);
+
+
+--
 -- Name: categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -347,6 +415,26 @@ CREATE TABLE public.chapters (
     is_published boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: coupons; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.coupons (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    code character varying(64) NOT NULL,
+    discount_percentage numeric(5,2) NOT NULL,
+    applicable_user_id uuid,
+    max_uses integer DEFAULT 1 NOT NULL,
+    times_used integer DEFAULT 0 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    valid_until timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT coupons_discount_percentage_check CHECK (((discount_percentage >= (0)::numeric) AND (discount_percentage <= (100)::numeric))),
+    CONSTRAINT coupons_max_uses_check CHECK ((max_uses > 0)),
+    CONSTRAINT coupons_times_used_check CHECK ((times_used >= 0))
 );
 
 
@@ -501,7 +589,8 @@ CREATE TABLE public.payments (
     refund_reason text,
     invoice_number text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    coupon_code text
 );
 
 
@@ -533,7 +622,9 @@ CREATE TABLE public.profiles (
     avatar_url text,
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    referral_code character varying(16),
+    referred_by uuid
 );
 
 
@@ -604,6 +695,50 @@ COMMENT ON COLUMN public.questions.question_number IS 'Admin-facing question num
 --
 
 COMMENT ON COLUMN public.questions.correct_text_answer IS 'Expected answer for question_type = text. NULL for mcq/msq questions.';
+
+
+--
+-- Name: referral_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.referral_settings (
+    id integer DEFAULT 1 NOT NULL,
+    referee_discount_percentage numeric(5,2) DEFAULT 20.00 NOT NULL,
+    referrer_reward_percentage numeric(5,2) DEFAULT 10.00 NOT NULL,
+    points_per_rupee numeric(10,2) DEFAULT 5.00 NOT NULL,
+    min_withdrawal_points integer DEFAULT 500 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_by uuid,
+    CONSTRAINT referral_settings_id_check CHECK ((id = 1)),
+    CONSTRAINT referral_settings_min_withdrawal_points_check CHECK ((min_withdrawal_points >= 0)),
+    CONSTRAINT referral_settings_points_per_rupee_check CHECK ((points_per_rupee > (0)::numeric)),
+    CONSTRAINT referral_settings_referee_discount_percentage_check CHECK (((referee_discount_percentage >= (0)::numeric) AND (referee_discount_percentage <= (100)::numeric))),
+    CONSTRAINT referral_settings_referrer_reward_percentage_check CHECK (((referrer_reward_percentage >= (0)::numeric) AND (referrer_reward_percentage <= (100)::numeric)))
+);
+
+
+--
+-- Name: referrals; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.referrals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    referrer_id uuid NOT NULL,
+    referee_id uuid NOT NULL,
+    referral_code character varying(32) NOT NULL,
+    status character varying(32) DEFAULT 'registered'::character varying NOT NULL,
+    total_purchases_count integer DEFAULT 0 NOT NULL,
+    total_purchased_amount numeric(10,2) DEFAULT 0 NOT NULL,
+    total_points_awarded integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT no_self_referral CHECK ((referrer_id <> referee_id)),
+    CONSTRAINT referrals_status_check CHECK (((status)::text = ANY ((ARRAY['registered'::character varying, 'purchased'::character varying])::text[]))),
+    CONSTRAINT referrals_total_points_awarded_check CHECK ((total_points_awarded >= 0)),
+    CONSTRAINT referrals_total_purchased_amount_check CHECK ((total_purchased_amount >= (0)::numeric)),
+    CONSTRAINT referrals_total_purchases_count_check CHECK ((total_purchases_count >= 0))
+);
 
 
 --
@@ -726,6 +861,24 @@ CREATE TABLE public.tests (
 
 
 --
+-- Name: user_wallets; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_wallets (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    current_balance integer DEFAULT 0 NOT NULL,
+    total_earned integer DEFAULT 0 NOT NULL,
+    total_redeemed integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT user_wallets_current_balance_check CHECK ((current_balance >= 0)),
+    CONSTRAINT user_wallets_total_earned_check CHECK ((total_earned >= 0)),
+    CONSTRAINT user_wallets_total_redeemed_check CHECK ((total_redeemed >= 0))
+);
+
+
+--
 -- Name: video_lessons; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -752,6 +905,28 @@ CREATE TABLE public.video_sessions (
     user_agent text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     expires_at timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wallet_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    wallet_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    type character varying(32) NOT NULL,
+    points integer NOT NULL,
+    balance_after integer NOT NULL,
+    reference_id text,
+    source_user_id uuid,
+    description text NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT wallet_transactions_balance_after_check CHECK ((balance_after >= 0)),
+    CONSTRAINT wallet_transactions_points_check CHECK ((points <> 0)),
+    CONSTRAINT wallet_transactions_type_check CHECK (((type)::text = ANY ((ARRAY['credit_purchase'::character varying, 'debit_conversion'::character varying, 'refund_conversion_rejected'::character varying, 'admin_adjustment'::character varying])::text[])))
 );
 
 
@@ -814,6 +989,14 @@ COPY public.audit_logs (id, user_id, action, resource_type, resource_id, ip_addr
 
 
 --
+-- Data for Name: cash_conversion_requests; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.cash_conversion_requests (id, user_id, points_requested, inr_amount, points_per_rupee, status, student_notes, admin_notes, processed_at, processed_by, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -868,12 +1051,20 @@ ab7ae40b-4edb-47e4-8203-7f9670e7736f	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	Chapte
 
 
 --
+-- Data for Name: coupons; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.coupons (id, code, discount_percentage, applicable_user_id, max_uses, times_used, is_active, valid_until, created_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: courses; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.courses (id, category_id, title, slug, description, thumbnail_url, price, discount_price, status, created_by, published_at, created_at, updated_at) FROM stdin;
 b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testing-Phase-I	testing-phase-i	The Aviation Course is designed to provide students with a strong understanding of the aviation and airline industry. It covers key areas such as airport operations, passenger handling, airline management, aviation safety, customer service, and basic industry procedures. The course helps students develop practical skills, professional communication, and industry knowledge needed to pursue exciting career opportunities in aviation and airport services.	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/b8434539-78f9-4e76-b6a7-d002cc006640/thumbnail.jpeg?v=1788606290508	999.00	499.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-05 11:02:50.183+00	2026-09-05 11:02:32.770246+00	2026-09-10 12:02:08.917901+00
-17f620f4-ff2a-4c63-b63b-f9bc920c99ca	9c950693-2835-4088-8fdb-ae651820e3c0	Navigation-Part-I	navigation-part-i	\N	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/17f620f4-ff2a-4c63-b63b-f9bc920c99ca/thumbnail.jpeg?v=1788875344430	20000.00	15000.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 13:10:48.927+00	2026-09-06 12:52:19.604544+00	2026-09-08 13:49:08.123389+00
+17f620f4-ff2a-4c63-b63b-f9bc920c99ca	9c950693-2835-4088-8fdb-ae651820e3c0	Navigation-Part-I	navigation-part-i	<h3>📰 Today’s Top News — 11 Sept 2026</h3><p><strong>🇮🇳 BRICS Summit:</strong> New Delhi is under tight security as leaders arrive for the BRICS summit, with major traffic restrictions across the capital.</p><p><strong>📉 Indian Markets:</strong> Sensex and Nifty fell sharply as escalating Middle East tensions pushed crude oil above <strong>$108/barrel</strong>.</p><p><strong>💱 Rupee Under Pressure:</strong> The rupee weakened amid surging oil prices and rising US yields, with the RBI reportedly intervening to support the currency.</p>	https://emoqhomxasfusolkppzr.supabase.co/storage/v1/object/public/course-media/courses/17f620f4-ff2a-4c63-b63b-f9bc920c99ca/thumbnail.jpeg?v=1788875344430	20000.00	15000.00	published	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 13:10:48.927+00	2026-09-06 12:52:19.604544+00	2026-09-11 06:51:50.911478+00
 \.
 
 
@@ -882,20 +1073,15 @@ b8434539-78f9-4e76-b6a7-d002cc006640	98a0f515-69db-4557-b50b-e948af329998	Testin
 --
 
 COPY public.devices (id, user_id, device_fingerprint, device_name, platform, last_active_at, created_at) FROM stdin;
-a9780ffa-2ac5-42ed-86ac-ca928bf97e2f	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTA0MTI1OCwiZXhwIjoxNzkxNjMzMjU4fQ.On0Xr10NRy3SWHgsUlDqmFRs7Dyf2vmO-aPd65GbRMo	unknown	web	2026-09-10 11:54:18.371276+00	2026-09-10 11:54:18.371276+00
 b138ede6-c3b5-42eb-993c-73fc0ac84329	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4OTA0MTQ3NiwiZXhwIjoxNzkxNjMzNDc2fQ.HJq_-l6tOI8EF2IKzWFpIU7EC2yLxbvGC5j20FPW16A	unknown	web	2026-09-10 11:57:56.789318+00	2026-09-10 11:57:56.789318+00
-96f07c1e-fc02-43d4-aeec-bd367d5622aa	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI5ZDE3MGFlLWE5ZTAtNGRhYi04N2FkLThjZDRhYzgyYjNlOSIsImVtYWlsIjoidHBsbXMwMUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwNDE4NTksImV4cCI6MTc5MTYzMzg1OX0.G1karOBmN4XNYsKj7dKvb08Q3SJzFpdT1nvuaFr2Vr4	unknown	web	2026-09-10 12:04:19.455439+00	2026-09-10 12:04:19.455439+00
-bd764828-9349-4fb4-89be-e91262a2b948	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4OTA0MzQ4NSwiZXhwIjoxNzkxNjM1NDg1fQ.K8lWhImElB5TU-1wpYh9L4nGwyA8NzU9HkNHPHUA9Qc	unknown	web	2026-09-10 12:31:26.199213+00	2026-09-10 12:31:26.199213+00
-4cb3a441-b221-4f81-9d03-1148c36142d1	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImI5ZDE3MGFlLWE5ZTAtNGRhYi04N2FkLThjZDRhYzgyYjNlOSIsImVtYWlsIjoidHBsbXMwMUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjM5OTQsImV4cCI6MTc5MTYxNTk5NH0.RTBpdLyYVTIO-pQ3S0UNWLoHA1xOMxaIOHnpzkozKPY	unknown	web	2026-09-10 07:06:34.282751+00	2026-09-10 07:06:34.282751+00
-01ecab7f-de7b-4a9e-86c1-23f4680aae8d	027fe0b1-5d20-4543-aa20-22843b83e39d	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyN2ZlMGIxLTVkMjAtNDU0My1hYTIwLTIyODQzYjgzZTM5ZCIsImVtYWlsIjoidHBsbXMwMkBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQxMjcsImV4cCI6MTc5MTYxNjEyN30.nnFKS-dA66OSCQJCWPrwHWmlyk39mElUYghm4z7v4kk	Web Browser	web	2026-09-10 07:08:47.359786+00	2026-09-10 07:08:47.359786+00
-1aca96cd-0492-403d-86f7-551f546c1eb9	027fe0b1-5d20-4543-aa20-22843b83e39d	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjAyN2ZlMGIxLTVkMjAtNDU0My1hYTIwLTIyODQzYjgzZTM5ZCIsImVtYWlsIjoidHBsbXMwMkBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQxNTksImV4cCI6MTc5MTYxNjE1OX0.Kha7rcbOv4pUAhCo61NhdGZTCZWIllE9YqcsMJHVbgA	unknown	web	2026-09-10 07:09:19.979328+00	2026-09-10 07:09:19.979328+00
+ab43eb96-4d5c-4eba-ba4b-b1879c0969c5	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzYWM3YWM2LWUzZDQtNDQ5NS04MmNlLWM5Y2Q2NDUxYmYzYyIsImVtYWlsIjoibHVjazI4a3VkaWRhQGF0b21pY21haWwuaW8iLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTc4OTEwNzU2MCwiZXhwIjoxNzkxNjk5NTYwfQ.d3rZceI6HCjUtos1SjtybQ6CyxQeYxk2IT96by40w2M	unknown	web	2026-09-11 06:19:21.021907+00	2026-09-11 06:19:21.021907+00
+d685c14a-6b9a-4fc2-a197-285cb20c412c	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTEwOTE4NSwiZXhwIjoxNzkxNzAxMTg1fQ.tIzbv5gCPMEBMGuCahc5q238WHHFi-S8sgylV0yXdO8	unknown	web	2026-09-11 06:46:25.162644+00	2026-09-11 06:46:25.162644+00
+654b8460-4f61-43f8-b6a0-df02d2516e59	ac16bf89-3b9f-4dff-9229-6ceea67c483c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjMTZiZjg5LTNiOWYtNGRmZi05MjI5LTZjZWVhNjdjNDgzYyIsImVtYWlsIjoidHBsbXMwM0BhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkxMDk1NDUsImV4cCI6MTc5MTcwMTU0NX0.VkuuB_9N_blmj4YqKX1tWfJW_HsRczgZZ-CfRCGQtHk	unknown	web	2026-09-11 06:52:25.706034+00	2026-09-11 06:52:25.706034+00
 1c7f9550-098f-4dce-a17d-6d87ba4dd0c5	ac16bf89-3b9f-4dff-9229-6ceea67c483c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjMTZiZjg5LTNiOWYtNGRmZi05MjI5LTZjZWVhNjdjNDgzYyIsImVtYWlsIjoidHBsbXMwM0BhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQyMTYsImV4cCI6MTc5MTYxNjIxNn0.Rq7YQgpXgREAxAJUTmkegbWEzV-aH2x5gQ9p_uRVBdM	Web Browser	web	2026-09-10 07:10:17.291447+00	2026-09-10 07:10:17.291447+00
-9ed98255-4fcf-4448-a5e8-9192834f3b07	ac16bf89-3b9f-4dff-9229-6ceea67c483c	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFjMTZiZjg5LTNiOWYtNGRmZi05MjI5LTZjZWVhNjdjNDgzYyIsImVtYWlsIjoidHBsbXMwM0BhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQyMjUsImV4cCI6MTc5MTYxNjIyNX0.uMBb4Bglxjzr4EdXum7s8BXsgPZdCrxz1e3PKKhEPag	unknown	web	2026-09-10 07:10:25.524031+00	2026-09-10 07:10:25.524031+00
 1383427a-45f8-4a38-bd1f-3cb017cdc281	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhjODEyMGNiLTkyZjctNGU5ZS05NWY4LTFlZWE1ODIxZDNlZiIsImVtYWlsIjoidHBsbXMwNEBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQzNTMsImV4cCI6MTc5MTYxNjM1M30.e8XINhn6ETqPUaO6KYGFLRCpdNL6uwZF8IhjAe2YOf4	Web Browser	web	2026-09-10 07:12:34.069709+00	2026-09-10 07:12:34.069709+00
 7f2bb2ee-d97d-4203-a89f-781cedb39800	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjhjODEyMGNiLTkyZjctNGU5ZS05NWY4LTFlZWE1ODIxZDNlZiIsImVtYWlsIjoidHBsbXMwNEBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQzODQsImV4cCI6MTc5MTYxNjM4NH0.HmjxKiWI9Ej4v8qctwso32QkxEMyxxPIwGv74e5bqgY	unknown	web	2026-09-10 07:13:04.957222+00	2026-09-10 07:13:04.957222+00
 4b55ce44-75a9-4d90-9a32-a938ae732922	439195c5-3e21-4eb6-b8fc-58a86ea95882	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQzOTE5NWM1LTNlMjEtNGViNi1iOGZjLTU4YTg2ZWE5NTg4MiIsImVtYWlsIjoidHBsbXMwNUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQ1MDAsImV4cCI6MTc5MTYxNjUwMH0.RJdCMvi9_W2geoejsedcZ6iUAwV04YZOaqrumA8kLsg	Web Browser	web	2026-09-10 07:15:00.934067+00	2026-09-10 07:15:00.934067+00
 eebe87f3-2d8d-4bf3-abf6-2537fe96fc88	439195c5-3e21-4eb6-b8fc-58a86ea95882	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQzOTE5NWM1LTNlMjEtNGViNi1iOGZjLTU4YTg2ZWE5NTg4MiIsImVtYWlsIjoidHBsbXMwNUBhdG9taWNtYWlsLmlvIiwicm9sZSI6InN0dWRlbnQiLCJpYXQiOjE3ODkwMjQ1MTcsImV4cCI6MTc5MTYxNjUxN30.nbSFzSitGxgRADfWm-QuPHUy0ySFvhajZFD6JxHZdiI	unknown	web	2026-09-10 07:15:17.314783+00	2026-09-10 07:15:17.314783+00
-d348e012-b1de-4e30-af9a-73d4ead645e9	c7412dd5-8f70-4716-aa60-ac597baf36d7	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3NDEyZGQ1LThmNzAtNDcxNi1hYTYwLWFjNTk3YmFmMzZkNyIsImVtYWlsIjoidGVjaG5pY2FscGlsb3RAYXRvbWljbWFpbC5pbyIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc4OTAyNDU1MywiZXhwIjoxNzkxNjE2NTUzfQ.hFie_D_A5SQ6LddW0hwgW9OP-mjLz17mBMGxBEPKiw4	unknown	web	2026-09-10 07:15:53.114132+00	2026-09-10 07:15:53.114132+00
 \.
 
 
@@ -912,6 +1098,8 @@ COPY public.doubt_bookings (id, slot_id, student_id, status, booked_at, cancelle
 --
 
 COPY public.doubt_slots (id, created_by, date, start_time, end_time, duration_minutes, max_bookings, current_bookings, status, updated_at, created_at, topic, description, meeting_link, target_type, course_id, student_id) FROM stdin;
+2bab2a83-0dc1-420a-ba3b-3cbdecbe1543	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-11	13:00:00	14:00:00	60	1	0	available	2026-09-11 06:54:22.89377+00	2026-09-11 06:54:22.89377+00	Chapter-1	This is a test doubt session	http://localhost:3000	course	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	\N
+e9c1ee62-8709-4694-96ae-0edc68cb1f6b	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-11	13:00:00	14:00:00	60	1	0	available	2026-09-11 06:55:08.249367+00	2026-09-11 06:55:08.249367+00	Chapter-1	This is a test doubt session.	http://localhost:3000	course	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	\N
 \.
 
 
@@ -924,6 +1112,7 @@ COPY public.enrollments (id, student_id, course_id, enrolled_at, status, complet
 c6d46e52-297e-4dab-8501-7387b118573a	2c919628-836c-4d18-abc9-2def9e21573a	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-09 11:46:36.125+00	active	\N	2026-09-09 11:46:36.354939+00
 287e152a-48ed-4080-aa26-d4e6a9cd1158	439195c5-3e21-4eb6-b8fc-58a86ea95882	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-10 08:27:21.765+00	active	\N	2026-09-10 08:27:21.818151+00
 bd53a2eb-b80e-40bd-a847-fe350213110a	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-10 12:07:01.467+00	active	\N	2026-09-10 12:39:22.397674+00
+edb2e23d-7761-4098-9c01-edaa08291e32	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-10 14:14:04.049+00	active	\N	2026-09-10 14:14:04.143668+00
 4c4d6bed-f7f2-472b-9e35-2d515db672c9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	2026-09-06 13:11:36.47+00	completed	2026-09-08 15:05:06.047+00	2026-09-08 15:05:06.097318+00
 cb016fd4-e073-46c0-9647-c78fa4b451f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	2026-09-06 10:53:20.714+00	completed	2026-09-09 05:20:01.227+00	2026-09-09 05:20:01.281803+00
 \.
@@ -951,6 +1140,10 @@ adaf23e3-ad60-417b-98b7-b63e7d9efe7c	8850f799-f86c-4aa0-9cc1-f2c210e7d8b0	NAV-Vi
 --
 
 COPY public.notifications (id, recipient_id, type, title, body, metadata, is_read, created_at) FROM stdin;
+eee96e96-d5ab-4e67-995a-04807f5d39ec	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: Navigation-Part-I (Chapter-1)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-11 at 13:00. Book your slot now!	{}	f	2026-09-11 06:54:24.188361+00
+103d325b-e4bd-4bf4-a8b5-324c672600b0	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	doubt_session	Doubt Session: Navigation-Part-I (Chapter-1)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-11 at 13:00. Book your slot now!	{}	f	2026-09-11 06:54:24.188361+00
+f4cf1860-9d89-4cf3-b158-22a7c648b65e	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: Navigation-Part-I (Chapter-1)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-11 at 13:00. Book your slot now!	{}	f	2026-09-11 06:55:09.708912+00
+e409f2fe-7909-4d04-b0c0-4be1d208109f	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	doubt_session	Doubt Session: Navigation-Part-I (Chapter-1)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-11 at 13:00. Book your slot now!	{}	f	2026-09-11 06:55:09.708912+00
 0fb5a064-e81e-4dd1-a9a2-3a86343a8abc	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	query_reply	Reply to: This is a test message	Hello.!	{"query_id": "97e95d70-81b1-409d-8a75-c176181ded23"}	t	2026-09-06 12:35:17.966434+00
 26de0a41-5ec0-435a-9d11-00792db7a9e1	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	query_reply	Reply to: Extra attempt request: Assignment 01	Approved. You have been granted 1 additional attempt.	{"query_id": "2a797c15-d7e6-4611-a837-a1902456a5df"}	t	2026-09-06 12:34:53.692829+00
 53dec21c-cdc9-40b7-85fc-26fac7239056	c7412dd5-8f70-4716-aa60-ac597baf36d7	extra_attempt_request	Extra Attempt Request #Q-30317	Student requested an extra attempt for Assignment 01.	{"query_id": "2a797c15-d7e6-4611-a837-a1902456a5df", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c", "query_number": "Q-30317"}	t	2026-09-06 11:20:14.436264+00
@@ -962,7 +1155,6 @@ b35f386b-d818-4068-8afc-ac952549cfa8	c7412dd5-8f70-4716-aa60-ac597baf36d7	contac
 98295834-31b4-4fe4-8459-d836d6e96c92	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-27461	Ramu (8080908090): I'm unaware of this platform.	{"email": "ramu@test.com", "phone": "8080908090", "query_id": "a2abe9b6-c87c-4398-8d97-fcc62e6d2067", "query_number": "Q-27461"}	t	2026-09-07 17:35:00.321652+00
 30f15a18-5d5b-4fac-bbfd-53318f3c30fd	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	announcement	hi	gi	{}	t	2026-09-09 05:25:24.71593+00
 0d07a7f2-4530-45c8-9802-e98a50994872	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: Navigation-Part-I (Navigation Chapter Queries)	A doubt clearing session for "Navigation-Part-I" is scheduled on 2026-09-10 at 18:15. Book your slot now!	{}	f	2026-09-10 12:43:12.131625+00
-9ca755d7-3c9c-4059-9bc2-db614ef0d266	ac16bf89-3b9f-4dff-9229-6ceea67c483c	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
 98af2ee9-4301-4626-b152-d6984a7df13b	8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
 e5e2a582-5338-420a-9bc7-f02e2f2ce929	439195c5-3e21-4eb6-b8fc-58a86ea95882	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
 7bf74299-775f-4718-b2a3-8045e23f5f8b	2c919628-836c-4d18-abc9-2def9e21573a	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	f	2026-09-10 12:44:54.187817+00
@@ -970,6 +1162,11 @@ fda9fc44-fe27-4bfb-9893-f037d4391488	027fe0b1-5d20-4543-aa20-22843b83e39d	doubt_
 23113a30-8bdf-4ac9-a21e-179b27762806	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	t	2026-09-10 12:44:54.187817+00
 d71bc249-fe93-41fd-8a8e-06e35e70a249	c7412dd5-8f70-4716-aa60-ac597baf36d7	doubt_booking	New Doubt Session Booked	Student booked a session for 2026-09-10 at 18:16 (All students).	{"slot_id": "e2d64b0e-eac2-4b66-b7d8-97b71c1213c6", "booking_id": "8e0fc13a-49cf-4a3b-b1ac-955cf3282978", "student_id": "53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c"}	f	2026-09-10 12:45:23.728567+00
 a4df5fb1-7b63-4b43-b9f7-347b7d5bedc6	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	t	2026-09-10 12:44:54.187817+00
+528e9220-c4fb-412f-bcc0-5fd970c70523	027fe0b1-5d20-4543-aa20-22843b83e39d	contact_inquiry	Contact Request #Q-24964	Audit Test (+919876543210): Audit	{"email": "audit@example.com", "phone": "+919876543210", "query_id": "2a64e737-6809-4102-86e5-e127a808d0a0", "query_number": "Q-24964"}	f	2026-09-10 14:43:19.092967+00
+8d53e713-9a91-4156-845a-668b1c932d02	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-24964	Audit Test (+919876543210): Audit	{"email": "audit@example.com", "phone": "+919876543210", "query_id": "2a64e737-6809-4102-86e5-e127a808d0a0", "query_number": "Q-24964"}	f	2026-09-10 14:43:19.092967+00
+9fa71c3a-ca6e-4cc0-8ab4-8326d983472d	027fe0b1-5d20-4543-aa20-22843b83e39d	contact_inquiry	Contact Request #Q-57099	Auditor (+919876543210): Audit	{"email": "auditor@test.com", "phone": "+919876543210", "query_id": "84169f8d-d541-44d2-bc70-d2da426e44c8", "query_number": "Q-57099"}	f	2026-09-10 14:44:15.417251+00
+e13b8bef-7831-4a2d-aa4a-98066b640534	c7412dd5-8f70-4716-aa60-ac597baf36d7	contact_inquiry	Contact Request #Q-57099	Auditor (+919876543210): Audit	{"email": "auditor@test.com", "phone": "+919876543210", "query_id": "84169f8d-d541-44d2-bc70-d2da426e44c8", "query_number": "Q-57099"}	f	2026-09-10 14:44:15.417251+00
+9ca755d7-3c9c-4059-9bc2-db614ef0d266	ac16bf89-3b9f-4dff-9229-6ceea67c483c	doubt_session	Doubt Session: All students	A doubt clearing session is scheduled on 2026-09-10 at 18:16. Book your slot now!	{}	t	2026-09-10 12:44:54.187817+00
 \.
 
 
@@ -977,14 +1174,15 @@ a4df5fb1-7b63-4b43-b9f7-347b7d5bedc6	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	doubt_
 -- Data for Name: payments; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.payments (id, student_id, course_id, amount, discount_amount, razorpay_order_id, razorpay_payment_id, razorpay_signature, status, refund_reason, invoice_number, created_at, updated_at) FROM stdin;
-bf7ac66d-2940-4abe-9b95-27765f7eafa9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TYj0BiGHLmzXfH	pay_TYj0ayBHx69qro	d6813872c04bc29f000d97d3c561bf5afac23727d0adbdacd8d7a9e852dc89cf	completed	\N	INV-1788691956904-6EYR58	2026-09-06 10:52:36.966269+00	2026-09-06 10:53:20.646935+00
-b00a848a-1768-4e2a-a930-6b12337a8f95	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TYlMamX8voCK7b	pay_TYlMhpGuSePsA5	8be0d1c77fd0222a028da552263cb1aca428563ac518ecc4fabc16273549f554	completed	\N	INV-1788700272695-Z49TVZ	2026-09-06 13:11:12.756489+00	2026-09-06 13:11:36.418874+00
-acb9f99f-2a7f-45c5-bf82-58dd1b5ca243	2c919628-836c-4d18-abc9-2def9e21573a	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TZslWFBpLvZOWG	pay_TZsloRpQa2x0x6	2a7c42ea53c12a93858f1ac954c2f76e96aad1835481edcb0009152d12d36ffb	completed	\N	INV-1788944679951-O8SAA9	2026-09-09 09:04:40.003985+00	2026-09-09 09:05:14.60091+00
-6f681c41-fbe8-4f3c-8e0e-30f8f8687cc2	2c919628-836c-4d18-abc9-2def9e21573a	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TZvW4MNcDW4L4x	pay_TZvWGXpFmC9F6E	cad9773beb361949dc01bca2f4620e691d9be119a75ef3585a2c63b0ff8522c1	completed	\N	INV-1788954367252-HSQXGR	2026-09-09 11:46:07.340794+00	2026-09-09 11:46:36.048881+00
-d5c4c061-16df-470a-8943-2cda53e85442	439195c5-3e21-4eb6-b8fc-58a86ea95882	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaGeV7nv5waoo9	pay_TaGes8NCas71po	e19c34ca69408d702e52e51da87dd519b5e075421e94e7305a2f37fee4f459b9	completed	\N	INV-1789028800081-PPZHO3	2026-09-10 08:26:40.150567+00	2026-09-10 08:27:21.689586+00
-4477372a-ff8b-4618-9de5-b503e48eb165	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TaKGP6UpIsAjcT	\N	\N	pending	\N	INV-1789041517859-831YKD	2026-09-10 11:58:37.955073+00	2026-09-10 11:58:37.955073+00
-8cb6a958-771b-4508-b94a-082feb4e45ff	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaKOL0vlwgC3Uj	pay_TaKOwFrt8mydZg	6e29cefe5578c5e437251c0dd3900b3f92e3ad634390815f7312c131685e11f8	completed	\N	INV-1789041968459-1U9VQ4	2026-09-10 12:06:08.532594+00	2026-09-10 12:07:01.39473+00
+COPY public.payments (id, student_id, course_id, amount, discount_amount, razorpay_order_id, razorpay_payment_id, razorpay_signature, status, refund_reason, invoice_number, created_at, updated_at, coupon_code) FROM stdin;
+bf7ac66d-2940-4abe-9b95-27765f7eafa9	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TYj0BiGHLmzXfH	pay_TYj0ayBHx69qro	d6813872c04bc29f000d97d3c561bf5afac23727d0adbdacd8d7a9e852dc89cf	completed	\N	INV-1788691956904-6EYR58	2026-09-06 10:52:36.966269+00	2026-09-06 10:53:20.646935+00	\N
+b00a848a-1768-4e2a-a930-6b12337a8f95	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TYlMamX8voCK7b	pay_TYlMhpGuSePsA5	8be0d1c77fd0222a028da552263cb1aca428563ac518ecc4fabc16273549f554	completed	\N	INV-1788700272695-Z49TVZ	2026-09-06 13:11:12.756489+00	2026-09-06 13:11:36.418874+00	\N
+acb9f99f-2a7f-45c5-bf82-58dd1b5ca243	2c919628-836c-4d18-abc9-2def9e21573a	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TZslWFBpLvZOWG	pay_TZsloRpQa2x0x6	2a7c42ea53c12a93858f1ac954c2f76e96aad1835481edcb0009152d12d36ffb	completed	\N	INV-1788944679951-O8SAA9	2026-09-09 09:04:40.003985+00	2026-09-09 09:05:14.60091+00	\N
+6f681c41-fbe8-4f3c-8e0e-30f8f8687cc2	2c919628-836c-4d18-abc9-2def9e21573a	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TZvW4MNcDW4L4x	pay_TZvWGXpFmC9F6E	cad9773beb361949dc01bca2f4620e691d9be119a75ef3585a2c63b0ff8522c1	completed	\N	INV-1788954367252-HSQXGR	2026-09-09 11:46:07.340794+00	2026-09-09 11:46:36.048881+00	\N
+d5c4c061-16df-470a-8943-2cda53e85442	439195c5-3e21-4eb6-b8fc-58a86ea95882	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaGeV7nv5waoo9	pay_TaGes8NCas71po	e19c34ca69408d702e52e51da87dd519b5e075421e94e7305a2f37fee4f459b9	completed	\N	INV-1789028800081-PPZHO3	2026-09-10 08:26:40.150567+00	2026-09-10 08:27:21.689586+00	\N
+4477372a-ff8b-4618-9de5-b503e48eb165	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TaKGP6UpIsAjcT	\N	\N	pending	\N	INV-1789041517859-831YKD	2026-09-10 11:58:37.955073+00	2026-09-10 11:58:37.955073+00	\N
+8cb6a958-771b-4508-b94a-082feb4e45ff	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b8434539-78f9-4e76-b6a7-d002cc006640	499.00	500.00	order_TaKOL0vlwgC3Uj	pay_TaKOwFrt8mydZg	6e29cefe5578c5e437251c0dd3900b3f92e3ad634390815f7312c131685e11f8	completed	\N	INV-1789041968459-1U9VQ4	2026-09-10 12:06:08.532594+00	2026-09-10 12:07:01.39473+00	\N
+293c3553-4cae-4346-96a3-b2cdca22968f	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	17f620f4-ff2a-4c63-b63b-f9bc920c99ca	15000.00	5000.00	order_TaMYZCMjKhhXGt	pay_TaMZAXY98CCSOd	0e3a75b5fe4bd6e9e02815dd18d3658415803ee26e977cb909150db4eaab91ed	completed	\N	INV-1789049592671-U5BMX0	2026-09-10 14:13:12.775623+00	2026-09-10 14:14:03.939444+00	\N
 \.
 
 
@@ -1003,15 +1201,15 @@ d7b4efd4-f647-481d-97f7-208ea66e74aa	adaf23e3-ad60-417b-98b7-b63e7d9efe7c	naviga
 -- Data for Name: profiles; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at) FROM stdin;
-ac16bf89-3b9f-4dff-9229-6ceea67c483c	tplms03@atomicmail.io	student	Technical Pilot 03	9889097898	\N	t	2026-09-10 07:09:49.675676+00	2026-09-10 07:09:49.786019+00
-8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	tplms04@atomicmail.io	student	Technical Pilot 04	9809909809	\N	t	2026-09-10 07:11:49.45116+00	2026-09-10 07:11:49.617251+00
-439195c5-3e21-4eb6-b8fc-58a86ea95882	tplms05@atomicmail.io	student	Qwerty@1	9889988899	\N	t	2026-09-10 07:13:38.858581+00	2026-09-10 07:13:39.223256+00
-c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-09-05 14:26:40.013197+00
-53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	luck28kudida@atomicmail.io	student	Student	9898656598	\N	t	2026-09-06 10:24:24.756663+00	2026-09-06 12:05:15.334094+00
-2c919628-836c-4d18-abc9-2def9e21573a	mohan819.tp@gmail.com	student	Mohan	9878767898	https://lh3.googleusercontent.com/a/ACg8ocJbq4bwrWsjaBn_HPrZk1KTYdsZr-LkD2EPcAFL4PO1N_yQLQ=s96-c	t	2026-09-09 05:22:23.5441+00	2026-09-09 09:03:57.694696+00
-b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	tplms01@atomicmail.io	student	Technical Pilot 01	9898878776	\N	t	2026-09-10 06:57:24.4559+00	2026-09-10 06:57:24.693815+00
-027fe0b1-5d20-4543-aa20-22843b83e39d	tplms02@atomicmail.io	student	Technical Pilot 02	9889878909	\N	t	2026-09-10 07:08:15.433687+00	2026-09-10 07:08:15.619111+00
+COPY public.profiles (id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at, referral_code, referred_by) FROM stdin;
+ac16bf89-3b9f-4dff-9229-6ceea67c483c	tplms03@atomicmail.io	student	Technical Pilot 03	9889097898	\N	t	2026-09-10 07:09:49.675676+00	2026-09-11 07:31:48.159175+00	TPKDZLV2	\N
+8c8120cb-92f7-4e9e-95f8-1eea5821d3ef	tplms04@atomicmail.io	student	Technical Pilot 04	9809909809	\N	t	2026-09-10 07:11:49.45116+00	2026-09-11 07:31:48.159175+00	TPPU7PPJ	\N
+439195c5-3e21-4eb6-b8fc-58a86ea95882	tplms05@atomicmail.io	student	Qwerty@1	9889988899	\N	t	2026-09-10 07:13:38.858581+00	2026-09-11 07:31:48.159175+00	TPNLA96B	\N
+027fe0b1-5d20-4543-aa20-22843b83e39d	tplms02@atomicmail.io	sub_admin	Technical Pilot 02	9889878909	\N	t	2026-09-10 07:08:15.433687+00	2026-09-11 07:31:48.159175+00	TPFQPUQF	\N
+c7412dd5-8f70-4716-aa60-ac597baf36d7	technicalpilot@atomicmail.io	admin	Admin LMS	9876543210	\N	t	2026-08-23 13:01:58.216853+00	2026-09-11 07:31:48.159175+00	TPCYPYCN	\N
+53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	luck28kudida@atomicmail.io	student	Student	9898656598	\N	t	2026-09-06 10:24:24.756663+00	2026-09-11 07:31:48.159175+00	TPUKP29D	\N
+2c919628-836c-4d18-abc9-2def9e21573a	mohan819.tp@gmail.com	student	Mohan	9878767898	https://lh3.googleusercontent.com/a/ACg8ocJbq4bwrWsjaBn_HPrZk1KTYdsZr-LkD2EPcAFL4PO1N_yQLQ=s96-c	t	2026-09-09 05:22:23.5441+00	2026-09-11 07:31:48.159175+00	TPU6W94A	\N
+b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	tplms01@atomicmail.io	student	Technical Pilot 01	9898878776	\N	t	2026-09-10 06:57:24.4559+00	2026-09-11 07:31:48.159175+00	TP4G72HX	\N
 \.
 
 
@@ -1027,14 +1225,14 @@ ccba6ad7-defe-4d50-98ee-bafcb9fee440	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	adaf23
 b7193b64-ad1e-4e75-acb4-7a798bf5f74f	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	e82d3a0d-ff5b-4551-a376-1777f9f98c72	completed	100	0	2026-09-09 05:20:03.59+00	2026-09-09 05:20:03.681748+00
 3336b29a-8c61-4e53-b3ae-060159cbdf47	2c919628-836c-4d18-abc9-2def9e21573a	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-09 09:06:37.853+00	2026-09-09 09:06:37.901026+00
 76f89fc0-755a-44da-abcd-85ccbf0f5c61	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-07 09:53:29.851+00	2026-09-07 09:53:30.038043+00
-a815b685-bb58-4bbf-92e2-7f90d9e65829	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-10 12:34:07.692+00	2026-09-10 12:34:07.74748+00
 6f3bc546-b7c7-40b5-9628-e300394caf08	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	57777e9a-c3e8-448d-a691-75adca51cd93	completed	100	0	2026-09-06 10:59:20.88+00	2026-09-06 10:59:20.966065+00
 87e5f941-f466-4e1b-96f0-34d9bd5e9d74	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-08 12:52:09.605+00	2026-09-08 12:52:09.713554+00
 6d7b5e30-ca82-457d-ba3f-0719c5a1cafc	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-10 12:38:42.265+00	2026-09-10 12:38:42.318696+00
-a0db5de0-affd-4667-bba6-a7e3100d3f0b	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-08 12:52:17.269+00	2026-09-08 12:52:17.373034+00
 14a66eee-8bb7-49d7-b2e3-6f273ad472a3	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	e82d3a0d-ff5b-4551-a376-1777f9f98c72	in_progress	0	0	\N	2026-09-10 12:39:21.865134+00
-0cb33985-b339-4d32-8abd-57712be35eca	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	completed	100	9	2026-09-06 13:18:56.838+00	2026-09-10 12:43:24.936088+00
 d6a0c04f-5416-4f54-b95e-67a74a03f567	2c919628-836c-4d18-abc9-2def9e21573a	4827d058-7606-4146-bea2-bc391b05a85c	completed	100	11	2026-09-09 09:14:33.017+00	2026-09-09 09:14:33.066238+00
+a0db5de0-affd-4667-bba6-a7e3100d3f0b	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-11 06:51:56.473+00	2026-09-11 06:51:56.62352+00
+0cb33985-b339-4d32-8abd-57712be35eca	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	completed	100	11	2026-09-11 06:23:33.871+00	2026-09-11 06:23:34.021062+00
+a815b685-bb58-4bbf-92e2-7f90d9e65829	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-11 06:24:40.031+00	2026-09-11 06:24:40.186153+00
 a3719857-12e1-4aea-beb9-ba81aea6e2c4	2c919628-836c-4d18-abc9-2def9e21573a	597ccd87-b524-4446-a648-e397ab4fffaf	completed	100	11	2026-09-09 09:15:30.788+00	2026-09-09 09:15:30.836142+00
 b91b8bb6-a8f7-4698-8dfc-3afbd3f00932	2c919628-836c-4d18-abc9-2def9e21573a	b7304d3b-6618-4cd4-b52f-8d8ce583244a	completed	100	0	2026-09-09 09:16:05.654+00	2026-09-09 09:16:05.706199+00
 e870c071-2703-4eaa-91d8-848296d61817	2c919628-836c-4d18-abc9-2def9e21573a	e82d3a0d-ff5b-4551-a376-1777f9f98c72	completed	100	0	2026-09-09 09:17:56.095+00	2026-09-09 09:17:56.149196+00
@@ -1187,6 +1385,23 @@ c9256184-8ed3-4405-9474-ecd92e11f554	\N	Which of these are prime numbers?	msq	1	
 
 
 --
+-- Data for Name: referral_settings; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.referral_settings (id, referee_discount_percentage, referrer_reward_percentage, points_per_rupee, min_withdrawal_points, is_active, updated_at, updated_by) FROM stdin;
+1	20.00	10.00	5.00	500	t	2026-09-11 07:31:48.159175+00	\N
+\.
+
+
+--
+-- Data for Name: referrals; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.referrals (id, referrer_id, referee_id, referral_code, status, total_purchases_count, total_purchased_amount, total_points_awarded, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: student_queries; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -1195,6 +1410,8 @@ COPY public.student_queries (id, student_id, subject, body, status, admin_reply,
 97e95d70-81b1-409d-8a75-c176181ded23	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	This is a test message	Hi Sir.!	answered	Hello.!	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-06 12:35:17.795+00	2026-09-06 11:39:23.594407+00	2026-09-06 12:35:17.849268+00	general	{"query_number": "Q-63994"}
 a2abe9b6-c87c-4398-8d97-fcc62e6d2067	\N	I'm unaware of this platform.	Please guide me through the platform.	answered	Ok	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-08 02:08:07.89+00	2026-09-07 17:34:59.665617+00	2026-09-08 02:08:07.946186+00	contact_form	{"is_guest": true, "guest_name": "Ramu", "guest_email": "ramu@test.com", "guest_phone": "8080908090", "query_number": "Q-27461"}
 352f4584-0a9f-45e6-a099-09c30f4fd59c	\N	Why my access is blocked.?	Please reply.	answered	Ok	c7412dd5-8f70-4716-aa60-ac597baf36d7	2026-09-08 02:08:15.088+00	2026-09-07 14:12:43.324645+00	2026-09-08 02:08:15.146601+00	contact_form	{"is_guest": true, "guest_name": "New Student", "guest_email": "hello@hello.com", "guest_phone": "9898898998", "query_number": "Q-87645"}
+2a64e737-6809-4102-86e5-e127a808d0a0	\N	Audit	Hello	open	\N	\N	\N	2026-09-10 14:43:18.482635+00	2026-09-10 14:43:18.482635+00	contact_form	{"is_guest": true, "guest_name": "Audit Test", "guest_email": "audit@example.com", "guest_phone": "+919876543210", "query_number": "Q-24964"}
+84169f8d-d541-44d2-bc70-d2da426e44c8	\N	Audit	Automated test	open	\N	\N	\N	2026-09-10 14:44:14.79936+00	2026-09-10 14:44:14.79936+00	contact_form	{"is_guest": true, "guest_name": "Auditor", "guest_email": "auditor@test.com", "guest_phone": "+919876543210", "query_number": "Q-57099"}
 \.
 
 
@@ -1243,6 +1460,14 @@ bd505e3d-b811-4212-87a8-0521b4a42385	e82d3a0d-ff5b-4551-a376-1777f9f98c72	Final 
 
 
 --
+-- Data for Name: user_wallets; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.user_wallets (id, user_id, current_balance, total_earned, total_redeemed, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: video_lessons; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -1260,9 +1485,18 @@ COPY public.video_lessons (id, lesson_id, vdocipher_video_id, duration_seconds, 
 COPY public.video_sessions (id, user_id, lesson_id, ip_address, user_agent, created_at, expires_at) FROM stdin;
 780fe4c5-a14b-496c-9f82-d3cb82facd0d	2c919628-836c-4d18-abc9-2def9e21573a	4827d058-7606-4146-bea2-bc391b05a85c	136.226.244.100,100.30.201.22, 172.70.174.234, 10.24.8.245	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-09 09:13:44.326058+00	2026-09-09 09:28:44.274+00
 6379165d-b3d5-470c-be37-b926cfcb1d18	2c919628-836c-4d18-abc9-2def9e21573a	597ccd87-b524-4446-a648-e397ab4fffaf	136.226.244.100,3.87.155.243, 172.71.124.247, 10.30.43.217	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-09 09:14:34.503636+00	2026-09-09 09:29:34.115+00
-13343717-240a-40ab-8992-d34c6ede14a7	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:31:45.639761+00	2026-09-10 12:46:45.446+00
-dabcfa49-4fe9-4e48-9867-eac871a57a04	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	4827d058-7606-4146-bea2-bc391b05a85c	103.240.233.140,13.223.82.211, 104.22.66.68, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:33:15.967059+00	2026-09-10 12:48:15.919+00
-1fa2ee0c-05d7-4986-b702-01b7becaadd5	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	103.240.233.140,3.81.118.16, 162.158.162.103, 10.30.43.217	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-10 12:33:43.425982+00	2026-09-10 12:48:43.372+00
+9a02dba3-840a-4ee5-bb0c-27b138e527f0	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	decf63f1-f42d-48a4-b0cd-9d0f05971a7a	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-11 06:19:55.578592+00	2026-09-11 06:34:55.344+00
+e9988aef-5431-4005-b3d5-4d00348697e8	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-11 06:23:46.734121+00	2026-09-11 06:38:46.578+00
+1e2f1139-7e99-464d-9fb1-ca622e771b1a	b9d170ae-a9e0-4dab-87ad-8cd4ac82b3e9	597ccd87-b524-4446-a648-e397ab4fffaf	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-11 06:23:56.649746+00	2026-09-11 06:38:56.497+00
+fa7f01b2-9304-4407-9c70-0ab2cf908cf8	53ac7ac6-e3d4-4495-82ce-c9cd6451bf3c	597ccd87-b524-4446-a648-e397ab4fffaf	::ffff:127.0.0.1	Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0	2026-09-11 06:24:47.556117+00	2026-09-11 06:39:47.403+00
+\.
+
+
+--
+-- Data for Name: wallet_transactions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.wallet_transactions (id, wallet_id, user_id, type, points, balance_after, reference_id, source_user_id, description, metadata, created_at) FROM stdin;
 \.
 
 
@@ -1331,6 +1565,14 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
+-- Name: cash_conversion_requests cash_conversion_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_conversion_requests
+    ADD CONSTRAINT cash_conversion_requests_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1368,6 +1610,22 @@ ALTER TABLE ONLY public.chapter_starts
 
 ALTER TABLE ONLY public.chapters
     ADD CONSTRAINT chapters_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: coupons coupons_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupons
+    ADD CONSTRAINT coupons_code_key UNIQUE (code);
+
+
+--
+-- Name: coupons coupons_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupons
+    ADD CONSTRAINT coupons_pkey PRIMARY KEY (id);
 
 
 --
@@ -1491,6 +1749,14 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: profiles profiles_referral_code_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profiles
+    ADD CONSTRAINT profiles_referral_code_key UNIQUE (referral_code);
+
+
+--
 -- Name: progress progress_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1520,6 +1786,30 @@ ALTER TABLE ONLY public.question_options
 
 ALTER TABLE ONLY public.questions
     ADD CONSTRAINT questions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: referral_settings referral_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referral_settings
+    ADD CONSTRAINT referral_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: referrals referrals_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: referrals referrals_referee_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_referee_id_key UNIQUE (referee_id);
 
 
 --
@@ -1587,6 +1877,30 @@ ALTER TABLE ONLY public.tests
 
 
 --
+-- Name: wallet_transactions unique_reference_type; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT unique_reference_type UNIQUE (reference_id, type);
+
+
+--
+-- Name: user_wallets user_wallets_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_wallets
+    ADD CONSTRAINT user_wallets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_wallets user_wallets_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_wallets
+    ADD CONSTRAINT user_wallets_user_id_key UNIQUE (user_id);
+
+
+--
 -- Name: video_lessons video_lessons_lesson_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1608,6 +1922,14 @@ ALTER TABLE ONLY public.video_lessons
 
 ALTER TABLE ONLY public.video_sessions
     ADD CONSTRAINT video_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wallet_transactions wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT wallet_transactions_pkey PRIMARY KEY (id);
 
 
 --
@@ -1688,6 +2010,20 @@ CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id);
 
 
 --
+-- Name: idx_cash_conv_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_conv_status ON public.cash_conversion_requests USING btree (status);
+
+
+--
+-- Name: idx_cash_conv_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cash_conv_user_id ON public.cash_conversion_requests USING btree (user_id);
+
+
+--
 -- Name: idx_chapter_starts_chapter; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1706,6 +2042,20 @@ CREATE INDEX idx_chapter_starts_student ON public.chapter_starts USING btree (st
 --
 
 CREATE INDEX idx_chapters_course_id ON public.chapters USING btree (course_id);
+
+
+--
+-- Name: idx_coupons_applicable_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_coupons_applicable_user ON public.coupons USING btree (applicable_user_id);
+
+
+--
+-- Name: idx_coupons_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_coupons_code ON public.coupons USING btree (code);
 
 
 --
@@ -1898,6 +2248,20 @@ CREATE INDEX idx_pdf_notes_lesson_id ON public.pdf_notes USING btree (lesson_id)
 
 
 --
+-- Name: idx_profiles_referral_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profiles_referral_code ON public.profiles USING btree (referral_code);
+
+
+--
+-- Name: idx_profiles_referred_by; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profiles_referred_by ON public.profiles USING btree (referred_by);
+
+
+--
 -- Name: idx_progress_lesson_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1937,6 +2301,27 @@ CREATE INDEX idx_questions_assignment_id ON public.questions USING btree (assign
 --
 
 CREATE INDEX idx_questions_test_id ON public.questions USING btree (test_id);
+
+
+--
+-- Name: idx_referrals_code; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_referrals_code ON public.referrals USING btree (referral_code);
+
+
+--
+-- Name: idx_referrals_referee_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_referrals_referee_id ON public.referrals USING btree (referee_id);
+
+
+--
+-- Name: idx_referrals_referrer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_referrals_referrer_id ON public.referrals USING btree (referrer_id);
 
 
 --
@@ -2003,10 +2388,38 @@ CREATE INDEX idx_tests_lesson_id ON public.tests USING btree (lesson_id);
 
 
 --
+-- Name: idx_user_wallets_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_user_wallets_user_id ON public.user_wallets USING btree (user_id);
+
+
+--
 -- Name: idx_video_lessons_lesson_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_video_lessons_lesson_id ON public.video_lessons USING btree (lesson_id);
+
+
+--
+-- Name: idx_wallet_tx_reference; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_wallet_tx_reference ON public.wallet_transactions USING btree (reference_id, type);
+
+
+--
+-- Name: idx_wallet_tx_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_wallet_tx_user_id ON public.wallet_transactions USING btree (user_id);
+
+
+--
+-- Name: idx_wallet_tx_wallet_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_wallet_tx_wallet_id ON public.wallet_transactions USING btree (wallet_id);
 
 
 --
@@ -2150,6 +2563,13 @@ CREATE TRIGGER tests_updated_at BEFORE UPDATE ON public.tests FOR EACH ROW EXECU
 
 
 --
+-- Name: profiles trg_set_profile_referral_code; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_set_profile_referral_code BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.set_profile_referral_code();
+
+
+--
 -- Name: video_lessons video_lessons_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -2245,6 +2665,22 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
+-- Name: cash_conversion_requests cash_conversion_requests_processed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_conversion_requests
+    ADD CONSTRAINT cash_conversion_requests_processed_by_fkey FOREIGN KEY (processed_by) REFERENCES public.profiles(id);
+
+
+--
+-- Name: cash_conversion_requests cash_conversion_requests_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cash_conversion_requests
+    ADD CONSTRAINT cash_conversion_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
 -- Name: chapter_starts chapter_starts_chapter_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2258,6 +2694,14 @@ ALTER TABLE ONLY public.chapter_starts
 
 ALTER TABLE ONLY public.chapters
     ADD CONSTRAINT chapters_course_id_fkey FOREIGN KEY (course_id) REFERENCES public.courses(id) ON DELETE CASCADE;
+
+
+--
+-- Name: coupons coupons_applicable_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.coupons
+    ADD CONSTRAINT coupons_applicable_user_id_fkey FOREIGN KEY (applicable_user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -2389,6 +2833,14 @@ ALTER TABLE ONLY public.profiles
 
 
 --
+-- Name: profiles profiles_referred_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profiles
+    ADD CONSTRAINT profiles_referred_by_fkey FOREIGN KEY (referred_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
 -- Name: progress progress_lesson_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2426,6 +2878,30 @@ ALTER TABLE ONLY public.questions
 
 ALTER TABLE ONLY public.questions
     ADD CONSTRAINT questions_test_id_fkey FOREIGN KEY (test_id) REFERENCES public.tests(id) ON DELETE CASCADE;
+
+
+--
+-- Name: referral_settings referral_settings_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referral_settings
+    ADD CONSTRAINT referral_settings_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.profiles(id);
+
+
+--
+-- Name: referrals referrals_referee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_referee_id_fkey FOREIGN KEY (referee_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: referrals referrals_referrer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.referrals
+    ADD CONSTRAINT referrals_referrer_id_fkey FOREIGN KEY (referrer_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
 
 
 --
@@ -2525,6 +3001,14 @@ ALTER TABLE ONLY public.tests
 
 
 --
+-- Name: user_wallets user_wallets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_wallets
+    ADD CONSTRAINT user_wallets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
 -- Name: video_lessons video_lessons_lesson_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2546,6 +3030,30 @@ ALTER TABLE ONLY public.video_sessions
 
 ALTER TABLE ONLY public.video_sessions
     ADD CONSTRAINT video_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wallet_transactions wallet_transactions_source_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT wallet_transactions_source_user_id_fkey FOREIGN KEY (source_user_id) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: wallet_transactions wallet_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT wallet_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: wallet_transactions wallet_transactions_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wallet_transactions
+    ADD CONSTRAINT wallet_transactions_wallet_id_fkey FOREIGN KEY (wallet_id) REFERENCES public.user_wallets(id) ON DELETE CASCADE;
 
 
 --
@@ -2759,6 +3267,20 @@ CREATE POLICY "Admin update any profile" ON public.profiles FOR UPDATE USING ((p
 
 
 --
+-- Name: cash_conversion_requests Admins can manage conversion requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Admins can manage conversion requests" ON public.cash_conversion_requests TO authenticated USING ((public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role])));
+
+
+--
+-- Name: referral_settings Anyone can read referral settings; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Anyone can read referral settings" ON public.referral_settings FOR SELECT TO authenticated USING (true);
+
+
+--
 -- Name: categories Anyone reads active categories; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2878,6 +3400,20 @@ CREATE POLICY "Enrolled students read video lessons" ON public.video_lessons FOR
      JOIN public.chapters ch ON ((ch.id = l.chapter_id)))
      JOIN public.enrollments e ON ((e.course_id = ch.course_id)))
   WHERE ((l.id = video_lessons.lesson_id) AND (e.student_id = auth.uid()) AND (e.status = 'active'::public.enrollment_status)))));
+
+
+--
+-- Name: referral_settings Only admins can update referral settings; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Only admins can update referral settings" ON public.referral_settings TO authenticated USING ((public.get_my_role() = 'admin'::public.user_role));
+
+
+--
+-- Name: referrals Referrers can view their referrals; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Referrers can view their referrals" ON public.referrals FOR SELECT TO authenticated USING (((referrer_id = auth.uid()) OR (public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role]))));
 
 
 --
@@ -3102,6 +3638,41 @@ CREATE POLICY "Sub admin reads own permissions" ON public.sub_admin_permissions 
 
 
 --
+-- Name: cash_conversion_requests Users can insert their own conversion requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can insert their own conversion requests" ON public.cash_conversion_requests FOR INSERT TO authenticated WITH CHECK ((user_id = auth.uid()));
+
+
+--
+-- Name: cash_conversion_requests Users can view their own conversion requests; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own conversion requests" ON public.cash_conversion_requests FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR (public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role]))));
+
+
+--
+-- Name: user_wallets Users can view their own wallet; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own wallet" ON public.user_wallets FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR (public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role]))));
+
+
+--
+-- Name: wallet_transactions Users can view their own wallet transactions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own wallet transactions" ON public.wallet_transactions FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR (public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role]))));
+
+
+--
+-- Name: coupons Users can view valid coupons; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view valid coupons" ON public.coupons FOR SELECT TO authenticated USING (((applicable_user_id IS NULL) OR (applicable_user_id = auth.uid()) OR (public.get_my_role() = ANY (ARRAY['admin'::public.user_role, 'sub_admin'::public.user_role]))));
+
+
+--
 -- Name: devices Users manage own devices; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3159,6 +3730,12 @@ ALTER TABLE public.assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: cash_conversion_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.cash_conversion_requests ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: categories; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3175,6 +3752,12 @@ ALTER TABLE public.chapter_starts ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.chapters ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: coupons; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: courses; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3332,6 +3915,18 @@ ALTER TABLE public.question_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: referral_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.referral_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: referrals; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: student_queries; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3382,6 +3977,12 @@ ALTER TABLE public.test_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tests ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: user_wallets; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: video_lessons; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3394,8 +3995,14 @@ ALTER TABLE public.video_lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_sessions ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: wallet_transactions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SFQLGglcEw7TqBWkTdaaTmXpd3XNNu7nnn5caQYdxcgg0bE0zWMwbh9bYDR5WLy
+\unrestrict tuWaW2NsbNyULEk5aWjGfZRSr8FvfTqVm6ZbmTseU7QkVhidOsGYKz9rmvDcwbc
 

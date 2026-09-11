@@ -1,5 +1,5 @@
-import { IsEmail, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsEmail, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class DeviceInfoDto {
   @IsString()

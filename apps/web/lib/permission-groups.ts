@@ -130,6 +130,16 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
         label: 'View Payments & Invoices',
         description: 'Access transaction history, revenue logs, and tax invoices.',
       },
+      {
+        slug: 'referrals:read',
+        label: 'View Referrals & Rewards',
+        description: 'Inspect referral relationships, credit ledger, and cash requests.',
+      },
+      {
+        slug: 'referrals:manage',
+        label: 'Manage Referrals & Payouts',
+        description: 'Configure reward rates, approve or reject manual cash conversions.',
+      },
     ],
   },
   {

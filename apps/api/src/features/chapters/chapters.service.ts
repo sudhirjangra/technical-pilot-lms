@@ -105,10 +105,12 @@ export class ChaptersService {
     await this.ensureActiveEnrollment(studentId, courseId);
     await this.ensurePreviousChapterCompleted(chapterId, courseId, studentId);
 
-    const { error } = await this.supabase.from('chapter_starts').upsert(
-      { student_id: studentId, chapter_id: chapterId },
-      { onConflict: 'student_id,chapter_id', ignoreDuplicates: true },
-    );
+    const { error } = await this.supabase
+      .from('chapter_starts')
+      .upsert(
+        { student_id: studentId, chapter_id: chapterId },
+        { onConflict: 'student_id,chapter_id', ignoreDuplicates: true },
+      );
     if (error) throw new BadRequestException(error.message);
 
     return this.getChapterStart(chapterId, studentId);

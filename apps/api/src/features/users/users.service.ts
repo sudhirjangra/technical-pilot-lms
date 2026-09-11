@@ -26,7 +26,9 @@ export class UsersService {
       .select(
         'id, email, role, full_name, phone, avatar_url, is_active, created_at, updated_at',
       )
-      .or(`id.eq.${identifier},email.eq.${identifier},full_name.eq.${identifier}`)
+      .or(
+        `id.eq.${identifier},email.eq.${identifier},full_name.eq.${identifier}`,
+      )
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new NotFoundException('User not found.');

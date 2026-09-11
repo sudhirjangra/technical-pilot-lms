@@ -41,23 +41,31 @@ export const ContactQueryReceivedMail = ({
     <div style="background-color:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:20px;margin:20px 0;">
       <h3 style="margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;">Inquiry Reference</h3>
       <table style="width:100%;font-size:14px;color:#374151;border-collapse:collapse;">
-        ${ticketId ? `
+        ${
+          ticketId
+            ? `
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Ticket Ref:</td>
           <td style="padding:6px 0;text-align:right;font-mono;font-weight:600;color:#111827;">${ticketId.slice(0, 8).toUpperCase()}</td>
         </tr>
-        ` : ''}
+        `
+            : ''
+        }
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Subject:</td>
           <td style="padding:6px 0;text-align:right;font-weight:600;color:#111827;">${subject || 'General Inquiry'}</td>
         </tr>
       </table>
-      ${message ? `
+      ${
+        message
+          ? `
       <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
         <p style="font-size:12px;color:#6b7280;margin:0 0 6px;">Your Message:</p>
         <p style="font-size:13px;color:#374151;margin:0;white-space:pre-wrap;line-height:1.5;">${message.slice(0, 280)}${message.length > 280 ? '...' : ''}</p>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
 
     <p style="font-size:13px;line-height:1.5;color:#6b7280;margin:20px 0 0;">

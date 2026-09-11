@@ -18,15 +18,26 @@ import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
 import Link from 'next/link';
-import { ChangeEvent, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { ChangeEvent, useEffect, useState } from 'react';
 
 const SignUpForm = () => {
+  const searchParams = useSearchParams();
+  const refCodeFromUrl = searchParams.get('ref') ?? '';
+
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
     password: '',
     phone: '',
+    referral_code: refCodeFromUrl,
   });
+
+  useEffect(() => {
+    if (refCodeFromUrl) {
+      setFormData((prev) => ({ ...prev, referral_code: refCodeFromUrl.toUpperCase() }));
+    }
+  }, [refCodeFromUrl]);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setFormData((prevState) => ({
@@ -144,6 +155,36 @@ const SignUpForm = () => {
                   </p>
                 )}
                 <PasswordValidErrors password={formData.password} />
+              </div>
+
+              {/* Referral Code (Optional) */}
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="referral_code">Referral Code (Optional)</Label>
+                  {formData.referral_code && (
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      🎁 20% discount coupon applied
+                    </span>
+                  )}
+                </div>
+                <Input
+                  id="referral_code"
+                  name="referral_code"
+                  type="text"
+                  placeholder="e.g. TP7K9X2B"
+                  autoCapitalize="characters"
+                  disabled={isExecuting}
+                  value={formData.referral_code}
+                  onChange={(e) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      referral_code: e.target.value.toUpperCase(),
+                    }));
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Invited by a friend? Enter their referral code to unlock a 20% discount coupon on all courses!
+                </p>
               </div>
 
               {/* Submit */}

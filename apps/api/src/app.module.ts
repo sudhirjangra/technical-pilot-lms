@@ -13,13 +13,14 @@ import { CategoriesModule } from '@/features/categories/categories.module';
 import { ChaptersModule } from '@/features/chapters/chapters.module';
 import { CoursesModule } from '@/features/courses/courses.module';
 import { DoubtSessionsModule } from '@/features/doubt-sessions/doubt-sessions.module';
-import { NotificationsModule } from '@/features/notifications/notifications.module';
 import { EnrollmentsModule } from '@/features/enrollments/enrollments.module';
 import { FileModule } from '@/features/file/file.module';
 import { LessonsModule } from '@/features/lessons/lessons.module';
+import { NotificationsModule } from '@/features/notifications/notifications.module';
 import { PaymentsModule } from '@/features/payments/payments.module';
 import { PermissionsModule } from '@/features/permissions/permissions.module';
 import { ProgressModule } from '@/features/progress/progress.module';
+import { ReferralsModule } from '@/features/referrals/referrals.module';
 import { StudentQueriesModule } from '@/features/student-queries/student-queries.module';
 import { TestsModule } from '@/features/tests/tests.module';
 import { UsersModule } from '@/features/users/users.module';
@@ -85,6 +86,7 @@ import { MailModule } from './features/mail/mail.module';
     NotificationsModule,
     StudentQueriesModule,
     VideosModule,
+    ReferralsModule,
   ],
 })
 export class AppModule {}

@@ -12,7 +12,8 @@
 - Contact support, flexible two-to-four option imports, DOB removal, touch-device cursor handling, admin revenue removal, and payment money-deduction safeguards are implemented.
 - Direct VdoCipher custom video thumbnail upload, student course name display, assessment navigation exit guards, and lesson editor RangeError fixes are implemented.
 - SMTP transactional emails (course purchase receipt, new course launch announcement, course archived notice, password changes, sign-in/new device logins) and course archiving access control/notifications (TP-EMAIL-001, TP-ARCHIVE-001, TP-ARCHIVE-002) are implemented.
-- Supabase migrations through `017_contact_queries_support.sql` are present in the repository. Applying migrations remains an environment operation.
+- Referral & Wallet Reward system (TP-STUDENT-003, TP-REF-001 through TP-REF-005): Unique `TP...` referral codes, friend sign-up tracking with prefill URL, exclusive referee course discount coupons (default 20%), referrer wallet reward points on purchase (default 10%), admin conversion ratio (default 5 pts = ₹1), manual cash conversion requests with immutable double-entry ledger and admin review/payout management.
+- Supabase migrations through `018_referral_system.sql` are present in the repository. Applying migrations remains an environment operation.
 
 
 ### Pending
@@ -137,6 +138,14 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - Added course name display in student course TOC sidebar header and course progress overview header.
   - Added in-app assessment exit guard (`test-guard.ts`, `GuardedLink`, `LessonBackLink`) to prompt students and autosave answers before leaving active tests/assignments.
   - **Files Changed**: `apps/api/src/features/videos/videos.controller.ts`, `apps/api/src/features/videos/videos.service.ts`, `apps/web/app/api/video-otp/[lessonId]/route.ts`, `apps/web/app/dashboard/courses/[courseId]/layout.tsx`, `apps/web/app/dashboard/courses/[courseId]/lessons/[lessonId]/page.tsx`, `apps/web/app/dashboard/courses/[courseId]/page.tsx`, `apps/web/components/admin/course-detail-client.tsx`, `apps/web/components/dashboard/course-progress-client.tsx`, `apps/web/components/dashboard/course-toc.tsx`, `apps/web/components/dashboard/test-viewer.tsx`, `apps/web/components/video-player.tsx`, `apps/web/server/admin/videos.server.ts`, `apps/web/server/student/courses.server.ts`, `apps/web/components/dashboard/guarded-link.tsx`, `apps/web/components/dashboard/lesson-back-link.tsx`, `apps/web/lib/test-guard.ts`.
+- [x] **TP-STUDENT-003 & TP-REF-001 through TP-REF-005 - Referral and Wallet Rewards System**
+  - **TP-STUDENT-003**: Guaranteed unique `TP...` referral code (8 alphanumeric chars after prefix) for every user generated upon registration, Google sign-in, profile completion, and DB trigger.
+  - **TP-REF-001**: Stored referral relationship on signup with pre-filled referral query parameter `?ref=TP...`. Automatically generated an exclusive course discount coupon (default 20% off) tied strictly to the referee (`applicable_user_id`).
+  - **TP-REF-002**: Upon successful course purchase verification (browser endpoint or Razorpay webhook), rewarded referrer with wallet points calculated from configurable percentage of course amount (default 10%, 5 pts = ₹1). Applied DB-level idempotency via `(reference_id, type)` unique constraint.
+  - **TP-REF-003**: Created responsive student "Refer & Earn" dashboard showing unique code, copy link, WhatsApp share button, wallet metrics, cash conversion requests, referred friends table, and immutable points history.
+  - **TP-REF-004 & TP-REF-005**: Implemented cash conversion workflow with atomic balance locking, admin review dashboard (Mark Paid / Reject with point refund), manual email-based payout instructions, and zero Razorpay auto-deductions.
+  - **Database Migration**: Created `018_referral_system.sql` (`referral_settings`, `referrals`, `user_wallets`, `wallet_transactions`, `cash_conversion_requests`, `coupons` table updates and RLS policies).
+  - **Files Changed**: `packages/supabase/migrations/018_referral_system.sql`, `packages/supabase/src/types/index.ts`, `apps/api/src/features/referrals/*`, `apps/api/src/features/auth/auth.service.ts`, `apps/api/src/features/payments/payments.service.ts`, `apps/web/app/dashboard/referrals/page.tsx`, `apps/web/components/dashboard/referrals-client.tsx`, `apps/web/app/admin/referrals/page.tsx`, `apps/web/components/admin/referrals-client.tsx`, `apps/web/components/courses/course-view-client.tsx`, `apps/web/components/auth/form/sign-up.form.tsx`, `apps/web/server/student/referrals.server.ts`, `apps/web/server/admin/referrals.server.ts`.
 
 ## Immediate Next Step
 
@@ -252,7 +261,7 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
   - Remove date of birth entirely from signup, student profiles, admin views, backend DTO/service handling, schemas, and other student forms.
   - Do not continue collecting DOB through hidden fields or compatibility-only form fields.
 
-- [ ] **TP-STUDENT-003 - Unique referral code**
+- [x] **TP-STUDENT-003 - Unique referral code**
   - Assign every user a unique referral code beginning with `TP` followed by the required unique characters.
   - Every user must be able to view their referral code.
 
@@ -318,21 +327,21 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 ### Referral Credits and Manual Conversion
 
-- [ ] **TP-REF-001 - Referral relationship**
+- [x] **TP-REF-001 - Referral relationship**
   - Allow a new user to enter a referral code during signup and store the referral relationship safely.
 
-- [ ] **TP-REF-002 - Referral reward**
+- [x] **TP-REF-002 - Referral reward**
   - When a referred user purchases a course, calculate a configurable percentage of the course purchase amount and award points/credits to the referring student.
   - Do not automatically transfer money.
 
-- [ ] **TP-REF-003 - Referral tracking**
+- [x] **TP-REF-003 - Referral tracking**
   - Users must see referral code, referred users, purchase status, points earned, points used/converted, and remaining balance.
 
-- [ ] **TP-REF-004 - Manual cash conversion**
+- [x] **TP-REF-004 - Manual cash conversion**
   - Let users request conversion of points into real money and collect required account details.
   - Admin must review and validate requests, manually send money directly, mark requests paid, and update remaining points.
 
-- [ ] **TP-REF-005 - Conversion safety**
+- [x] **TP-REF-005 - Conversion safety**
   - Prevent duplicate payment for the same points, preserve referral/conversion history, support partial conversion where applicable, do not deduct money automatically from Razorpay, and do not create an automatic payout flow.
 
 ## Final Verification Checklist
@@ -347,7 +356,7 @@ Do not mark the full specification complete until all of these are verified:
 - [ ] Course expiry and renewal work without losing progress.
 - [ ] Archived courses revoke access in frontend and backend.
 - [x] Refund and admin money-deduction functionality cannot be triggered.
-- [ ] Referral credits and manual conversion work safely.
+- [x] Referral credits and manual conversion work safely.
 - [ ] Existing data is preserved and important edge cases are tested.
 - [ ] No unrelated functionality is broken.
 

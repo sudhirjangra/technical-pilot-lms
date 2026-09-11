@@ -24,6 +24,39 @@ import {
 } from '@repo/shadcn/lucide';
 import './tiptap.css';
 
+const EDITOR_EXTENSIONS = [
+  StarterKit.configure({
+    bulletList: {
+      HTMLAttributes: {
+        class: 'list-disc list-outside ml-4 space-y-1',
+      },
+    },
+    orderedList: {
+      HTMLAttributes: {
+        class: 'list-decimal list-outside ml-4 space-y-1',
+      },
+    },
+    blockquote: {
+      HTMLAttributes: {
+        class: 'border-l-4 border-primary/40 pl-3 italic text-muted-foreground',
+      },
+    },
+    code: {
+      HTMLAttributes: {
+        class: 'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-primary',
+      },
+    },
+  }),
+  Underline,
+  Highlight,
+  Link.configure({
+    openOnClick: false,
+    HTMLAttributes: {
+      class: 'text-primary underline hover:text-primary/80 cursor-pointer',
+    },
+  }),
+];
+
 export interface RichTextEditorProps {
   value?: string;
   onChange?: (html: string) => void;
@@ -41,53 +74,31 @@ export function RichTextEditor({
 }: RichTextEditorProps) {
   const isUpdatingRef = useRef(false);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    editable,
-    extensions: [
-      StarterKit.configure({
-        bulletList: {
-          HTMLAttributes: {
-            class: 'list-disc list-outside ml-4 space-y-1',
-          },
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      editable,
+      extensions: EDITOR_EXTENSIONS,
+      content: value || '',
+      editorProps: {
+        attributes: {
+          class: cn('prose prose-sm dark:prose-invert focus:outline-none w-full max-w-none p-3', minHeight),
         },
-        orderedList: {
-          HTMLAttributes: {
-            class: 'list-decimal list-outside ml-4 space-y-1',
-          },
-        },
-        blockquote: {
-          HTMLAttributes: {
-            class: 'border-l-4 border-primary/40 pl-3 italic text-muted-foreground',
-          },
-        },
-        code: {
-          HTMLAttributes: {
-            class: 'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-primary',
-          },
-        },
-      }),
-      Underline,
-      Highlight,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline hover:text-primary/80 cursor-pointer',
-        },
-      }),
-    ],
-    content: value || '',
-    editorProps: {
-      attributes: {
-        class: cn('prose prose-sm dark:prose-invert focus:outline-none w-full max-w-none p-3', minHeight),
+      },
+      onUpdate: ({ editor }) => {
+        isUpdatingRef.current = true;
+        const html = editor.getHTML();
+        onChange?.(html);
       },
     },
-    onUpdate: ({ editor }) => {
-      isUpdatingRef.current = true;
-      const html = editor.getHTML();
-      onChange?.(html);
-    },
-  });
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      editor?.destroy();
+    };
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;

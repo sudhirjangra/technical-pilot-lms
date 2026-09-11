@@ -1402,7 +1402,10 @@ export function CourseDetailClient({
       </div>
 
       {course.description && (
-        <p className="text-muted-foreground">{course.description}</p>
+        <div
+          className="prose-article prose dark:prose-invert max-w-none text-muted-foreground text-sm leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: course.description }}
+        />
       )}
 
       <Tabs defaultValue="content">

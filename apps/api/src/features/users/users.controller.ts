@@ -1,6 +1,14 @@
 import { Permissions, Roles } from '@/common/decorators';
 import { RolesGuard } from '@/common/guards/roles.guard';
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 
 @Controller('users')

@@ -28,7 +28,6 @@ export class DoubtSessionsService {
     private readonly logger: Logger,
   ) {}
 
-
   private async hydrateSlots(slots: any[]): Promise<any[]> {
     if (!slots || slots.length === 0) return [];
 
@@ -57,7 +56,10 @@ export class DoubtSessionsService {
     ]);
 
     const courseMap = new Map(
-      (coursesRes.data ?? []).map((c: { id: string; title: string }) => [c.id, c]),
+      (coursesRes.data ?? []).map((c: { id: string; title: string }) => [
+        c.id,
+        c,
+      ]),
     );
     const profileMap = new Map(
       (profilesRes.data ?? []).map(
@@ -74,8 +76,69 @@ export class DoubtSessionsService {
       target_student: slot.student_id
         ? profileMap.get(slot.student_id) || null
         : null,
-      profiles: slot.created_by ? profileMap.get(slot.created_by) || null : null,
+      profiles: slot.created_by
+        ? profileMap.get(slot.created_by) || null
+        : null,
     }));
+  }
+
+  private async checkDuplicateSlot(
+    slot: {
+      date: string;
+      start_time: string;
+      target_type?: string;
+      course_id?: string | null;
+      student_id?: string | null;
+    },
+    excludeSlotId?: string,
+  ) {
+    const targetType = slot.target_type || 'all';
+    let query = this.supabase
+      .from('doubt_slots')
+      .select('id, date, start_time, target_type, course_id, student_id')
+      .eq('date', slot.date)
+      .eq('start_time', slot.start_time)
+      .neq('status', 'cancelled');
+
+    if (excludeSlotId) {
+      query = query.neq('id', excludeSlotId);
+    }
+
+    const { data: existingSlots, error } = await query;
+    if (error) throw new BadRequestException(error.message);
+
+    if (existingSlots && existingSlots.length > 0) {
+      for (const existing of existingSlots) {
+        const existingTarget = existing.target_type || 'all';
+        if (targetType === 'course') {
+          if (
+            (existingTarget === 'course' &&
+              existing.course_id === slot.course_id) ||
+            existingTarget === 'all'
+          ) {
+            throw new ConflictException(
+              `A doubt session for this course/audience is already scheduled on ${slot.date} at ${slot.start_time.slice(0, 5)}.`,
+            );
+          }
+        } else if (targetType === 'student') {
+          if (
+            existingTarget === 'student' &&
+            existing.student_id === slot.student_id
+          ) {
+            throw new ConflictException(
+              `A 1-on-1 doubt session for this student is already scheduled on ${slot.date} at ${slot.start_time.slice(0, 5)}.`,
+            );
+          }
+        } else {
+          // targetType === 'all'
+          if (existingTarget === 'all' || existingTarget === 'course') {
+            throw new ConflictException(
+              `A doubt session is already scheduled on ${slot.date} at ${slot.start_time.slice(0, 5)}.`,
+            );
+          }
+        }
+      }
+    }
   }
 
   async createSlot(dto: CreateSlotDto, createdBy: string) {
@@ -100,6 +163,9 @@ export class DoubtSessionsService {
       student_id: targetType === 'student' ? slotData.student_id : null,
       created_by: createdBy,
     };
+
+    // Prevent duplicate doubt sessions on same date, time, and target audience
+    await this.checkDuplicateSlot(payload);
 
     const { data, error } = await this.supabase
       .from('doubt_slots')
@@ -135,19 +201,32 @@ export class DoubtSessionsService {
             },
           );
         } else if (targetType === 'course' && hydrated.course_id) {
-          const courseTitle =
-            hydrated.courses?.title || 'your course';
+          const courseTitle = hydrated.courses?.title || 'your course';
           await this.notificationsService.broadcast(
             `Doubt Session: ${courseTitle}${topicText}`,
             `A doubt clearing session for "${courseTitle}" is scheduled on ${hydrated.date} at ${timeText}. Book your slot now!`,
             'doubt_session',
             hydrated.course_id,
+            {
+              slot_id: hydrated.id,
+              course_id: hydrated.course_id,
+              date: hydrated.date,
+              start_time: hydrated.start_time,
+              meeting_link: hydrated.meeting_link,
+            },
           );
         } else {
           await this.notificationsService.broadcast(
             `Doubt Session: ${hydrated.topic || 'General Doubt Clearing'}`,
             `A doubt clearing session is scheduled on ${hydrated.date} at ${timeText}. Book your slot now!`,
             'doubt_session',
+            undefined,
+            {
+              slot_id: hydrated.id,
+              date: hydrated.date,
+              start_time: hydrated.start_time,
+              meeting_link: hydrated.meeting_link,
+            },
           );
         }
       } catch {
@@ -197,12 +276,12 @@ export class DoubtSessionsService {
     if (!studentId) {
       filtered = data.filter((s) => !s.target_type || s.target_type === 'all');
     } else {
-      // Retrieve student's active enrollments to filter course-targeted slots
+      // Retrieve student's active/completed enrollments to filter course-targeted slots
       const { data: enrollments } = await this.supabase
         .from('enrollments')
         .select('course_id')
         .eq('student_id', studentId)
-        .eq('status', 'active');
+        .in('status', ['active', 'completed']);
 
       const enrolledCourseIds = new Set(
         (enrollments ?? []).map((e) => e.course_id),
@@ -226,6 +305,14 @@ export class DoubtSessionsService {
   }
 
   async updateSlot(id: string, dto: UpdateSlotDto) {
+    const { data: existingSlot, error: fetchErr } = await this.supabase
+      .from('doubt_slots')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (fetchErr || !existingSlot)
+      throw new NotFoundException('Slot not found');
+
     const updateData: Record<string, unknown> = { ...dto };
     if (dto.target_type === 'all') {
       updateData.course_id = null;
@@ -235,6 +322,20 @@ export class DoubtSessionsService {
     } else if (dto.target_type === 'student') {
       updateData.course_id = null;
     }
+
+    const merged = {
+      date: (dto.date ?? existingSlot.date) as string,
+      start_time: (dto.start_time ?? existingSlot.start_time) as string,
+      target_type: (dto.target_type ?? existingSlot.target_type) as string,
+      course_id: ('course_id' in updateData
+        ? updateData.course_id
+        : existingSlot.course_id) as string | null,
+      student_id: ('student_id' in updateData
+        ? updateData.student_id
+        : existingSlot.student_id) as string | null,
+    };
+
+    await this.checkDuplicateSlot(merged, id);
 
     const { data, error } = await this.supabase
       .from('doubt_slots')
@@ -294,7 +395,7 @@ export class DoubtSessionsService {
         .select('id')
         .eq('student_id', studentId)
         .eq('course_id', slot.course_id)
-        .eq('status', 'active')
+        .in('status', ['active', 'completed'])
         .maybeSingle();
 
       if (!enrollment) {
@@ -357,13 +458,15 @@ export class DoubtSessionsService {
             }),
           })
           .catch((err) => {
-            this.logger.warn({ err, studentId }, 'Failed to send doubt booking confirmation email');
+            this.logger.warn(
+              { err, studentId },
+              'Failed to send doubt booking confirmation email',
+            );
           });
       }
     } catch {
       // Don't fail booking if notification fails
     }
-
 
     return booking;
   }
@@ -411,13 +514,17 @@ export class DoubtSessionsService {
 
     // Hydrate course info on slots
     const rawSlots = data
-      .map((b) => (Array.isArray(b.doubt_slots) ? b.doubt_slots[0] : b.doubt_slots))
+      .map((b) =>
+        Array.isArray(b.doubt_slots) ? b.doubt_slots[0] : b.doubt_slots,
+      )
       .filter(Boolean);
     const hydratedSlots = await this.hydrateSlots(rawSlots);
     const slotMap = new Map(hydratedSlots.map((s) => [s.id, s]));
 
     return data.map((b) => {
-      const slotObj = Array.isArray(b.doubt_slots) ? b.doubt_slots[0] : b.doubt_slots;
+      const slotObj = Array.isArray(b.doubt_slots)
+        ? b.doubt_slots[0]
+        : b.doubt_slots;
       return {
         ...b,
         doubt_slots: slotObj ? slotMap.get(slotObj.id) || slotObj : null,

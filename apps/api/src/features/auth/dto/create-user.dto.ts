@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, Matches, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -24,4 +30,9 @@ export class CreateUserDto {
   @IsString()
   @MinLength(10, { message: 'Phone number must be at least 10 digits' })
   phone: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  referral_code?: string;
 }

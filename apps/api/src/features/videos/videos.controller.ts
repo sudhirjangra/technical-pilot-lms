@@ -11,8 +11,8 @@ import {
   Post,
   Req,
 } from '@nestjs/common';
-import type { FastifyRequest } from 'fastify';
 import { Throttle } from '@nestjs/throttler';
+import type { FastifyRequest } from 'fastify';
 import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
 import { VideosService } from './videos.service';
 

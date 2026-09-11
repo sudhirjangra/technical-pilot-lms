@@ -10,4 +10,3 @@ import { DoubtSessionsService } from './doubt-sessions.service';
   providers: [DoubtSessionsService],
 })
 export class DoubtSessionsModule {}
-

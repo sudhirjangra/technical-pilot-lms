@@ -41,7 +41,6 @@ export class ChaptersController {
   @Post(':id/start')
   async startChapter(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() _body: Record<string, never> = {},
     @Req() req: { user: { id: string } },
   ) {
     const data = await this.chaptersService.startChapter(id, req.user.id);

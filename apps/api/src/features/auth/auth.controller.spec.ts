@@ -3,6 +3,7 @@ import {
   SUPABASE_ANON,
 } from '@/common/modules/supabase.module';
 import { MailService } from '@/features/mail/mail.service';
+import { ReferralsService } from '@/features/referrals/referrals.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -102,6 +103,13 @@ describe('AuthController', () => {
           provide: MailService,
           useValue: {
             sendEmail: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: ReferralsService,
+          useValue: {
+            ensureUserReferralCode: jest.fn().mockResolvedValue('TPTEST01'),
+            processSignupReferral: jest.fn().mockResolvedValue(null),
           },
         },
       ],

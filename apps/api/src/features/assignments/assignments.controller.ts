@@ -1,4 +1,4 @@
-import { Permissions, Roles } from '@/common/decorators';
+import { Roles } from '@/common/decorators';
 import {
   Body,
   Controller,
@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
+import { AssignmentsService } from './assignments.service';
 import {
   CreateAssignmentDto,
   CreateAssignmentQuestionDto,
@@ -21,7 +22,6 @@ import {
   UpdateAssignmentDto,
   UpdateAssignmentQuestionDto,
 } from './dto';
-import { AssignmentsService } from './assignments.service';
 
 @Controller('assignments')
 export class AssignmentsController {
@@ -80,9 +80,7 @@ export class AssignmentsController {
 
   @Roles('ADMIN', 'SUB_ADMIN')
   @Delete('questions/:questionId')
-  async removeQuestion(
-    @Param('questionId', ParseUUIDPipe) questionId: string,
-  ) {
+  async removeQuestion(@Param('questionId', ParseUUIDPipe) questionId: string) {
     await this.assignmentsService.removeQuestion(questionId);
     return { message: 'Question deleted' };
   }
@@ -104,7 +102,10 @@ export class AssignmentsController {
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
     @Req() req: { user: { id: string } },
   ) {
-    const data = await this.assignmentsService.getAssignmentForStudentLesson(lessonId, req.user.id);
+    const data = await this.assignmentsService.getAssignmentForStudentLesson(
+      lessonId,
+      req.user.id,
+    );
     return { message: 'Assignment fetched', data };
   }
 
@@ -119,7 +120,10 @@ export class AssignmentsController {
     @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
     @Req() req: { user: { id: string } },
   ) {
-    const data = await this.assignmentsService.startAttempt(assignmentId, req.user.id);
+    const data = await this.assignmentsService.startAttempt(
+      assignmentId,
+      req.user.id,
+    );
     return { message: 'Attempt started', data };
   }
 
@@ -129,7 +133,11 @@ export class AssignmentsController {
     @Body() dto: SubmitAssignmentAttemptDto,
     @Req() req: { user: { id: string } },
   ) {
-    const data = await this.assignmentsService.submitAttempt(attemptId, req.user.id, dto);
+    const data = await this.assignmentsService.submitAttempt(
+      attemptId,
+      req.user.id,
+      dto,
+    );
     return { message: 'Attempt submitted', data };
   }
 
@@ -140,7 +148,12 @@ export class AssignmentsController {
     @Body() dto: SaveAssignmentAnswerDto,
     @Req() req: { user: { id: string } },
   ) {
-    await this.assignmentsService.saveAnswer(attemptId, questionId, req.user.id, dto);
+    await this.assignmentsService.saveAnswer(
+      attemptId,
+      questionId,
+      req.user.id,
+      dto,
+    );
     return { message: 'Answer saved' };
   }
 
@@ -157,8 +170,11 @@ export class AssignmentsController {
 
   @Roles('ADMIN', 'SUB_ADMIN')
   @Get('attempts/:attemptId')
-  async getAssignmentAttemptDetail(@Param('attemptId', ParseUUIDPipe) attemptId: string) {
-    const data = await this.assignmentsService.getAssignmentAttemptDetail(attemptId);
+  async getAssignmentAttemptDetail(
+    @Param('attemptId', ParseUUIDPipe) attemptId: string,
+  ) {
+    const data =
+      await this.assignmentsService.getAssignmentAttemptDetail(attemptId);
     return { message: 'Attempt detail fetched', data };
   }
 
@@ -187,13 +203,16 @@ export class AssignmentsController {
 
   // ── End admin analytics routes ────────────────────────────────────────────
 
-
   @Get('student/attempts/:attemptId')
   async getStudentAttemptDetail(
     @Param('attemptId', ParseUUIDPipe) attemptId: string,
     @Req() req: { user: { id: string; role?: string } },
   ) {
-    const data = await this.assignmentsService.findAttemptForStudent(attemptId, req.user.id, req.user.role);
+    const data = await this.assignmentsService.findAttemptForStudent(
+      attemptId,
+      req.user.id,
+      req.user.role,
+    );
     return { message: 'Attempt detail fetched', data };
   }
 

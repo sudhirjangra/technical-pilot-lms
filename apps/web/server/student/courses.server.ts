@@ -225,6 +225,7 @@ export type PaymentOrder = z.infer<typeof PaymentOrderSchema>;
 
 export async function createPaymentOrder(
   courseId: string,
+  couponCode?: string,
 ): Promise<{ error?: string; order?: PaymentOrder }> {
   const session = await auth();
   if (!session?.user) return { error: 'Not authenticated' };
@@ -238,12 +239,51 @@ export async function createPaymentOrder(
         Authorization: `Bearer ${session.user.tokens.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ course_id: courseId }),
+      body: JSON.stringify({
+        course_id: courseId,
+        coupon_code: couponCode?.trim() || undefined,
+      }),
       cache: 'no-store',
     },
   );
   if (error) return { error: typeof error === 'string' ? error : 'Unable to start payment' };
   return { order: data! };
+}
+
+const CouponValidationSchema = z.object({
+  valid: z.boolean(),
+  code: z.string(),
+  discount_percentage: z.number(),
+  discount_amount: z.number(),
+  original_price: z.number(),
+  final_price: z.number(),
+});
+
+export type CouponValidationResult = z.infer<typeof CouponValidationSchema>;
+
+export async function validateCourseCoupon(
+  code: string,
+  courseId: string,
+): Promise<{ error?: string; result?: CouponValidationResult }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+
+  const [error, data] = await safeFetch(
+    CouponValidationSchema,
+    '/referrals/validate-coupon',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code: code.trim(), course_id: courseId }),
+      cache: 'no-store',
+    },
+  );
+
+  if (error) return { error: typeof error === 'string' ? error : 'Invalid coupon code' };
+  return { result: data! };
 }
 
 export async function verifyPayment(payment: {

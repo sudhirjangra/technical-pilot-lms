@@ -35,6 +35,8 @@ export interface Database {
           phone: string | null;
           avatar_url: string | null;
           is_active: boolean;
+          referral_code?: string | null;
+          referred_by?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -47,6 +49,8 @@ export interface Database {
           phone?: string | null;
           avatar_url?: string | null;
           is_active?: boolean;
+          referral_code?: string | null;
+          referred_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -59,6 +63,8 @@ export interface Database {
           phone?: string | null;
           avatar_url?: string | null;
           is_active?: boolean;
+          referral_code?: string | null;
+          referred_by?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -443,6 +449,205 @@ lesson_type?: LessonType;
           type?: string;
           metadata?: Json | null;
           is_read?: boolean;
+        };
+        Relationships: [];
+      };
+      referral_settings: {
+        Row: {
+          id: number;
+          referee_discount_percentage: number;
+          referrer_reward_percentage: number;
+          points_per_rupee: number;
+          min_withdrawal_points: number;
+          is_active: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: number;
+          referee_discount_percentage?: number;
+          referrer_reward_percentage?: number;
+          points_per_rupee?: number;
+          min_withdrawal_points?: number;
+          is_active?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: number;
+          referee_discount_percentage?: number;
+          referrer_reward_percentage?: number;
+          points_per_rupee?: number;
+          min_withdrawal_points?: number;
+          is_active?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referrer_id: string;
+          referee_id: string;
+          referral_code: string;
+          status: 'registered' | 'purchased';
+          total_purchases_count: number;
+          total_purchased_amount: number;
+          total_points_awarded: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          referrer_id: string;
+          referee_id: string;
+          referral_code: string;
+          status?: 'registered' | 'purchased';
+          total_purchases_count?: number;
+          total_purchased_amount?: number;
+          total_points_awarded?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: 'registered' | 'purchased';
+          total_purchases_count?: number;
+          total_purchased_amount?: number;
+          total_points_awarded?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      user_wallets: {
+        Row: {
+          id: string;
+          user_id: string;
+          current_balance: number;
+          total_earned: number;
+          total_redeemed: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          current_balance?: number;
+          total_earned?: number;
+          total_redeemed?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          current_balance?: number;
+          total_earned?: number;
+          total_redeemed?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      wallet_transactions: {
+        Row: {
+          id: string;
+          wallet_id: string;
+          user_id: string;
+          type: 'credit_purchase' | 'debit_conversion' | 'refund_conversion_rejected' | 'admin_adjustment';
+          points: number;
+          balance_after: number;
+          reference_id: string | null;
+          source_user_id: string | null;
+          description: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          wallet_id: string;
+          user_id: string;
+          type: 'credit_purchase' | 'debit_conversion' | 'refund_conversion_rejected' | 'admin_adjustment';
+          points: number;
+          balance_after: number;
+          reference_id?: string | null;
+          source_user_id?: string | null;
+          description: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          balance_after?: number;
+          description?: string;
+          metadata?: Json;
+        };
+        Relationships: [];
+      };
+      cash_conversion_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          points_requested: number;
+          inr_amount: number;
+          points_per_rupee: number;
+          status: 'pending' | 'approved' | 'rejected' | 'paid';
+          student_notes: string | null;
+          admin_notes: string | null;
+          processed_at: string | null;
+          processed_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          points_requested: number;
+          inr_amount: number;
+          points_per_rupee: number;
+          status?: 'pending' | 'approved' | 'rejected' | 'paid';
+          student_notes?: string | null;
+          admin_notes?: string | null;
+          processed_at?: string | null;
+          processed_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: 'pending' | 'approved' | 'rejected' | 'paid';
+          admin_notes?: string | null;
+          processed_at?: string | null;
+          processed_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      coupons: {
+        Row: {
+          id: string;
+          code: string;
+          discount_percentage: number;
+          applicable_user_id: string | null;
+          max_uses: number;
+          times_used: number;
+          is_active: boolean;
+          valid_until: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          discount_percentage: number;
+          applicable_user_id?: string | null;
+          max_uses?: number;
+          times_used?: number;
+          is_active?: boolean;
+          valid_until?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          discount_percentage?: number;
+          applicable_user_id?: string | null;
+          max_uses?: number;
+          times_used?: number;
+          is_active?: boolean;
+          valid_until?: string | null;
         };
         Relationships: [];
       };

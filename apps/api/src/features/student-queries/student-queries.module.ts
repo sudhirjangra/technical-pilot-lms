@@ -10,4 +10,3 @@ import { StudentQueriesService } from './student-queries.service';
   providers: [StudentQueriesService],
 })
 export class StudentQueriesModule {}
-

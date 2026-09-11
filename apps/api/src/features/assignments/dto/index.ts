@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -164,7 +164,9 @@ export class CreateAssignmentQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
-  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @ApiPropertyOptional({
+    description: 'Topic or subject for analytics grouping',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -222,7 +224,9 @@ export class UpdateAssignmentQuestionDto {
   @MaxLength(5000)
   correct_text_answer?: string;
 
-  @ApiPropertyOptional({ description: 'Topic or subject for analytics grouping' })
+  @ApiPropertyOptional({
+    description: 'Topic or subject for analytics grouping',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)

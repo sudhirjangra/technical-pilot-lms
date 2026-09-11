@@ -14,7 +14,11 @@ import {
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import type { FastifyRequest } from 'fastify';
 import { CategoriesService } from './categories.service';
-import { CreateCategoryDto, ReorderCategoriesDto, UpdateCategoryDto } from './dto';
+import {
+  CreateCategoryDto,
+  ReorderCategoriesDto,
+  UpdateCategoryDto,
+} from './dto';
 
 @Controller('categories')
 export class CategoriesController {
@@ -75,8 +79,17 @@ export class CategoriesController {
   @Permissions('courses:write')
   @Post(':id/thumbnail')
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } }, required: ['file'] } })
-  async uploadThumbnail(@Param('id', ParseUUIDPipe) id: string, @Req() request: FastifyRequest) {
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  async uploadThumbnail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: FastifyRequest,
+  ) {
     const data = await this.categoriesService.uploadThumbnail(id, request);
     return { message: 'Thumbnail uploaded successfully', data };
   }

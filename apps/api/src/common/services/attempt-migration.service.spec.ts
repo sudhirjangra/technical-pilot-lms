@@ -15,7 +15,10 @@ describe('AttemptMigrationService', () => {
       from: jest.fn(),
     };
 
-    service = new AttemptMigrationService(supabaseMock as any, mongoServiceMock as any);
+    service = new AttemptMigrationService(
+      supabaseMock as any,
+      mongoServiceMock as any,
+    );
   });
 
   describe('mapSupabaseAttemptToMongoDoc', () => {
@@ -70,13 +73,38 @@ describe('AttemptMigrationService', () => {
           },
         ],
         allOptions: [
-          { id: 'opt-1', question_id: 'q-1', option_text: 'Sea level pressure', is_correct: true },
-          { id: 'opt-2', question_id: 'q-1', option_text: 'Standard pressure', is_correct: false },
-          { id: 'opt-3', question_id: 'q-2', option_text: 'Station pressure', is_correct: true },
+          {
+            id: 'opt-1',
+            question_id: 'q-1',
+            option_text: 'Sea level pressure',
+            is_correct: true,
+          },
+          {
+            id: 'opt-2',
+            question_id: 'q-1',
+            option_text: 'Standard pressure',
+            is_correct: false,
+          },
+          {
+            id: 'opt-3',
+            question_id: 'q-2',
+            option_text: 'Station pressure',
+            is_correct: true,
+          },
         ],
         answers: [
-          { id: 'ans-1', question_id: 'q-1', is_correct: true, time_spent_seconds: 400 },
-          { id: 'ans-2', question_id: 'q-2', is_correct: false, time_spent_seconds: 500 },
+          {
+            id: 'ans-1',
+            question_id: 'q-1',
+            is_correct: true,
+            time_spent_seconds: 400,
+          },
+          {
+            id: 'ans-2',
+            question_id: 'q-2',
+            is_correct: false,
+            time_spent_seconds: 500,
+          },
         ],
         answerOptions: [
           { assignment_answer_id: 'ans-1', option_id: 'opt-1' },
@@ -127,7 +155,12 @@ describe('AttemptMigrationService', () => {
         questions: [], // questions table was truncated or questions deleted
         allOptions: [],
         answers: [
-          { id: 'ans-legacy-1', question_id: 'q-deleted-1', is_correct: true, time_spent_seconds: 150 },
+          {
+            id: 'ans-legacy-1',
+            question_id: 'q-deleted-1',
+            is_correct: true,
+            time_spent_seconds: 150,
+          },
         ],
         answerOptions: [
           { test_answer_id: 'ans-legacy-1', option_id: 'opt-deleted-1' },
@@ -172,7 +205,11 @@ describe('AttemptMigrationService', () => {
               score: 10,
               max_score: 10,
               time_spent_seconds: 600,
-              assignments: { id: 'assign-1', title: 'Navigation 101', passing_score_percent: 60 },
+              assignments: {
+                id: 'assign-1',
+                title: 'Navigation 101',
+                passing_score_percent: 60,
+              },
             },
             error: null,
           }),
@@ -181,7 +218,14 @@ describe('AttemptMigrationService', () => {
             error: null,
           }),
           assignment_answers: buildRequest({
-            data: [{ id: 'ans-1', question_id: 'q-1', is_correct: true, time_spent_seconds: 600 }],
+            data: [
+              {
+                id: 'ans-1',
+                question_id: 'q-1',
+                is_correct: true,
+                time_spent_seconds: 600,
+              },
+            ],
             error: null,
           }),
           assignment_answer_options: buildRequest({
@@ -189,7 +233,9 @@ describe('AttemptMigrationService', () => {
             error: null,
           }),
           questions: buildRequest({
-            data: [{ id: 'q-1', question_text: 'Compass reading?', points: 10 }],
+            data: [
+              { id: 'q-1', question_text: 'Compass reading?', points: 10 },
+            ],
             error: null,
           }),
           question_options: buildRequest({
@@ -208,7 +254,8 @@ describe('AttemptMigrationService', () => {
         };
       });
 
-      const result = await service.migrateSingleAssignmentAttempt('attempt-migrate-1');
+      const result =
+        await service.migrateSingleAssignmentAttempt('attempt-migrate-1');
       expect(result).toBe(true);
       expect(mongoServiceMock.saveAttempt).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -226,7 +273,8 @@ describe('AttemptMigrationService', () => {
         maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
       });
 
-      const result = await service.migrateSingleAssignmentAttempt('non-existent');
+      const result =
+        await service.migrateSingleAssignmentAttempt('non-existent');
       expect(result).toBe(false);
       expect(mongoServiceMock.saveAttempt).not.toHaveBeenCalled();
     });
@@ -268,11 +316,15 @@ describe('AttemptMigrationService', () => {
           select: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
-          maybeSingle: jest.fn().mockResolvedValue(buildRequest({ data: null, error: null })),
+          maybeSingle: jest
+            .fn()
+            .mockResolvedValue(buildRequest({ data: null, error: null })),
         };
       });
 
-      jest.spyOn(service, 'migrateSingleAssignmentAttempt').mockResolvedValue(true);
+      jest
+        .spyOn(service, 'migrateSingleAssignmentAttempt')
+        .mockResolvedValue(true);
       jest.spyOn(service, 'migrateSingleTestAttempt').mockResolvedValue(true);
 
       const summary = await service.migrateAllAttempts();

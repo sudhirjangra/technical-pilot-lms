@@ -54,7 +54,7 @@ export class NotificationsService {
     if (fetchErr || !notification)
       throw new NotFoundException('Notification not found');
     if (notification.recipient_id !== userId)
-      throw new ForbiddenException('Cannot mark another user\'s notification');
+      throw new ForbiddenException("Cannot mark another user's notification");
 
     const { data, error } = await this.supabase
       .from('notifications')
@@ -81,6 +81,7 @@ export class NotificationsService {
     body: string | undefined,
     type: string,
     courseId?: string,
+    metadata?: Record<string, unknown>,
   ) {
     let studentIds: string[] | undefined;
 
@@ -89,39 +90,46 @@ export class NotificationsService {
         .from('enrollments')
         .select('student_id')
         .eq('course_id', courseId)
-        .eq('status', 'active');
+        .in('status', ['active', 'completed']);
       if (enrollmentsErr) throw new BadRequestException(enrollmentsErr.message);
       studentIds = [
-        ...new Set((enrollments ?? []).map((enrollment) => enrollment.student_id)),
+        ...new Set(
+          (enrollments ?? []).map((enrollment) => enrollment.student_id),
+        ),
       ];
       if (studentIds.length === 0) return { sent: 0 };
     }
 
-    // Roles are stored lowercase in profiles.
-    let studentsQuery = this.supabase
-      .from('profiles')
-      .select('id')
-      .eq('role', 'student')
-      .eq('is_active', true);
-    if (studentIds) studentsQuery = studentsQuery.in('id', studentIds);
+    let targetRecipientIds: string[] = [];
 
-    const { data: students, error: studentsErr } = await studentsQuery;
-    if (studentsErr) throw new BadRequestException(studentsErr.message);
-    if (!students || students.length === 0) return { sent: 0 };
+    if (studentIds && studentIds.length > 0) {
+      // For course broadcasts, target all enrolled student IDs directly
+      targetRecipientIds = studentIds;
+    } else {
+      // For global broadcasts, target all active students
+      const { data: students, error: studentsErr } = await this.supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['student', 'STUDENT'])
+        .neq('is_active', false);
+      if (studentsErr) throw new BadRequestException(studentsErr.message);
+      targetRecipientIds = (students ?? []).map((s) => s.id);
+    }
 
-    const rows = students.map((s) => ({
-      recipient_id: s.id,
+    if (targetRecipientIds.length === 0) return { sent: 0 };
+
+    const rows = targetRecipientIds.map((recipientId) => ({
+      recipient_id: recipientId,
       title,
       body: body ?? null,
       type,
+      metadata: metadata ?? {},
     }));
 
-    const { error } = await this.supabase
-      .from('notifications')
-      .insert(rows);
+    const { error } = await this.supabase.from('notifications').insert(rows);
     if (error) throw new BadRequestException(error.message);
 
-    return { sent: students.length };
+    return { sent: rows.length };
   }
 
   async send(

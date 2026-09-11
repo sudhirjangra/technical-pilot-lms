@@ -13,7 +13,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Logger } from 'nestjs-pino';
 import { CreateProgressDto, UpdateProgressDto } from './dto';
 
-
 @Injectable()
 export class ProgressService {
   constructor(
@@ -22,7 +21,6 @@ export class ProgressService {
     private readonly notificationsService: NotificationsService,
     private readonly logger: Logger,
   ) {}
-
 
   /** Initialize or get progress for a lesson — verifies enrollment first */
   async initOrGet(dto: CreateProgressDto, studentId: string) {
@@ -44,16 +42,21 @@ export class ProgressService {
       .eq('course_id', courseId)
       .maybeSingle();
 
-    const courseData = enrollment?.courses as unknown as { status?: string } | null;
+    const courseData = enrollment?.courses as unknown as {
+      status?: string;
+    } | null;
 
-    if (!enrollment || enrollment.status === 'expired' || courseData?.status === 'archived') {
+    if (
+      !enrollment ||
+      enrollment.status === 'expired' ||
+      courseData?.status === 'archived'
+    ) {
       throw new ForbiddenException(
         enrollment?.status === 'expired' || courseData?.status === 'archived'
           ? 'COURSE_ACCESS_REVOKED'
           : 'Active enrollment required to access this content',
       );
     }
-
 
     // Upsert progress record
     const { data, error } = await this.supabase
@@ -132,13 +135,18 @@ export class ProgressService {
     if (error) throw new BadRequestException('Failed to update progress');
 
     if (dto.status === 'completed') {
-      this.checkAndUpdateEnrollmentCompletion(lessonId, studentId).catch(() => {});
+      this.checkAndUpdateEnrollmentCompletion(lessonId, studentId).catch(
+        () => {},
+      );
     }
 
     return data;
   }
 
-  private async checkAndUpdateEnrollmentCompletion(lessonId: string, studentId: string) {
+  private async checkAndUpdateEnrollmentCompletion(
+    lessonId: string,
+    studentId: string,
+  ) {
     const { data: lesson } = await this.supabase
       .from('lessons')
       .select('id, chapters(course_id)')
@@ -146,7 +154,8 @@ export class ProgressService {
       .single();
     if (!lesson) return;
 
-    const courseId = (lesson.chapters as unknown as { course_id: string }).course_id;
+    const courseId = (lesson.chapters as unknown as { course_id: string })
+      .course_id;
 
     const { data: chapters } = await this.supabase
       .from('chapters')
@@ -179,27 +188,37 @@ export class ProgressService {
         .eq('student_id', studentId)
         .eq('course_id', courseId)
         .eq('status', 'active')
-        .select('id, student_id, course_id, courses(id, title), profiles(id, full_name, email)')
+        .select(
+          'id, student_id, course_id, courses(id, title), profiles(id, full_name, email)',
+        )
         .maybeSingle();
 
       if (updatedEnrollment) {
-        const courseData = updatedEnrollment.courses as unknown as { id: string; title: string } | null;
-        const profileData = updatedEnrollment.profiles as unknown as { full_name?: string; email?: string } | null;
+        const courseData = updatedEnrollment.courses as unknown as {
+          id: string;
+          title: string;
+        } | null;
+        const profileData = updatedEnrollment.profiles as unknown as {
+          full_name?: string;
+          email?: string;
+        } | null;
         const courseTitle = courseData?.title || 'your enrolled course';
         const studentEmail = profileData?.email;
         const studentName = profileData?.full_name || studentEmail || 'Student';
 
-        // Broadcast in-app notification
+        // Send in-app notification
         this.notificationsService
-          .broadcast(
+          .send(
+            studentId,
             `Course Completed: ${courseTitle}`,
             `Congratulations ${studentName}! You have successfully completed all lessons and assessments in ${courseTitle}.`,
             'course_completed',
-            courseId,
-            studentId,
           )
           .catch((err) => {
-            this.logger.warn({ err, studentId, courseId }, 'Failed to send course completed in-app notification');
+            this.logger.warn(
+              { err, studentId, courseId },
+              'Failed to send course completed in-app notification',
+            );
           });
 
         // Send congratulations email
@@ -216,20 +235,24 @@ export class ProgressService {
               }),
             })
             .catch((err) => {
-              this.logger.warn({ err, studentEmail, courseId }, 'Failed to send course completed email');
+              this.logger.warn(
+                { err, studentEmail, courseId },
+                'Failed to send course completed email',
+              );
             });
         }
       }
     } else {
-
-      const overallStatus = completedCount > 0 ? 'active' : 'active';
       const { data: enrollment } = await this.supabase
         .from('enrollments')
         .select('status')
         .eq('student_id', studentId)
         .eq('course_id', courseId)
         .single();
-      if (enrollment?.status === 'completed' && completedCount < allLessonIds.length) {
+      if (
+        enrollment?.status === 'completed' &&
+        completedCount < allLessonIds.length
+      ) {
         await this.supabase
           .from('enrollments')
           .update({ status: 'active', completed_at: null })
@@ -249,12 +272,16 @@ export class ProgressService {
       .eq('course_id', courseId)
       .maybeSingle();
 
-    const courseData = enrollment?.courses as unknown as { status?: string } | null;
+    const courseData = enrollment?.courses as unknown as {
+      status?: string;
+    } | null;
 
-    if (enrollment && (enrollment.status === 'expired' || courseData?.status === 'archived')) {
+    if (
+      enrollment &&
+      (enrollment.status === 'expired' || courseData?.status === 'archived')
+    ) {
       throw new ForbiddenException('COURSE_ACCESS_REVOKED');
     }
-
 
     // Get all lessons for the course. Note: nested-table dot filters (e.g. "lessons.is_published")
     // are not reliably applied by PostgREST without an `!inner` join hint, and silently return
@@ -298,9 +325,7 @@ export class ProgressService {
 
     const lessonIds = visibleChapters.flatMap(
       (ch: { lessons: { id: string; is_published?: boolean }[] }) =>
-        ch.lessons
-          .filter((l) => l.is_published !== false)
-          .map((l) => l.id),
+        ch.lessons.filter((l) => l.is_published !== false).map((l) => l.id),
     );
 
     if (lessonIds.length === 0)
@@ -326,30 +351,44 @@ export class ProgressService {
     );
 
     // Calculate chapter-level completion, then overall course completion
-    const chapterProgress = visibleChapters.map((ch: { lessons: { id: string; lesson_type: string; is_published?: boolean }[] }) => {
-      const publishedLessons = (ch.lessons ?? []).filter((l) => l.is_published !== false);
-      if (publishedLessons.length === 0) return 0;
+    const chapterProgress = visibleChapters.map(
+      (ch: {
+        lessons: { id: string; lesson_type: string; is_published?: boolean }[];
+      }) => {
+        const publishedLessons = (ch.lessons ?? []).filter(
+          (l) => l.is_published !== false,
+        );
+        if (publishedLessons.length === 0) return 0;
 
-      const lessonProgresses = publishedLessons.map((lesson) => {
-        const progress = progressMap.get(lesson.id) as
-          | { progress_percent?: number; status?: string }
-          | undefined;
-        if (lesson.lesson_type === 'assignment' || lesson.lesson_type === 'test') {
-          return progress?.status === 'completed' ? 100 : 0;
-        }
-        return progress?.status === 'completed'
-          ? 100
-          : Math.min(100, Math.max(0, progress?.progress_percent ?? 0));
-      });
+        const lessonProgresses = publishedLessons.map((lesson) => {
+          const progress = progressMap.get(lesson.id) as
+            { progress_percent?: number; status?: string } | undefined;
+          if (
+            lesson.lesson_type === 'assignment' ||
+            lesson.lesson_type === 'test'
+          ) {
+            return progress?.status === 'completed' ? 100 : 0;
+          }
+          return progress?.status === 'completed'
+            ? 100
+            : Math.min(100, Math.max(0, progress?.progress_percent ?? 0));
+        });
 
-      return lessonProgresses.length
-        ? Math.round(lessonProgresses.reduce((sum, val) => sum + val, 0) / lessonProgresses.length)
-        : 0;
-    });
+        return lessonProgresses.length
+          ? Math.round(
+              lessonProgresses.reduce((sum, val) => sum + val, 0) /
+                lessonProgresses.length,
+            )
+          : 0;
+      },
+    );
 
     // Overall course percent is the average of all chapter percents
     const overallPercent = chapterProgress.length
-      ? Math.round(chapterProgress.reduce((sum, val) => sum + val, 0) / chapterProgress.length)
+      ? Math.round(
+          chapterProgress.reduce((sum, val) => sum + val, 0) /
+            chapterProgress.length,
+        )
       : 0;
     const overallStatus =
       overallPercent === 100
@@ -423,18 +462,34 @@ export class ProgressService {
       return (value as Meta) ?? null;
     };
 
-    const assignmentLessons = new Map<string, { lessonId: string; chapterId: string; meta: Meta }>();
-    const testLessons = new Map<string, { lessonId: string; chapterId: string; meta: Meta }>();
+    const assignmentLessons = new Map<
+      string,
+      { lessonId: string; chapterId: string; meta: Meta }
+    >();
+    const testLessons = new Map<
+      string,
+      { lessonId: string; chapterId: string; meta: Meta }
+    >();
 
     for (const chapter of chapters) {
       for (const lesson of chapter.lessons ?? []) {
         if (lesson.is_published === false) continue;
         if (lesson.lesson_type === 'assignment') {
           const meta = first(lesson.assignments);
-          if (meta?.id) assignmentLessons.set(meta.id, { lessonId: lesson.id, chapterId: chapter.id, meta });
+          if (meta?.id)
+            assignmentLessons.set(meta.id, {
+              lessonId: lesson.id,
+              chapterId: chapter.id,
+              meta,
+            });
         } else if (lesson.lesson_type === 'test') {
           const meta = first(lesson.tests);
-          if (meta?.id) testLessons.set(meta.id, { lessonId: lesson.id, chapterId: chapter.id, meta });
+          if (meta?.id)
+            testLessons.set(meta.id, {
+              lessonId: lesson.id,
+              chapterId: chapter.id,
+              meta,
+            });
         }
       }
     }
@@ -492,11 +547,15 @@ export class ProgressService {
         const completed = attempts.filter((a) => a.completed_at);
         const passingPct = entry.meta.passing_score_percent ?? 60;
         const passed = completed.some((a) => {
-          const pct = a.max_score && a.max_score > 0 ? ((a.score ?? 0) / a.max_score) * 100 : 0;
+          const pct =
+            a.max_score && a.max_score > 0
+              ? ((a.score ?? 0) / a.max_score) * 100
+              : 0;
           return pct >= passingPct;
         });
         const baseMax = entry.meta.max_attempts ?? null;
-        const maxAttempts = baseMax === null ? null : baseMax + (grantMap.get(id) ?? 0);
+        const maxAttempts =
+          baseMax === null ? null : baseMax + (grantMap.get(id) ?? 0);
         const attemptsUsed = attempts.length;
         const exhausted = maxAttempts !== null && attemptsUsed >= maxAttempts;
 
@@ -528,7 +587,10 @@ export class ProgressService {
       'assignment',
       assignmentLessons,
       groupBy(
-        ((assignmentAttempts as { data?: unknown[] }).data ?? []) as Record<string, unknown>[],
+        ((assignmentAttempts as { data?: unknown[] }).data ?? []) as Record<
+          string,
+          unknown
+        >[],
         'assignment_id',
       ),
     );
@@ -536,7 +598,10 @@ export class ProgressService {
       'test',
       testLessons,
       groupBy(
-        ((testAttempts as { data?: unknown[] }).data ?? []) as Record<string, unknown>[],
+        ((testAttempts as { data?: unknown[] }).data ?? []) as Record<
+          string,
+          unknown
+        >[],
         'test_id',
       ),
     );

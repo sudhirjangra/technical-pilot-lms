@@ -67,18 +67,26 @@ export const CoursePurchaseSuccessMail = ({
           <td style="padding:6px 0;color:#6b7280;">Amount Paid:</td>
           <td style="padding:6px 0;text-align:right;font-weight:600;color:#059669;">₹${amount}</td>
         </tr>
-        ${invoiceNumber ? `
+        ${
+          invoiceNumber
+            ? `
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Invoice Number:</td>
           <td style="padding:6px 0;text-align:right;color:#374151;">${invoiceNumber}</td>
         </tr>
-        ` : ''}
-        ${orderId ? `
+        `
+            : ''
+        }
+        ${
+          orderId
+            ? `
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Order Reference:</td>
           <td style="padding:6px 0;text-align:right;color:#374151;">${orderId}</td>
         </tr>
-        ` : ''}
+        `
+            : ''
+        }
         <tr>
           <td style="padding:6px 0;color:#6b7280;">Date:</td>
           <td style="padding:6px 0;text-align:right;color:#374151;">${formattedDate}</td>

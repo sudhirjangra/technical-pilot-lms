@@ -22,6 +22,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   FolderKanban,
+  Gift,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -97,6 +98,7 @@ const navGroups: NavGroupDef[] = [
     group: 'Finance',
     items: [
       { label: 'Payments', href: '/admin/payments', icon: CreditCard, exact: false, requiredPermissions: ['payments:read'] },
+      { label: 'Referrals', href: '/admin/referrals', icon: Gift, exact: false, requiredPermissions: ['referrals:read'] },
     ],
   },
 ];

@@ -28,6 +28,7 @@ export const SignUpSchema = z.object({
     .string()
     .min(10, 'Phone number must be at least 10 digits')
     .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)'),
+  referral_code: z.string().trim().optional(),
 });
 
 /**
@@ -177,6 +178,7 @@ export const CompleteProfileSchema = z.object({
     .string()
     .min(10, 'Phone number must be at least 10 digits')
     .regex(/^\+?[1-9]\d{9,14}$/, 'Enter a valid phone number (e.g. +919876543210)'),
+  referral_code: z.string().trim().optional(),
 });
 
 export type CompleteProfile = z.infer<typeof CompleteProfileSchema>;

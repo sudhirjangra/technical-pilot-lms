@@ -17,14 +17,45 @@ import {
   REGEXP_ONLY_DIGITS,
 } from '@repo/shadcn/input-otp';
 import { cn } from '@repo/shadcn/lib/utils';
+import { toast } from '@repo/shadcn/sonner';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const ConfirmEmailForm = ({ email }: { email: string }) => {
-
+  const router = useRouter();
   const [token, setToken] = useState('');
   const [resendMsg, setResendMsg] = useState('');
+
+  useEffect(() => {
+    if (!email) return;
+
+    let isMounted = true;
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/auth/email-status?email=${encodeURIComponent(email)}`,
+          { cache: 'no-store' },
+        );
+        if (response.ok) {
+          const body = await response.json();
+          if (body?.data?.isConfirmed && isMounted) {
+            clearInterval(intervalId);
+            toast.success('Email confirmed successfully! Redirecting...');
+            window.location.href = `/auth/sign-in?email=${encodeURIComponent(email)}&confirmed=1`;
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [email]);
 
   const {
     executeAsync,

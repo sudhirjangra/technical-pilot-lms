@@ -13,7 +13,9 @@ describe('MailService', () => {
         MailService,
         {
           provide: ConfigService,
-          useValue: { get: jest.fn().mockReturnValue('noreply@technicalpilot.com') },
+          useValue: {
+            get: jest.fn().mockReturnValue('noreply@technicalpilot.com'),
+          },
         },
         {
           provide: MailerService,
@@ -34,7 +36,6 @@ describe('MailService', () => {
 
     service = module.get<MailService>(MailService);
   });
-
 
   it('should be defined', () => {
     expect(service).toBeDefined();

@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Logger } from 'nestjs-pino';
-import { CreateEnrollmentDto, ListEnrollmentsQueryDto, UpdateEnrollmentDto } from './dto';
+import {
+  CreateEnrollmentDto,
+  ListEnrollmentsQueryDto,
+  UpdateEnrollmentDto,
+} from './dto';
 
 @Injectable()
 export class EnrollmentsService {
@@ -19,7 +23,6 @@ export class EnrollmentsService {
     private readonly mailService: MailService,
     private readonly logger: Logger,
   ) {}
-
 
   async create(dto: CreateEnrollmentDto) {
     // Check if course exists and is published
@@ -177,11 +180,16 @@ export class EnrollmentsService {
     }
 
     // Send confirmation email asynchronously
-    this.sendFreeEnrollmentReceiptEmail(studentId, course.title, courseId).catch(
-      (err) => {
-        this.logger.warn({ err, studentId, courseId }, 'Failed to dispatch free enrollment email');
-      },
-    );
+    this.sendFreeEnrollmentReceiptEmail(
+      studentId,
+      course.title,
+      courseId,
+    ).catch((err) => {
+      this.logger.warn(
+        { err, studentId, courseId },
+        'Failed to dispatch free enrollment email',
+      );
+    });
 
     return data;
   }
@@ -212,7 +220,10 @@ export class EnrollmentsService {
         });
       }
     } catch (err) {
-      this.logger.warn({ err, studentId, courseId }, 'Failed to send free enrollment receipt email');
+      this.logger.warn(
+        { err, studentId, courseId },
+        'Failed to send free enrollment receipt email',
+      );
     }
   }
 
@@ -236,4 +247,3 @@ export class EnrollmentsService {
     return true;
   }
 }
-

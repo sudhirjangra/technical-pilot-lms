@@ -1,6 +1,7 @@
 import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import { MailService } from '@/features/mail/mail.service';
 import { CoursePurchaseSuccessMail } from '@/features/mail/templates';
+import { ReferralsService } from '@/features/referrals/referrals.service';
 import {
   BadRequestException,
   ForbiddenException,
@@ -23,6 +24,7 @@ export class PaymentsService {
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly config: ConfigService,
     private readonly mailService: MailService,
+    private readonly referralsService: ReferralsService,
     private readonly logger: Logger,
   ) {
     this.razorpayKeyId = this.config.getOrThrow<string>('RAZORPAY_KEY_ID');
@@ -30,7 +32,6 @@ export class PaymentsService {
       'RAZORPAY_KEY_SECRET',
     );
   }
-
 
   /** Create a Razorpay order and store pending payment record */
   async createOrder(dto: CreateOrderDto, studentId: string) {
@@ -55,10 +56,24 @@ export class PaymentsService {
     if (existing)
       throw new BadRequestException('Already enrolled in this course');
 
-    const amount = course.discount_price ?? course.price;
-    const discountAmount = course.discount_price
+    let amount = course.discount_price ?? course.price;
+    let discountAmount = course.discount_price
       ? course.price - course.discount_price
       : 0;
+    let appliedCouponCode: string | null = null;
+
+    if (dto.coupon_code) {
+      const couponValidation = await this.referralsService.validateCoupon(
+        dto.coupon_code,
+        studentId,
+        dto.course_id,
+      );
+      amount = couponValidation.final_price;
+      discountAmount =
+        (course.discount_price ? course.price - course.discount_price : 0) +
+        couponValidation.discount_amount;
+      appliedCouponCode = couponValidation.code;
+    }
 
     // Create Razorpay order via API
     const orderPayload = {
@@ -95,6 +110,7 @@ export class PaymentsService {
         course_id: dto.course_id,
         amount,
         discount_amount: discountAmount,
+        coupon_code: appliedCouponCode,
         razorpay_order_id: order.id,
         invoice_number: invoiceNumber,
         status: 'pending',
@@ -142,18 +158,19 @@ export class PaymentsService {
     }
 
     if (existingPayment.status === 'completed') {
-      await this.supabase
-        .from('enrollments')
-        .upsert(
-          {
-            student_id: studentId,
-            course_id: existingPayment.course_id,
-            status: 'active',
-            enrolled_at: new Date().toISOString(),
-          },
-          { onConflict: 'student_id,course_id' },
-        );
-      return { message: 'Payment already verified, enrollment activated', payment: existingPayment };
+      await this.supabase.from('enrollments').upsert(
+        {
+          student_id: studentId,
+          course_id: existingPayment.course_id,
+          status: 'active',
+          enrolled_at: new Date().toISOString(),
+        },
+        { onConflict: 'student_id,course_id' },
+      );
+      return {
+        message: 'Payment already verified, enrollment activated',
+        payment: existingPayment,
+      };
     }
 
     if (existingPayment.status !== 'pending')
@@ -179,17 +196,30 @@ export class PaymentsService {
       );
 
     // Create enrollment
-    await this.supabase
-      .from('enrollments')
-      .upsert(
-        {
-          student_id: studentId,
-          course_id: payment.course_id,
-          status: 'active',
-          enrolled_at: new Date().toISOString(),
-        },
-        { onConflict: 'student_id,course_id' },
-      );
+    await this.supabase.from('enrollments').upsert(
+      {
+        student_id: studentId,
+        course_id: payment.course_id,
+        status: 'active',
+        enrolled_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id,course_id' },
+    );
+
+    // Award referral reward points to referrer if referee purchased
+    this.referralsService
+      .awardReferralReward(
+        payment.id,
+        studentId,
+        payment.amount,
+        payment.course_id,
+      )
+      .catch((err) => {
+        this.logger.warn(
+          { err, paymentId: payment.id, studentId },
+          'Failed to award referral reward',
+        );
+      });
 
     // Dispatch confirmation receipt email asynchronously
     this.sendPurchaseReceiptEmail(studentId, payment.course_id, {
@@ -197,7 +227,10 @@ export class PaymentsService {
       invoice_number: payment.invoice_number,
       razorpay_order_id: payment.razorpay_order_id,
     }).catch((err) => {
-      this.logger.warn({ err, studentId }, 'Failed to dispatch purchase confirmation email');
+      this.logger.warn(
+        { err, studentId },
+        'Failed to dispatch purchase confirmation email',
+      );
     });
 
     return { message: 'Payment verified, enrollment activated', payment };
@@ -236,22 +269,37 @@ export class PaymentsService {
         })
         .eq('razorpay_order_id', orderId)
         .eq('status', 'pending')
-        .select('student_id, course_id, amount, invoice_number, razorpay_order_id')
+        .select(
+          'id, student_id, course_id, amount, invoice_number, razorpay_order_id',
+        )
         .single();
 
       if (payment) {
         // Ensure enrollment exists
-        await this.supabase
-          .from('enrollments')
-          .upsert(
-            {
-              student_id: payment.student_id,
-              course_id: payment.course_id,
-              status: 'active',
-              enrolled_at: new Date().toISOString(),
-            },
-            { onConflict: 'student_id,course_id' },
-          );
+        await this.supabase.from('enrollments').upsert(
+          {
+            student_id: payment.student_id,
+            course_id: payment.course_id,
+            status: 'active',
+            enrolled_at: new Date().toISOString(),
+          },
+          { onConflict: 'student_id,course_id' },
+        );
+
+        // Award referral reward points to referrer if referee purchased
+        this.referralsService
+          .awardReferralReward(
+            payment.id,
+            payment.student_id,
+            payment.amount,
+            payment.course_id,
+          )
+          .catch((err) => {
+            this.logger.warn(
+              { err, paymentId: payment.id, studentId: payment.student_id },
+              'Failed to award referral reward in webhook',
+            );
+          });
 
         // Dispatch confirmation receipt email asynchronously
         this.sendPurchaseReceiptEmail(payment.student_id, payment.course_id, {
@@ -259,7 +307,10 @@ export class PaymentsService {
           invoice_number: payment.invoice_number,
           razorpay_order_id: payment.razorpay_order_id,
         }).catch((err) => {
-          this.logger.warn({ err, studentId: payment.student_id }, 'Failed to dispatch purchase confirmation email');
+          this.logger.warn(
+            { err, studentId: payment.student_id },
+            'Failed to dispatch purchase confirmation email',
+          );
         });
       }
     } else if (event === 'payment.failed') {
@@ -324,7 +375,6 @@ export class PaymentsService {
       );
     }
   }
-
 
   /** Admin: list all payments with filters */
   async findAll(filters?: {
