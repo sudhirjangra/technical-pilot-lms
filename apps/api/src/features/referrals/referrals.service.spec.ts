@@ -278,4 +278,51 @@ describe('ReferralsService', () => {
       ).rejects.toThrow('Insufficient points balance');
     });
   });
+
+  describe('recordCouponUsage', () => {
+    it('should increment times_used when a coupon is used on purchase', async () => {
+      const updateMock = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      });
+
+      supabaseMock.from.mockImplementation((table: string) => {
+        if (table === 'coupons') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                maybeSingle: jest.fn().mockResolvedValue({
+                  data: {
+                    id: 'coupon-1',
+                    code: 'WELCOME-123',
+                    times_used: 0,
+                    max_uses: 1,
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+            update: updateMock,
+          };
+        }
+        if (table === 'payments') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({
+                  count: 1,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        }
+        return {};
+      });
+
+      await service.recordCouponUsage('WELCOME-123', 'student-1', 'pay-1');
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ times_used: 1 }),
+      );
+    });
+  });
 });

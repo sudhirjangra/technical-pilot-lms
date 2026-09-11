@@ -381,7 +381,25 @@ export class ReferralsService {
         );
       }
 
-      if (couponRecord.times_used >= couponRecord.max_uses) {
+      // Check both times_used on coupon record as well as completed payments count
+      const { count: completedCount } = await this.supabase
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('coupon_code', cleanCode)
+        .eq('status', 'completed');
+
+      const effectiveUses = Math.max(
+        couponRecord.times_used || 0,
+        completedCount ?? 0,
+      );
+
+      if (effectiveUses >= couponRecord.max_uses) {
+        if (couponRecord.times_used !== effectiveUses) {
+          await this.supabase
+            .from('coupons')
+            .update({ times_used: effectiveUses })
+            .eq('id', couponRecord.id);
+        }
         throw new BadRequestException(
           'This coupon code has already been used.',
         );
@@ -448,6 +466,59 @@ export class ReferralsService {
 
     // Any other case is invalid
     throw new BadRequestException('Invalid coupon code');
+  }
+
+  /**
+   * Record coupon usage upon completed course purchase.
+   * Atomically and idempotently updates `times_used` in the `coupons` table
+   * based on the count of completed payments associated with the coupon.
+   */
+  async recordCouponUsage(
+    couponCode?: string | null,
+    studentId?: string,
+    paymentId?: string,
+  ): Promise<void> {
+    if (!couponCode || !couponCode.trim()) return;
+
+    const cleanCode = couponCode.trim().toUpperCase();
+
+    try {
+      const { data: coupon } = await this.supabase
+        .from('coupons')
+        .select('id, times_used, max_uses')
+        .eq('code', cleanCode)
+        .maybeSingle();
+
+      if (!coupon) return;
+
+      // Count total completed payments for this coupon code
+      const { count: completedCount } = await this.supabase
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('coupon_code', cleanCode)
+        .eq('status', 'completed');
+
+      const actualUses = Math.max(
+        (coupon.times_used || 0) + 1,
+        completedCount ?? 1,
+      );
+
+      await this.supabase
+        .from('coupons')
+        .update({
+          times_used: actualUses,
+        })
+        .eq('id', coupon.id);
+
+      this.logger.log(
+        `Recorded coupon usage for ${cleanCode}: times_used updated to ${actualUses}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        { err, couponCode, studentId, paymentId },
+        `Failed to record coupon usage for ${cleanCode}`,
+      );
+    }
   }
 
   /**
@@ -650,18 +721,37 @@ export class ReferralsService {
     // Check if current user has an unused referral discount coupon
     const { data: myCoupon } = await this.supabase
       .from('coupons')
-      .select('code, discount_percentage, times_used, max_uses')
+      .select('id, code, discount_percentage, times_used, max_uses')
       .eq('applicable_user_id', userId)
       .eq('is_active', true)
       .maybeSingle();
 
-    const unusedCoupon =
-      myCoupon && myCoupon.times_used < myCoupon.max_uses
-        ? {
-            code: myCoupon.code,
-            discount_percentage: Number(myCoupon.discount_percentage),
-          }
-        : null;
+    let unusedCoupon: { code: string; discount_percentage: number } | null =
+      null;
+    if (myCoupon) {
+      const { count: completedCount } = await this.supabase
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('coupon_code', myCoupon.code)
+        .eq('status', 'completed');
+
+      const effectiveUses = Math.max(
+        myCoupon.times_used || 0,
+        completedCount ?? 0,
+      );
+
+      if (effectiveUses < myCoupon.max_uses) {
+        unusedCoupon = {
+          code: myCoupon.code,
+          discount_percentage: Number(myCoupon.discount_percentage),
+        };
+      } else if (myCoupon.times_used !== effectiveUses) {
+        await this.supabase
+          .from('coupons')
+          .update({ times_used: effectiveUses })
+          .eq('id', myCoupon.id);
+      }
+    }
 
     const inrValue = Number(
       (wallet.current_balance / settings.points_per_rupee).toFixed(2),

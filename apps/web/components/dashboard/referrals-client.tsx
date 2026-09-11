@@ -49,6 +49,7 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
   const [data, setData] = useState<ReferralSummary | null>(initialData ?? null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [origin, setOrigin] = useState('');
 
   // Conversion dialog state
@@ -175,6 +176,50 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
           </div>
         </div>
       </div>
+
+      {/* Available Referral Welcome Coupon (for students who signed up via referral) */}
+      {data?.available_coupon && (
+        <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-card p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0">
+                <Gift className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground text-base">Your Welcome Referral Discount Coupon</span>
+                  <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold">
+                    {data.available_coupon.discount_percentage}% OFF
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  You gained an exclusive {data.available_coupon.discount_percentage}% discount for joining through a friend&apos;s referral! Apply this code during checkout on any course.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+              <div className="px-3.5 py-2 rounded-lg bg-background border border-emerald-500/30 font-mono font-bold tracking-wider text-emerald-600 dark:text-emerald-400 text-sm">
+                {data.available_coupon.code}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10"
+                onClick={() => {
+                  navigator.clipboard.writeText(data.available_coupon!.code);
+                  setCopiedCoupon(true);
+                  toast.success('Coupon code copied to clipboard!');
+                  setTimeout(() => setCopiedCoupon(false), 2000);
+                }}
+              >
+                {copiedCoupon ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                {copiedCoupon ? 'Copied' : 'Copy Code'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share & Wallet Grid */}
       <div className="grid gap-6 md:grid-cols-2">

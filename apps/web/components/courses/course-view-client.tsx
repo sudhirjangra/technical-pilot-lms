@@ -57,6 +57,7 @@ export function CourseViewClient({
   email,
   chapterCount,
   lessonCount,
+  availableCoupon,
 }: {
   course: PublicCourse;
   isEnrolled: boolean;
@@ -64,6 +65,7 @@ export function CourseViewClient({
   email?: string | null;
   chapterCount?: number;
   lessonCount?: number;
+  availableCoupon?: { code: string; discount_percentage: number } | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -75,13 +77,10 @@ export function CourseViewClient({
   const isFree = Number(effectivePrice) === 0;
   const finalPrice = appliedCoupon ? appliedCoupon.final_price : effectivePrice;
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
-      toast.error('Please enter a coupon code');
-      return;
-    }
+  const handleApplySpecificCoupon = async (codeToApply: string) => {
+    if (!codeToApply.trim()) return;
     setValidatingCoupon(true);
-    const { error, result } = await validateCourseCoupon(couponCode, course.id);
+    const { error, result } = await validateCourseCoupon(codeToApply, course.id);
     setValidatingCoupon(false);
 
     if (error || !result) {
@@ -91,6 +90,14 @@ export function CourseViewClient({
 
     setAppliedCoupon(result);
     toast.success(`Coupon applied! You saved ₹${result.discount_amount}`);
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code');
+      return;
+    }
+    await handleApplySpecificCoupon(couponCode);
   };
 
   const handleRemoveCoupon = () => {
@@ -290,7 +297,31 @@ export function CourseViewClient({
 
                 {/* Coupon input for enrolled/paying students */}
                 {!isFree && !isEnrolled && isLoggedIn && course.status !== 'archived' && (
-                  <div className="pt-1">
+                  <div className="pt-1 space-y-2">
+                    {availableCoupon && !appliedCoupon && (
+                      <div className="flex items-center justify-between p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-300">
+                          <Tag className="size-3.5 shrink-0" />
+                          <span>
+                            {availableCoupon.discount_percentage}% Welcome Coupon:{' '}
+                            <strong className="font-mono font-bold">{availableCoupon.code}</strong>
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2.5 text-xs font-semibold border-emerald-500/30 bg-background text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 shrink-0"
+                          onClick={() => {
+                            setCouponCode(availableCoupon.code);
+                            handleApplySpecificCoupon(availableCoupon.code);
+                          }}
+                          disabled={validatingCoupon}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    )}
+
                     {appliedCoupon ? (
                       <div className="flex items-center justify-between p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 text-xs">
                         <div className="flex items-center gap-1.5 font-medium text-emerald-800 dark:text-emerald-300">

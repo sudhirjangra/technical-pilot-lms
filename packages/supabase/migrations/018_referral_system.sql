@@ -192,6 +192,27 @@ CREATE INDEX IF NOT EXISTS idx_coupons_applicable_user ON public.coupons (applic
 ALTER TABLE public.payments
 ADD COLUMN IF NOT EXISTS coupon_code TEXT;
 
+-- Trigger to increment coupons times_used when payment completes
+CREATE OR REPLACE FUNCTION public.handle_payment_completed_coupon()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM 'completed') AND NEW.coupon_code IS NOT NULL THEN
+    UPDATE public.coupons
+    SET times_used = times_used + 1
+    WHERE UPPER(code) = UPPER(NEW.coupon_code);
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_payment_completed_coupon ON public.payments;
+CREATE TRIGGER trg_payment_completed_coupon
+AFTER UPDATE ON public.payments
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_payment_completed_coupon();
+
 -- 9. Row Level Security Policies
 ALTER TABLE public.referral_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;

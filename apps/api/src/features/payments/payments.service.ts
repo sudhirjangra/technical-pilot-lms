@@ -221,6 +221,18 @@ export class PaymentsService {
         );
       });
 
+    // Record coupon usage if a coupon was applied
+    if (payment.coupon_code) {
+      this.referralsService
+        .recordCouponUsage(payment.coupon_code, studentId, payment.id)
+        .catch((err) => {
+          this.logger.warn(
+            { err, paymentId: payment.id, couponCode: payment.coupon_code },
+            'Failed to record coupon usage in verifyPayment',
+          );
+        });
+    }
+
     // Dispatch confirmation receipt email asynchronously
     this.sendPurchaseReceiptEmail(studentId, payment.course_id, {
       amount: payment.amount,
@@ -270,7 +282,7 @@ export class PaymentsService {
         .eq('razorpay_order_id', orderId)
         .eq('status', 'pending')
         .select(
-          'id, student_id, course_id, amount, invoice_number, razorpay_order_id',
+          'id, student_id, course_id, amount, invoice_number, razorpay_order_id, coupon_code',
         )
         .single();
 
@@ -300,6 +312,26 @@ export class PaymentsService {
               'Failed to award referral reward in webhook',
             );
           });
+
+        // Record coupon usage if a coupon was applied
+        if (payment.coupon_code) {
+          this.referralsService
+            .recordCouponUsage(
+              payment.coupon_code,
+              payment.student_id,
+              payment.id,
+            )
+            .catch((err) => {
+              this.logger.warn(
+                {
+                  err,
+                  paymentId: payment.id,
+                  couponCode: payment.coupon_code,
+                },
+                'Failed to record coupon usage in webhook',
+              );
+            });
+        }
 
         // Dispatch confirmation receipt email asynchronously
         this.sendPurchaseReceiptEmail(payment.student_id, payment.course_id, {
