@@ -42,6 +42,7 @@ import {
   updateTestQuestion,
 } from '@/server/admin/tests.server';
 import {
+  createVideoLesson,
   deleteVideoLesson,
   uploadVideoThumbnail,
   VideoLesson,
@@ -80,6 +81,7 @@ import {
 import { toast } from '@repo/shadcn/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/shadcn/tabs';
 import { Textarea } from '@repo/shadcn/textarea';
+import { cn } from '@repo/shadcn/lib/utils';
 
 type LessonKind = 'video' | 'pdf' | 'assignment' | 'test';
 type BuilderKind = 'assignment' | 'test';
@@ -98,6 +100,9 @@ type BuilderQuestion = {
   question_number: number | null;
   question_text: string;
   question_type: QuestionType;
+  question_category?: string | null;
+  question_difficulty?: 'easy' | 'medium' | 'hard' | null;
+  subtopic?: string | null;
   points: number;
   explanation: string | null | undefined;
   topic: string | null | undefined;
@@ -125,6 +130,9 @@ type QuestionDraft = {
   question_number: string;
   question_text: string;
   question_type: QuestionType;
+  question_category: string;
+  question_difficulty: 'easy' | 'medium' | 'hard' | '';
+  subtopic: string;
   points: string;
   explanation: string;
   topic: string;
@@ -157,6 +165,9 @@ const createQuestionDraft = (questionType: QuestionType = 'mcq'): QuestionDraft 
   question_number: '',
   question_text: '',
   question_type: questionType,
+  question_category: '',
+  question_difficulty: '',
+  subtopic: '',
   points: '1',
   explanation: '',
   topic: '',
@@ -250,9 +261,10 @@ export function CourseDetailClient({
   const [chapterDraft, setChapterDraft] = useState({ title: '', description: '', is_published: false });
   const [lessonFormChapterId, setLessonFormChapterId] = useState<string | null>(null);
   const [videoFormLessonId, setVideoFormLessonId] = useState<string | null>(null);
-  const [thumbnailFormLessonId, setThumbnailFormLessonId] = useState<string | null>(null);
+  const [videoFormMode, setVideoFormMode] = useState<'upload' | 'link' | 'thumbnail'>('upload');
   const [pdfFormLessonId, setPdfFormLessonId] = useState<string | null>(null);
   const [newLessonType, setNewLessonType] = useState<LessonKind>('video');
+  const [newLessonVideoMode, setNewLessonVideoMode] = useState<'upload' | 'link'>('upload');
   const [editingLesson, setEditingLesson] = useState<{
     id: string;
     title: string;
@@ -332,6 +344,35 @@ export function CourseDetailClient({
     router.refresh();
   };
 
+  const handleLinkVideoId = async (
+    event: React.FormEvent<HTMLFormElement>,
+    lessonId: string,
+  ) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const videoId = String(formData.get('vdocipher_video_id') ?? '').trim();
+    if (!videoId) {
+      toast.error('Please enter a VdoCipher Video ID');
+      return;
+    }
+
+    setLoading(true);
+    const result = await createVideoLesson({
+      lesson_id: lessonId,
+      vdocipher_video_id: videoId,
+    });
+    setLoading(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success('VdoCipher video linked');
+    setVideoFormLessonId(null);
+    router.refresh();
+  };
+
   const handleUploadThumbnail = async (
     event: React.FormEvent<HTMLFormElement>,
     lessonId: string,
@@ -356,7 +397,7 @@ export function CourseDetailClient({
     }
 
     toast.success('Thumbnail uploaded');
-    setThumbnailFormLessonId(null);
+    setVideoFormLessonId(null);
     router.refresh();
   };
 
@@ -480,27 +521,46 @@ export function CourseDetailClient({
     const createdLesson = result.data;
 
     const file = formData.get('asset');
-    const accessToken = file instanceof File && file.size > 0 && lessonType === 'video'
-      ? await getCurrentAccessToken()
-      : undefined;
-    const uploadResult: { error?: string } = file instanceof File && file.size > 0
-      ? lessonType === 'video'
-        ? await uploadFileDirect(
+    const vdocipherVideoId = String(formData.get('vdocipher_video_id') ?? '').trim();
+
+    let uploadError: string | undefined;
+    if (lessonType === 'video') {
+      if (newLessonVideoMode === 'link' && vdocipherVideoId) {
+        const linkResult = await createVideoLesson({
+          lesson_id: createdLesson.id,
+          vdocipher_video_id: vdocipherVideoId,
+        });
+        if (linkResult.error) {
+          uploadError = linkResult.error;
+        }
+      } else if (file instanceof File && file.size > 0) {
+        const accessToken = await getCurrentAccessToken();
+        const uploadResult = await uploadFileDirect(
           `/videos/lesson/${createdLesson.id}/upload`,
           file,
           accessToken,
           'file',
-        )
-        : lessonType === 'pdf'
-          ? await uploadPdfLesson(createdLesson.id, file)
-          : {}
-      : {};
+        );
+        if (uploadResult.error) {
+          uploadError = uploadResult.error;
+        }
+      }
+    } else if (lessonType === 'pdf' && file instanceof File && file.size > 0) {
+      const uploadResult = await uploadPdfLesson(createdLesson.id, file);
+      if (uploadResult.error) {
+        uploadError = uploadResult.error;
+      }
+    }
 
     setLoading(false);
-    if (uploadResult.error) {
-      toast.error(uploadResult.error);
+    if (uploadError) {
+      toast.error(uploadError);
     } else {
-      toast.success('Lesson added');
+      toast.success(
+        lessonType === 'video' && vdocipherVideoId
+          ? 'Lesson created and VdoCipher video linked'
+          : 'Lesson added',
+      );
     }
     setLessonFormChapterId(null);
     router.refresh();
@@ -673,6 +733,9 @@ export function CourseDetailClient({
       question_number: question.question_number ?? null,
       question_text: question.question_text,
       question_type: question.question_type,
+      question_category: (question as { question_category?: string | null }).question_category ?? null,
+      question_difficulty: (question as { question_difficulty?: 'easy' | 'medium' | 'hard' | null }).question_difficulty ?? null,
+      subtopic: (question as { subtopic?: string | null }).subtopic ?? null,
       points: question.points,
       explanation: question.explanation,
       topic: (question as { topic?: string | null }).topic ?? null,
@@ -760,6 +823,9 @@ export function CourseDetailClient({
       question_number: question.question_number != null ? String(question.question_number) : '',
       question_text: question.question_text,
       question_type: question.question_type,
+      question_category: question.question_category ?? '',
+      question_difficulty: (question.question_difficulty as 'easy' | 'medium' | 'hard') ?? '',
+      subtopic: question.subtopic ?? '',
       points: String(question.points),
       explanation: question.explanation ?? '',
       topic: question.topic ?? '',
@@ -888,6 +954,9 @@ export function CourseDetailClient({
       question_number: questionNumber,
       question_text: questionText,
       question_type: questionDraft.question_type,
+      question_category: questionDraft.question_category.trim() || undefined,
+      question_difficulty: (questionDraft.question_difficulty as 'easy' | 'medium' | 'hard') || undefined,
+      subtopic: questionDraft.subtopic.trim() || undefined,
       points,
       explanation: questionDraft.explanation.trim() || undefined,
       topic: questionDraft.topic.trim() || undefined,
@@ -919,6 +988,9 @@ export function CourseDetailClient({
         question_number: savedQuestion.question_number ?? null,
         question_text: savedQuestion.question_text,
         question_type: savedQuestion.question_type,
+        question_category: savedQuestion.question_category ?? (questionDraft.question_category.trim() || null),
+        question_difficulty: savedQuestion.question_difficulty ?? (questionDraft.question_difficulty || null),
+        subtopic: savedQuestion.subtopic ?? (questionDraft.subtopic.trim() || null),
         points: savedQuestion.points,
         explanation: savedQuestion.explanation,
         topic: savedQuestion.topic ?? null,
@@ -980,6 +1052,9 @@ export function CourseDetailClient({
         question_number: question.question_number ?? null,
         question_text: question.question_text,
         question_type: question.question_type,
+        question_category: (question as { question_category?: string | null }).question_category ?? null,
+        question_difficulty: (question as { question_difficulty?: 'easy' | 'medium' | 'hard' | null }).question_difficulty ?? null,
+        subtopic: (question as { subtopic?: string | null }).subtopic ?? null,
         points: question.points,
         explanation: question.explanation,
         topic: (question as { topic?: string | null }).topic ?? null,
@@ -1045,11 +1120,63 @@ export function CourseDetailClient({
           />
         </div>
         <div>
+          <label className="text-sm font-medium">
+            Question Category <span className="text-muted-foreground font-normal">(optional — type your own or pick)</span>
+          </label>
+          <Input
+            value={questionDraft.question_category}
+            onChange={(event) => handleQuestionDraftChange('question_category', event.target.value)}
+            placeholder="e.g. Technical General, Reasoning, Meteorology"
+            list="question-category-suggestions"
+          />
+          <datalist id="question-category-suggestions">
+            <option value="technical_general" />
+            <option value="air_regulations" />
+            <option value="aviation_meteorology" />
+            <option value="air_navigation" />
+            <option value="radio_aids" />
+            <option value="instruments" />
+            <option value="reasoning" />
+            <option value="calculation" />
+            <option value="numerical" />
+            <option value="conceptual" />
+          </datalist>
+        </div>
+        <div>
+          <label className="text-sm font-medium">
+            Question Difficulty <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          <Select
+            value={questionDraft.question_difficulty || 'none'}
+            onValueChange={(value) =>
+              handleQuestionDraftChange('question_difficulty', value === 'none' ? '' : value)
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select difficulty (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None (Unspecified)</SelectItem>
+              <SelectItem value="easy">Easy</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="hard">Hard</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
           <label className="text-sm font-medium">Topic / Subject <span className="text-muted-foreground font-normal">(optional)</span></label>
           <Input
             value={questionDraft.topic}
             onChange={(event) => handleQuestionDraftChange('topic', event.target.value)}
             placeholder="e.g. Algebra, Chemistry, History"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Subtopic / Section <span className="text-muted-foreground font-normal">(optional)</span></label>
+          <Input
+            value={questionDraft.subtopic}
+            onChange={(event) => handleQuestionDraftChange('subtopic', event.target.value)}
+            placeholder="e.g. Kinematics, Quadratic Equations"
           />
         </div>
         {questionDraft.question_type === 'text' && (
@@ -1309,8 +1436,29 @@ export function CourseDetailClient({
                                   </span>
                                   <Badge variant="outline">{question.question_type.toUpperCase()}</Badge>
                                   <Badge variant="secondary">{question.points} pt{question.points === 1 ? '' : 's'}</Badge>
+                                  {question.question_difficulty && (
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        'text-[10px] capitalize font-medium',
+                                        question.question_difficulty === 'easy' && 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+                                        question.question_difficulty === 'medium' && 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
+                                        question.question_difficulty === 'hard' && 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
+                                      )}
+                                    >
+                                      {question.question_difficulty}
+                                    </Badge>
+                                  )}
+                                  {question.question_category && (
+                                    <Badge variant="secondary" className="text-[10px] capitalize">
+                                      {question.question_category}
+                                    </Badge>
+                                  )}
                                   {question.topic && (
                                     <Badge variant="outline" className="text-[10px]">{question.topic}</Badge>
+                                  )}
+                                  {question.subtopic && (
+                                    <Badge variant="outline" className="text-[10px] text-muted-foreground">{question.subtopic}</Badge>
                                   )}
                                 </div>
                                 {question.question_options.length > 0 && (
@@ -1584,13 +1732,53 @@ export function CourseDetailClient({
                         <option value="test">Test</option>
                       </select>
                     </div>
-                    {(newLessonType === 'video' || newLessonType === 'pdf') && (
+                    {newLessonType === 'video' && (
+                      <div className="flex flex-col gap-1.5 w-full md:w-72">
+                        <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground mb-0.5">
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="video_input_type"
+                              checked={newLessonVideoMode === 'upload'}
+                              onChange={() => setNewLessonVideoMode('upload')}
+                              className="accent-primary"
+                            />
+                            Upload File
+                          </label>
+                          <label className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="video_input_type"
+                              checked={newLessonVideoMode === 'link'}
+                              onChange={() => setNewLessonVideoMode('link')}
+                              className="accent-primary"
+                            />
+                            Link Video ID
+                          </label>
+                        </div>
+                        {newLessonVideoMode === 'upload' ? (
+                          <Input
+                            name="asset"
+                            type="file"
+                            accept="video/*"
+                            className="text-xs"
+                          />
+                        ) : (
+                          <Input
+                            name="vdocipher_video_id"
+                            placeholder="VdoCipher Video ID"
+                            className="text-xs font-mono"
+                          />
+                        )}
+                      </div>
+                    )}
+                    {newLessonType === 'pdf' && (
                       <div className="w-full md:w-52">
                         <label className="text-sm font-medium">Asset</label>
                         <Input
                           name="asset"
                           type="file"
-                          accept={newLessonType === 'video' ? 'video/*' : 'application/pdf,.pdf'}
+                          accept="application/pdf,.pdf"
                           className="mt-1 text-xs"
                         />
                       </div>
@@ -1701,32 +1889,27 @@ export function CourseDetailClient({
                                   size="sm"
                                   variant="outline"
                                   className="h-7 sm:h-8 px-2 text-xs"
-                                  onClick={() => setVideoFormLessonId(
-                                    videoFormLessonId === lesson.id ? null : lesson.id,
-                                  )}
+                                  onClick={() => {
+                                    if (videoFormLessonId === lesson.id) {
+                                      setVideoFormLessonId(null);
+                                    } else {
+                                      setVideoFormLessonId(lesson.id);
+                                      setVideoFormMode('upload');
+                                    }
+                                  }}
                                 >
-                                  {videoLesson ? 'Replace Video' : 'Upload Video'}
+                                  {videoLesson ? 'Edit Video' : 'Add Video'}
                                 </Button>
                                 {videoLesson && (
                                   <Button
                                     size="sm"
-                                    variant="outline"
+                                    variant="destructive"
                                     className="h-7 sm:h-8 px-2 text-xs"
-                                    onClick={() => setThumbnailFormLessonId(
-                                      thumbnailFormLessonId === lesson.id ? null : lesson.id,
-                                    )}
+                                    onClick={() => handleDeleteVideo(lesson.id)}
                                   >
-                                    {videoLesson.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                                    Delete Video
                                   </Button>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="h-7 sm:h-8 px-2 text-xs"
-                                  onClick={() => handleDeleteVideo(lesson.id)}
-                                >
-                                  Delete Video
-                                </Button>
                               </>
                             )}
                             {lesson.lesson_type === 'pdf' && (
@@ -1772,61 +1955,136 @@ export function CourseDetailClient({
                         </div>
 
                         {lesson.lesson_type === 'video' && videoFormLessonId === lesson.id && (
-                          <form
-                            onSubmit={(event) => handleUploadVideo(event, lesson.id)}
-                            className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end"
-                          >
-                            <div className="flex-1">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Video file
-                              </label>
-                              <Input
-                                name="video"
-                                type="file"
-                                required
-                                accept="video/*"
-                                className="mt-1 text-xs"
-                              />
-                            </div>
-                            <Button type="submit" size="sm" disabled={loading}>
-                              {uploadingLessonId === lesson.id
-                                ? `Uploading${videoUploadProgress != null ? ` ${videoUploadProgress}%` : '...'}`
-                                : 'Upload'}
-                            </Button>
-                          </form>
-                        )}
-
-                        {lesson.lesson_type === 'video' && thumbnailFormLessonId === lesson.id && (
-                          <form
-                            onSubmit={(event) => handleUploadThumbnail(event, lesson.id)}
-                            className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end rounded-md border border-border/60 bg-muted/20 p-3"
-                          >
-                            {videoLesson?.thumbnail_url && (
-                              <div className="w-20 h-12 rounded overflow-hidden border border-border shrink-0 bg-black">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={videoLesson.thumbnail_url}
-                                  alt="Current thumbnail"
-                                  className="w-full h-full object-cover"
-                                />
+                          <div className="mt-3 rounded-md border border-border/60 bg-muted/20 p-3 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`video_mode_${lesson.id}`}
+                                    checked={videoFormMode === 'upload'}
+                                    onChange={() => setVideoFormMode('upload')}
+                                    className="accent-primary"
+                                  />
+                                  {videoLesson ? 'Replace Video File' : 'Upload Video File'}
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`video_mode_${lesson.id}`}
+                                    checked={videoFormMode === 'link'}
+                                    onChange={() => setVideoFormMode('link')}
+                                    className="accent-primary"
+                                  />
+                                  VdoCipher Video ID
+                                </label>
+                                {videoLesson && (
+                                  <label className="flex items-center gap-1 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={`video_mode_${lesson.id}`}
+                                      checked={videoFormMode === 'thumbnail'}
+                                      onChange={() => setVideoFormMode('thumbnail')}
+                                      className="accent-primary"
+                                    />
+                                    {videoLesson.thumbnail_url ? 'Change Thumbnail' : 'Add Thumbnail'}
+                                  </label>
+                                )}
                               </div>
-                            )}
-                            <div className="flex-1">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Thumbnail image (JPG, PNG, WebP)
-                              </label>
-                              <Input
-                                name="thumbnail"
-                                type="file"
-                                required
-                                accept="image/*"
-                                className="mt-1 text-xs"
-                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => setVideoFormLessonId(null)}
+                              >
+                                ✕ Cancel
+                              </Button>
                             </div>
-                            <Button type="submit" size="sm" disabled={loading}>
-                              {uploadingLessonId === lesson.id ? 'Uploading...' : 'Save Thumbnail'}
-                            </Button>
-                          </form>
+
+                            {videoFormMode === 'upload' && (
+                              <form
+                                onSubmit={(event) => handleUploadVideo(event, lesson.id)}
+                                className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                              >
+                                <div className="flex-1">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Video file
+                                  </label>
+                                  <Input
+                                    name="video"
+                                    type="file"
+                                    required
+                                    accept="video/*"
+                                    className="mt-1 text-xs"
+                                  />
+                                </div>
+                                <Button type="submit" size="sm" disabled={loading}>
+                                  {uploadingLessonId === lesson.id
+                                    ? `Uploading${videoUploadProgress != null ? ` ${videoUploadProgress}%` : '...'}`
+                                    : videoLesson
+                                    ? 'Replace Video'
+                                    : 'Upload Video'}
+                                </Button>
+                              </form>
+                            )}
+
+                            {videoFormMode === 'link' && (
+                              <form
+                                onSubmit={(event) => handleLinkVideoId(event, lesson.id)}
+                                className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                              >
+                                <div className="flex-1">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    VdoCipher Video ID
+                                  </label>
+                                  <Input
+                                    name="vdocipher_video_id"
+                                    defaultValue={videoLesson?.vdocipher_video_id ?? ''}
+                                    placeholder="e.g. 128b9d88582b4352b21ba1b5bbef0ba0"
+                                    required
+                                    className="mt-1 text-xs font-mono"
+                                  />
+                                </div>
+                                <Button type="submit" size="sm" disabled={loading}>
+                                  {loading ? 'Linking...' : videoLesson ? 'Update Link' : 'Link Video'}
+                                </Button>
+                              </form>
+                            )}
+
+                            {videoFormMode === 'thumbnail' && (
+                              <form
+                                onSubmit={(event) => handleUploadThumbnail(event, lesson.id)}
+                                className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                              >
+                                {videoLesson?.thumbnail_url && (
+                                  <div className="w-20 h-12 rounded overflow-hidden border border-border shrink-0 bg-black">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={videoLesson.thumbnail_url}
+                                      alt="Current thumbnail"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Thumbnail image (JPG, PNG, WebP)
+                                  </label>
+                                  <Input
+                                    name="thumbnail"
+                                    type="file"
+                                    required
+                                    accept="image/*"
+                                    className="mt-1 text-xs"
+                                  />
+                                </div>
+                                <Button type="submit" size="sm" disabled={loading}>
+                                  {uploadingLessonId === lesson.id ? 'Uploading...' : 'Save Thumbnail'}
+                                </Button>
+                              </form>
+                            )}
+                          </div>
                         )}
 
                         {lesson.lesson_type === 'pdf' && pdfFormLessonId === lesson.id && (

@@ -10,7 +10,10 @@
     "answer": "C",
     "points": 1,
     "explanation": "Paris has been the capital since the 12th century.",
-    "topic": "Geography"
+    "topic": "Geography",
+    "question_category": "reasoning",
+    "question_difficulty": "easy",
+    "subtopic": "General Geography"
   },
   {
     "question_number": 2,
@@ -23,7 +26,10 @@
     "answer": "D",
     "points": 1,
     "explanation": "2, 3 and 5 are prime; 4 is not (divisible by 2).",
-    "topic": "Mathematics"
+    "topic": "Mathematics",
+    "question_category": "calculation",
+    "question_difficulty": "medium",
+    "subtopic": "Number Theory"
   },
   {
     "question_number": 3,
@@ -36,6 +42,9 @@
     "answer": "4",
     "points": 2,
     "explanation": "2+2 = 4",
-    "topic": "Mathematics"
+    "topic": "Mathematics",
+    "question_category": "numerical",
+    "question_difficulty": "hard",
+    "subtopic": "Basic Arithmetic"
   }
 ]

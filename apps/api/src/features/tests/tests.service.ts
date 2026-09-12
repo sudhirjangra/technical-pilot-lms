@@ -141,6 +141,9 @@ export class TestsService {
       points: dto.points ?? 1,
       explanation: dto.explanation?.trim() || null,
       topic: dto.topic?.trim() || null,
+      question_category: dto.question_category?.trim() || null,
+      question_difficulty: dto.question_difficulty || null,
+      subtopic: dto.subtopic?.trim() || null,
       sort_order: sortOrder,
       question_number: dto.question_number ?? sortOrder,
       correct_text_answer:
@@ -192,6 +195,16 @@ export class TestsService {
             ? undefined
             : dto.explanation.trim() || null,
         topic: dto.topic === undefined ? undefined : dto.topic.trim() || null,
+        question_category:
+          dto.question_category === undefined
+            ? undefined
+            : dto.question_category.trim() || null,
+        question_difficulty:
+          dto.question_difficulty === undefined
+            ? undefined
+            : dto.question_difficulty || null,
+        subtopic:
+          dto.subtopic === undefined ? undefined : dto.subtopic.trim() || null,
         sort_order: dto.sort_order,
         question_number: dto.question_number,
         correct_text_answer:
@@ -446,7 +459,7 @@ export class TestsService {
     const { data: questions, error: questionsError } = await this.supabase
       .from('questions')
       .select(
-        'id, question_type, points, explanation, correct_text_answer, topic, question_text',
+        'id, question_type, points, explanation, correct_text_answer, topic, question_text, question_category, question_difficulty, subtopic',
       )
       .eq('test_id', attempt.test_id);
 
@@ -621,13 +634,20 @@ export class TestsService {
         options: qOptions,
         textAnswer: answer?.textAnswer ?? null,
         topic: (q as { topic?: string | null }).topic ?? null,
+        questionCategory:
+          (q as { question_category?: string | null }).question_category?.trim() ||
+          null,
+        questionDifficulty:
+          (q as { question_difficulty?: string | null }).question_difficulty ||
+          null,
+        subtopic: (q as { subtopic?: string | null }).subtopic ?? null,
         timeSpentSeconds: answer?.timeSpentSeconds ?? 0,
         questionType: q.question_type,
         questionText: (q as { question_text?: string }).question_text ?? '',
       };
     });
 
-    // Build topic breakdown
+    // Build breakdowns: topic, category (question type), difficulty
     const topicMap = new Map<
       string,
       {
@@ -638,27 +658,105 @@ export class TestsService {
         earnedPoints: number;
       }
     >();
+    const categoryMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+    const difficultyMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+
     for (const q of questions ?? []) {
-      const topic = (q as { topic?: string | null }).topic ?? 'General';
-      const current = topicMap.get(topic) ?? {
-        total: 0,
-        correct: 0,
-        totalTime: 0,
-        points: 0,
-        earnedPoints: 0,
-      };
+      const topic = (q as { topic?: string | null }).topic?.trim() || null;
+      const category =
+        (q as { question_category?: string | null }).question_category?.trim() ||
+        null;
+      const difficulty =
+        (q as { question_difficulty?: string | null }).question_difficulty ||
+        null;
+
       const result = answerResults.find((r) => r.questionId === q.id)!;
       const answer = dto.answers.find((a) => a.questionId === q.id);
-      current.total += 1;
-      if (result.isCorrect === true) current.correct += 1;
-      current.totalTime += answer?.timeSpentSeconds ?? 0;
-      current.points += result.points;
-      current.earnedPoints += result.pointsEarned;
-      topicMap.set(topic, current);
+      const isCorrect = result.isCorrect === true;
+      const timeSpent = answer?.timeSpentSeconds ?? 0;
+
+      if (topic) {
+        const currentTopic = topicMap.get(topic) ?? {
+          total: 0,
+          correct: 0,
+          totalTime: 0,
+          points: 0,
+          earnedPoints: 0,
+        };
+        currentTopic.total += 1;
+        if (isCorrect) currentTopic.correct += 1;
+        currentTopic.totalTime += timeSpent;
+        currentTopic.points += result.points;
+        currentTopic.earnedPoints += result.pointsEarned;
+        topicMap.set(topic, currentTopic);
+      }
+
+      if (category) {
+        const currentCategory = categoryMap.get(category) ?? {
+          total: 0,
+          correct: 0,
+          totalTime: 0,
+          points: 0,
+          earnedPoints: 0,
+        };
+        currentCategory.total += 1;
+        if (isCorrect) currentCategory.correct += 1;
+        currentCategory.totalTime += timeSpent;
+        currentCategory.points += result.points;
+        currentCategory.earnedPoints += result.pointsEarned;
+        categoryMap.set(category, currentCategory);
+      }
+
+      if (difficulty) {
+        const currentDifficulty = difficultyMap.get(difficulty) ?? {
+          total: 0,
+          correct: 0,
+          totalTime: 0,
+          points: 0,
+          earnedPoints: 0,
+        };
+        currentDifficulty.total += 1;
+        if (isCorrect) currentDifficulty.correct += 1;
+        currentDifficulty.totalTime += timeSpent;
+        currentDifficulty.points += result.points;
+        currentDifficulty.earnedPoints += result.pointsEarned;
+        difficultyMap.set(difficulty, currentDifficulty);
+      }
     }
+
     const topicBreakdown = Array.from(topicMap.entries()).map(
       ([topic, stats]) => ({
         topic,
+        ...stats,
+      }),
+    );
+    const categoryBreakdown = Array.from(categoryMap.entries()).map(
+      ([category, stats]) => ({
+        category,
+        ...stats,
+      }),
+    );
+    const difficultyBreakdown = Array.from(difficultyMap.entries()).map(
+      ([difficulty, stats]) => ({
+        difficulty,
         ...stats,
       }),
     );
@@ -692,6 +790,8 @@ export class TestsService {
       total_count: totalQCount,
       avg_time_per_question: avgTimePerQuestion,
       topic_breakdown: topicBreakdown,
+      category_breakdown: categoryBreakdown,
+      difficulty_breakdown: difficultyBreakdown,
       question_review: questionReview,
     });
 
@@ -723,14 +823,14 @@ export class TestsService {
             question_id: answer.questionId,
             text_answer: answer.textAnswer ?? null,
             is_correct: result?.isCorrect ?? null,
-            time_spent_seconds: answer.timeSpentSeconds,
+            time_spent_seconds: answer.timeSpentSeconds ?? 0,
           },
           { onConflict: 'attempt_id,question_id' },
         )
         .select('id')
         .single();
 
-      if (answerError) continue;
+      if (answerError) throw new BadRequestException(answerError.message);
 
       // For MCQ/MSQ, upsert junction table
       if (q?.question_type !== 'text' && answer.selectedOptionIds?.length) {
@@ -767,6 +867,8 @@ export class TestsService {
       questionReview,
       totalTimeSeconds,
       topicBreakdown,
+      categoryBreakdown,
+      difficultyBreakdown,
       avgTimePerQuestion,
     };
   }
@@ -934,6 +1036,74 @@ export class TestsService {
     });
   }
 
+  private deriveCategoryBreakdown(questionReview: any[]) {
+    const map = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+    for (const qr of questionReview ?? []) {
+      const cat = qr.questionCategory?.trim();
+      if (!cat) continue;
+      const cur = map.get(cat) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
+      cur.total += 1;
+      if (qr.isCorrect === true) cur.correct += 1;
+      cur.totalTime += qr.timeSpentSeconds || 0;
+      cur.points += qr.points || 0;
+      cur.earnedPoints += qr.pointsEarned || 0;
+      map.set(cat, cur);
+    }
+    return Array.from(map.entries()).map(([category, stats]) => ({
+      category,
+      ...stats,
+    }));
+  }
+
+  private deriveDifficultyBreakdown(questionReview: any[]) {
+    const map = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+    for (const qr of questionReview ?? []) {
+      const diff = qr.questionDifficulty?.trim();
+      if (!diff) continue;
+      const cur = map.get(diff) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
+      cur.total += 1;
+      if (qr.isCorrect === true) cur.correct += 1;
+      cur.totalTime += qr.timeSpentSeconds || 0;
+      cur.points += qr.points || 0;
+      cur.earnedPoints += qr.pointsEarned || 0;
+      map.set(diff, cur);
+    }
+    return Array.from(map.entries()).map(([difficulty, stats]) => ({
+      difficulty,
+      ...stats,
+    }));
+  }
+
   async getAttemptDetail(attemptId: string, studentId?: string) {
     // Check MongoDB primary store first
     const mongoDoc = await this.mongoService.getAttemptByAttemptId(attemptId);
@@ -960,6 +1130,12 @@ export class TestsService {
         totalCount: mongoDoc.total_count,
         avgTimePerQuestion: mongoDoc.avg_time_per_question,
         topicBreakdown: mongoDoc.topic_breakdown,
+        categoryBreakdown:
+          mongoDoc.category_breakdown ??
+          this.deriveCategoryBreakdown(mongoDoc.question_review),
+        difficultyBreakdown:
+          mongoDoc.difficulty_breakdown ??
+          this.deriveDifficultyBreakdown(mongoDoc.question_review),
         questionReview: mongoDoc.question_review,
       };
     }
@@ -1041,7 +1217,9 @@ export class TestsService {
 
     const { data: questions } = await this.supabase
       .from('questions')
-      .select('id, question_type, points, explanation, topic, question_text')
+      .select(
+        'id, question_type, points, explanation, topic, question_text, question_category, question_difficulty, subtopic',
+      )
       .eq('test_id', attempt.test_id);
 
     const questionIds = (questions ?? []).map((q) => q.id);
@@ -1095,6 +1273,13 @@ export class TestsService {
         questionText: (q as { question_text?: string }).question_text ?? '',
         questionType: q.question_type,
         topic: (q as { topic?: string | null }).topic ?? null,
+        questionCategory:
+          (q as { question_category?: string | null }).question_category ??
+          'reasoning',
+        questionDifficulty:
+          (q as { question_difficulty?: string | null }).question_difficulty ??
+          'medium',
+        subtopic: (q as { subtopic?: string | null }).subtopic ?? null,
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: answer?.time_spent_seconds ?? 0,
         points: q.points ?? 1,
@@ -1176,6 +1361,8 @@ export class TestsService {
       totalCount,
       avgTimePerQuestion,
       topicBreakdown,
+      categoryBreakdown: this.deriveCategoryBreakdown(questionReview),
+      difficultyBreakdown: this.deriveDifficultyBreakdown(questionReview),
       questionReview,
     };
 
@@ -1335,7 +1522,9 @@ export class TestsService {
 
     const { data: questions } = await this.supabase
       .from('questions')
-      .select('id, question_type, points, explanation, topic, question_text')
+      .select(
+        'id, question_type, points, explanation, topic, question_text, question_category, question_difficulty, subtopic',
+      )
       .eq('assignment_id', attempt.assignment_id);
 
     const questionIds = (questions ?? []).map((q) => q.id);
@@ -1389,6 +1578,13 @@ export class TestsService {
         questionText: (q as { question_text?: string }).question_text ?? '',
         questionType: q.question_type,
         topic: (q as { topic?: string | null }).topic ?? null,
+        questionCategory:
+          (q as { question_category?: string | null }).question_category ??
+          'reasoning',
+        questionDifficulty:
+          (q as { question_difficulty?: string | null }).question_difficulty ??
+          'medium',
+        subtopic: (q as { subtopic?: string | null }).subtopic ?? null,
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: answer?.time_spent_seconds ?? 0,
         points: q.points ?? 1,
@@ -1470,6 +1666,8 @@ export class TestsService {
       totalCount,
       avgTimePerQuestion,
       topicBreakdown,
+      categoryBreakdown: this.deriveCategoryBreakdown(questionReview),
+      difficultyBreakdown: this.deriveDifficultyBreakdown(questionReview),
       questionReview,
     };
   }
@@ -1566,7 +1764,7 @@ export class TestsService {
     const { data: questions, error } = await this.supabase
       .from('questions')
       .select(
-        'id, test_id, question_text, question_type, points, explanation, sort_order, question_number, topic',
+        'id, test_id, question_text, question_type, points, explanation, sort_order, question_number, topic, question_category, question_difficulty, subtopic',
       )
       .eq('test_id', testId)
       .order('sort_order', { ascending: true });
@@ -1744,6 +1942,9 @@ export class TestsService {
           points: question.points,
           explanation: question.explanation ?? null,
           topic: (question as { topic?: string | null }).topic ?? null,
+          question_category: question.question_category?.trim() || null,
+          question_difficulty: question.question_difficulty || null,
+          subtopic: question.subtopic?.trim() || null,
           sort_order: offsets.sortOrderOffset + index + 1,
           question_number:
             offsets.questionNumberOffset + question.question_number,

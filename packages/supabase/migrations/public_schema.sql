@@ -678,8 +678,12 @@ CREATE TABLE public.questions (
     question_number integer,
     correct_text_answer text,
     topic text,
+    question_category text,
+    question_difficulty text,
+    subtopic text,
     CONSTRAINT questions_parent_xor_check CHECK ((num_nonnulls(test_id, assignment_id) = 1)),
-    CONSTRAINT questions_question_type_check CHECK ((question_type = ANY (ARRAY['mcq'::text, 'msq'::text, 'text'::text])))
+    CONSTRAINT questions_question_type_check CHECK ((question_type = ANY (ARRAY['mcq'::text, 'msq'::text, 'text'::text]))),
+    CONSTRAINT questions_question_difficulty_check CHECK (((question_difficulty IS NULL) OR (question_difficulty = ANY (ARRAY['easy'::text, 'medium'::text, 'hard'::text]))))
 );
 
 

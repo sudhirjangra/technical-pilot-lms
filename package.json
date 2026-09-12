@@ -43,7 +43,7 @@
     "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.5.0",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.9.6",
     "prettier-plugin-css-order": "^2.2.0",
     "prettier-plugin-organize-imports": "^4.3.0",
@@ -51,7 +51,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "turbo": "^2.10.12",
     "typescript": "^5.9.3",
-    "zod": "^4.6.1"
+    "zod": "^4.6.2"
   },
   "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",
   "engines": {

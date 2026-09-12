@@ -16,6 +16,9 @@ export type ImportedQuizQuestion = {
   points: number;
   explanation?: string;
   topic?: string;
+  question_category?: string;
+  question_difficulty?: 'easy' | 'medium' | 'hard';
+  subtopic?: string;
   correct_text_answer: string | null;
   sort_order: number;
   options: QuizQuestionOptionInput[];
@@ -210,6 +213,9 @@ type ParsedRow = {
   points: number;
   explanation?: string;
   topic?: string;
+  question_category?: string;
+  question_difficulty?: 'easy' | 'medium' | 'hard';
+  subtopic?: string;
   correct_text_answer: string | null;
   options: QuizQuestionOptionInput[];
 };
@@ -232,6 +238,25 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
   const explanation = normalizeOptionalText(readCell(row, 'explanation'));
   const topic = normalizeOptionalText(readCell(row, 'topic'));
 
+  const rawDifficulty = normalizeOptionalText(
+    readCell(row, 'question_difficulty') ?? readCell(row, 'difficulty'),
+  )?.toLowerCase();
+  let question_difficulty: 'easy' | 'medium' | 'hard' | undefined = undefined;
+  if (rawDifficulty && ['easy', 'medium', 'hard'].includes(rawDifficulty)) {
+    question_difficulty = rawDifficulty as 'easy' | 'medium' | 'hard';
+  }
+
+  const rawCategory = normalizeOptionalText(
+    readCell(row, 'question_category') ??
+      readCell(row, 'category') ??
+      readCell(row, 'question_type_category') ??
+      readCell(row, 'type_category'),
+  );
+  const question_category = rawCategory || undefined;
+  const subtopic = normalizeOptionalText(
+    readCell(row, 'subtopic') ?? readCell(row, 'section'),
+  );
+
   if (questionType === 'text') {
     for (const letter of OPTION_LETTERS) {
       if (normalizeOptionalText(readCell(row, `option_${letter}`))) {
@@ -248,6 +273,9 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
       points,
       explanation,
       topic,
+      question_category,
+      question_difficulty,
+      subtopic,
       correct_text_answer: normalizeRequiredText(
         readCell(row, 'answer'),
         'answer',
@@ -264,6 +292,9 @@ function parseQuestionRow(row: RawRow, context: string): ParsedRow {
     points,
     explanation,
     topic,
+    question_category,
+    question_difficulty,
+    subtopic,
     correct_text_answer: null,
     options: buildOptions(row, questionType, context),
   };
@@ -300,6 +331,9 @@ function finalizeQuestions(
       points: question.points,
       explanation: question.explanation,
       topic: question.topic,
+      question_category: question.question_category,
+      question_difficulty: question.question_difficulty,
+      subtopic: question.subtopic,
       correct_text_answer: question.correct_text_answer,
       sort_order: number,
       options: question.options,

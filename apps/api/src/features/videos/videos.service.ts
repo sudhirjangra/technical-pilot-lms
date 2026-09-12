@@ -74,6 +74,34 @@ export class VideosService {
 
   // ── Admin: link VdoCipher video to a lesson ──────────────────────────────
 
+  private async fetchVdoCipherDetails(videoId: string): Promise<{
+    durationSeconds?: number;
+    thumbnailUrl?: string;
+  }> {
+    const apiSecret = this.config.get<string>('VDOCIPHER_API_SECRET');
+    if (!apiSecret || !videoId) return {};
+    try {
+      const response = await axios.get(`${VDOCIPHER_BASE}/videos/${videoId}`, {
+        headers: {
+          Authorization: `Apisecret ${apiSecret}`,
+          Accept: 'application/json',
+        },
+      });
+      const data = response.data;
+      const durationSeconds =
+        typeof data?.length === 'number' ? Math.round(data.length) : undefined;
+      const posters = data?.posters;
+      const thumbnailUrl =
+        Array.isArray(posters) && posters.length > 0
+          ? posters[posters.length - 1]?.url
+          : undefined;
+      return { durationSeconds, thumbnailUrl };
+    } catch (err) {
+      console.warn(describeAxiosError(`details fetch for "${videoId}"`, err));
+      return {};
+    }
+  }
+
   async createVideoLesson(dto: CreateVideoLessonDto) {
     const { data: lesson } = await this.supabase
       .from('lessons')
@@ -84,12 +112,45 @@ export class VideosService {
     if (lesson.lesson_type !== 'video')
       throw new BadRequestException('Lesson type must be video');
 
-    const { data, error } = await this.supabase
+    const cleanVideoId = dto.vdocipher_video_id?.trim();
+    if (!cleanVideoId) {
+      throw new BadRequestException('VdoCipher Video ID is required');
+    }
+
+    const { durationSeconds, thumbnailUrl } =
+      await this.fetchVdoCipherDetails(cleanVideoId);
+
+    const payload: Record<string, unknown> = {
+      lesson_id: dto.lesson_id,
+      vdocipher_video_id: cleanVideoId,
+    };
+    if (dto.thumbnail_url || thumbnailUrl) {
+      payload.thumbnail_url = dto.thumbnail_url ?? thumbnailUrl;
+    }
+    if (durationSeconds !== undefined) {
+      payload.duration_seconds = durationSeconds;
+    }
+
+    const { data: existing } = await this.supabase
       .from('video_lessons')
-      .insert(dto)
-      .select()
-      .single();
+      .select('id')
+      .eq('lesson_id', dto.lesson_id)
+      .maybeSingle();
+
+    const query = existing
+      ? this.supabase.from('video_lessons').update(payload).eq('id', existing.id)
+      : this.supabase.from('video_lessons').insert(payload);
+
+    const { data, error } = await query.select().single();
     if (error) throw new BadRequestException(error.message);
+
+    if (durationSeconds !== undefined) {
+      await this.supabase
+        .from('lessons')
+        .update({ duration_seconds: durationSeconds })
+        .eq('id', dto.lesson_id);
+    }
+
     return data;
   }
 
@@ -269,14 +330,46 @@ export class VideosService {
   }
 
   async updateVideoLesson(lessonId: string, dto: UpdateVideoLessonDto) {
-    const { data, error } = await this.supabase
+    const videoId = dto.vdocipher_video_id?.trim();
+    let durationSeconds: number | undefined;
+    let thumbnailUrl = dto.thumbnail_url;
+
+    if (videoId) {
+      const details = await this.fetchVdoCipherDetails(videoId);
+      durationSeconds = details.durationSeconds;
+      if (!thumbnailUrl) thumbnailUrl = details.thumbnailUrl;
+    }
+
+    const payload: Record<string, unknown> = {
+      lesson_id: lessonId,
+      ...(videoId ? { vdocipher_video_id: videoId } : {}),
+      ...(thumbnailUrl ? { thumbnail_url: thumbnailUrl } : {}),
+      ...(durationSeconds !== undefined
+        ? { duration_seconds: durationSeconds }
+        : {}),
+    };
+
+    const { data: existing } = await this.supabase
       .from('video_lessons')
-      .update(dto)
+      .select('id')
       .eq('lesson_id', lessonId)
-      .select()
-      .single();
+      .maybeSingle();
+
+    const query = existing
+      ? this.supabase.from('video_lessons').update(payload).eq('id', existing.id)
+      : this.supabase.from('video_lessons').insert(payload);
+
+    const { data, error } = await query.select().single();
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new NotFoundException('Video lesson not found');
+
+    if (durationSeconds !== undefined) {
+      await this.supabase
+        .from('lessons')
+        .update({ duration_seconds: durationSeconds })
+        .eq('id', lessonId);
+    }
+
     return data;
   }
 

@@ -82,6 +82,7 @@ import {
 import { toast } from '@repo/shadcn/sonner';
 import { requestExtraAttempt } from '@/server/student-queries.server';
 import { clearTestGuard, registerTestGuard } from '@/lib/test-guard';
+import { PersonalizedImprovement } from './personalized-improvement';
 
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -803,6 +804,14 @@ function ResultsScreen({
 
       <Separator />
 
+      {/* ── Personalized Improvement Suggestions & Graphs ── */}
+      <PersonalizedImprovement
+        topicBreakdown={topicBreakdown}
+        categoryBreakdown={(result as any).categoryBreakdown}
+        difficultyBreakdown={(result as any).difficultyBreakdown}
+        questionReview={result.questionReview}
+      />
+
       {/* ── Category / Topic Analysis (Pie & Bar Charts) ── */}
       {topicBreakdown.length > 0 && (
         <div className="space-y-4 rounded-xl border p-4 sm:p-5 bg-muted/10">
@@ -1109,12 +1118,38 @@ function ResultsScreen({
               <CardHeader className="py-3 px-4">
                 <div className="flex items-start gap-2 flex-wrap">
                   <span className="text-xs text-muted-foreground mt-0.5 shrink-0 font-mono">Q{i + 1}</span>
+                  {((review as any).questionDifficulty || (q as any)?.question_difficulty) && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-[10px] px-1.5 py-0 shrink-0 capitalize font-medium',
+                        ((review as any).questionDifficulty || (q as any)?.question_difficulty) === 'easy' &&
+                          'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+                        ((review as any).questionDifficulty || (q as any)?.question_difficulty) === 'medium' &&
+                          'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
+                        ((review as any).questionDifficulty || (q as any)?.question_difficulty) === 'hard' &&
+                          'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
+                      )}
+                    >
+                      {((review as any).questionDifficulty || (q as any)?.question_difficulty)}
+                    </Badge>
+                  )}
+                  {((review as any).questionCategory || (q as any)?.question_category) && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0 capitalize">
+                      {((review as any).questionCategory || (q as any)?.question_category)}
+                    </Badge>
+                  )}
                   {review.topic && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                       {review.topic}
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 capitalize">
+                  {((review as any).subtopic || (q as any)?.subtopic) && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 text-muted-foreground">
+                      {((review as any).subtopic || (q as any)?.subtopic)}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0 uppercase">
                     {questionType}
                   </Badge>
                   <span className={cn('text-[10px] px-1.5 py-0 rounded border shrink-0 font-mono', timeColor)}>

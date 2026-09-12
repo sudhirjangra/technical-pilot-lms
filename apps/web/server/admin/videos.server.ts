@@ -42,6 +42,7 @@ export async function getVideoLesson(lessonId: string): Promise<VideoLesson | nu
 export async function createVideoLesson(payload: {
   lesson_id: string;
   vdocipher_video_id: string;
+  thumbnail_url?: string;
 }) {
   const [error, data] = await safeFetch(
     z.object({ data: VideoLessonSchema }),
@@ -79,6 +80,7 @@ export async function updateVideoLesson(
   lessonId: string,
   payload: {
     vdocipher_video_id?: string;
+    thumbnail_url?: string;
   },
 ) {
   const [error, data] = await safeFetch(

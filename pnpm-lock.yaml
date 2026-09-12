@@ -7,6 +7,10 @@ settings:
 overrides:
   fastify: ^5.12.1
   chokidar: ^4.0.3
+  prosemirror-model: 1.25.11
+  prosemirror-state: 1.4.4
+  prosemirror-transform: 1.12.0
+  prosemirror-view: 1.42.3
 
 importers:
 
@@ -37,8 +41,8 @@ importers:
         specifier: ^9.1.7
         version: 9.1.7
       lint-staged:
-        specifier: ^17.5.0
-        version: 17.5.0
+        specifier: ^17.5.1
+        version: 17.5.1
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -61,8 +65,8 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       zod:
-        specifier: ^4.6.1
-        version: 4.6.1
+        specifier: ^4.6.2
+        version: 4.6.2
 
   apps/api:
     dependencies:
@@ -261,7 +265,7 @@ importers:
         version: 0.1.8(@supabase/supabase-js@2.112.4(@opentelemetry/api@1.9.0))
       '@t3-oss/env-nextjs':
         specifier: ^0.13.0
-        version: 0.13.11(typescript@5.9.3)(zod@4.6.1)
+        version: 0.13.11(typescript@5.9.3)(zod@4.6.2)
       '@types/ua-parser-js':
         specifier: ^0.7.39
         version: 0.7.39
@@ -7574,8 +7578,8 @@ packages:
   linkifyjs@4.3.3:
     resolution: {integrity: sha512-P8aEP5U/D1/IlTY2OeYsErdwh9bGuLE30NcXtKEjgdHcahveQoQwM2yZNsioQHsWFz0P7KKudisbrzCgR0sDHg==}
 
-  lint-staged@17.5.0:
-    resolution: {integrity: sha512-ah2qsNtvKP1+Ak4rAvEEIvcXDLjjbr/xmxCvlequxqEOFYk0qINcZcRxD3Ic8wRn7/oQ8+wC9s0DfDrdMVCRFg==}
+  lint-staged@17.5.1:
+    resolution: {integrity: sha512-7EDuco1xnBMeVpvAbeMq1U5KXwJGLmY8q6l+Ye78r36C4mPc+Vg1Z2SK8gHyRTyvPro90A0q5/FAZ+Au23d6QQ==}
     engines: {node: '>=22.22.1'}
     hasBin: true
 
@@ -8807,17 +8811,11 @@ packages:
   prosemirror-keymap@1.2.3:
     resolution: {integrity: sha512-4HucRlpiLd1IPQQXNqeo81BGtkY8Ai5smHhKW9jjPKRc2wQIxksg7Hl1tTI2IfT2B/LgX6bfYvXxEpJl7aKYKw==}
 
-  prosemirror-model@1.25.1:
-    resolution: {integrity: sha512-AUvbm7qqmpZa5d9fPKMvH1Q5bqYQvAZWOGRvxsB6iFLyycvC9MwNemNVjHVrWgjaoxAfY8XVg7DbvQ/qxvI9Eg==}
-
   prosemirror-model@1.25.11:
     resolution: {integrity: sha512-QWg9RhnpLlogAmp3p96uEFrE5txQpFynd4vhBAELkwgOCWQs/X0yCzB3/hrHqiPwf91RG5KyWq6553zs9JqIOQ==}
 
   prosemirror-schema-list@1.5.1:
     resolution: {integrity: sha512-927lFx/uwyQaGwJxLWCZRkjXG0p48KpMj6ueoYiu4JX05GGuGcgzAy62dfiV8eFZftgyBUvLx76RsMe20fJl+Q==}
-
-  prosemirror-state@1.4.3:
-    resolution: {integrity: sha512-goFKORVbvPuAQaXhpbemJFRKJ2aixr+AZMGiquiqKxaucC6hlpHNZHWgz5R7dS4roHiwq9vDctE//CZ++o0W1Q==}
 
   prosemirror-state@1.4.4:
     resolution: {integrity: sha512-6jiYHH2CIGbCfnxdHbXZ12gySFY/fz/ulZE333G6bPqIZ4F+TXo9ifiR86nAHpWnfoNjOb3o5ESi7J8Uz1jXHw==}
@@ -8825,14 +8823,8 @@ packages:
   prosemirror-tables@1.8.5:
     resolution: {integrity: sha512-V/0cDCsHKHe/tfWkeCmthNUcEp1IVO3p6vwN8XtwE9PZQLAZJigbw3QoraAdfJPir4NKJtNvOB8oYGKRl+t0Dw==}
 
-  prosemirror-transform@1.10.4:
-    resolution: {integrity: sha512-pwDy22nAnGqNR1feOQKHxoFkkUtepoFAd3r2hbEDsnf4wp57kKA36hXsB3njA9FtONBEwSDnDeCiJe+ItD+ykw==}
-
   prosemirror-transform@1.12.0:
     resolution: {integrity: sha512-GxboyN4AMIsoHNtz5uf2r2Ru551i5hWeCMD6E2Ib4Eogqoub0NflniaBPVQ4MrGE5yZ8JV9tUHg9qcZTTrcN4w==}
-
-  prosemirror-view@1.40.0:
-    resolution: {integrity: sha512-2G3svX0Cr1sJjkD/DYWSe3cfV5VPVTBOxI9XQEGWJDFEpsZb/gh4MV29ctv+OJx2RFX4BLt09i+6zaGM/ldkCw==}
 
   prosemirror-view@1.42.3:
     resolution: {integrity: sha512-oTN7EtH+CpwxU9NrwEYWd0UZ4JUx7l048l5A2Xppm4p/60isZYLnth9QVQmC3VRIvdrIWCxwZSd+Uz791G31/w==}
@@ -10319,8 +10311,8 @@ packages:
   zod@4.5.4:
     resolution: {integrity: sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==}
 
-  zod@4.6.1:
-    resolution: {integrity: sha512-341aRWQsve0rvronKNTqZpjmzdbUDlFuzHaI/XLg/Ej82qffDJRRfBTCuv7+9q/rMjB6LSLyEBnW4InJeMtt/Q==}
+  zod@4.6.2:
+    resolution: {integrity: sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ==}
 
 snapshots:
 
@@ -13687,17 +13679,17 @@ snapshots:
     dependencies:
       defer-to-connect: 2.0.1
 
-  '@t3-oss/env-core@0.13.11(typescript@5.9.3)(zod@4.6.1)':
+  '@t3-oss/env-core@0.13.11(typescript@5.9.3)(zod@4.6.2)':
     optionalDependencies:
       typescript: 5.9.3
-      zod: 4.6.1
+      zod: 4.6.2
 
-  '@t3-oss/env-nextjs@0.13.11(typescript@5.9.3)(zod@4.6.1)':
+  '@t3-oss/env-nextjs@0.13.11(typescript@5.9.3)(zod@4.6.2)':
     dependencies:
-      '@t3-oss/env-core': 0.13.11(typescript@5.9.3)(zod@4.6.1)
+      '@t3-oss/env-core': 0.13.11(typescript@5.9.3)(zod@4.6.2)
     optionalDependencies:
       typescript: 5.9.3
-      zod: 4.6.1
+      zod: 4.6.2
 
   '@tabler/icons-react@3.46.0(react@19.2.8)':
     dependencies:
@@ -17575,7 +17567,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 26.5.0
+      '@types/node': 26.5.1
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -17852,7 +17844,7 @@ snapshots:
 
   linkifyjs@4.3.3: {}
 
-  lint-staged@17.5.0:
+  lint-staged@17.5.1:
     dependencies:
       picomatch: 4.0.7
       string-argv: 0.3.2
@@ -19359,47 +19351,43 @@ snapshots:
 
   prosemirror-changeset@2.4.2:
     dependencies:
-      prosemirror-transform: 1.10.4
+      prosemirror-transform: 1.12.0
 
   prosemirror-commands@1.7.1:
     dependencies:
-      prosemirror-model: 1.25.1
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
+      prosemirror-model: 1.25.11
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
 
   prosemirror-dropcursor@1.8.2:
     dependencies:
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
-      prosemirror-view: 1.40.0
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
+      prosemirror-view: 1.42.3
 
   prosemirror-gapcursor@1.4.1:
     dependencies:
       prosemirror-keymap: 1.2.3
-      prosemirror-model: 1.25.1
-      prosemirror-state: 1.4.3
-      prosemirror-view: 1.40.0
+      prosemirror-model: 1.25.11
+      prosemirror-state: 1.4.4
+      prosemirror-view: 1.42.3
 
   prosemirror-history@1.5.0:
     dependencies:
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
-      prosemirror-view: 1.40.0
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
+      prosemirror-view: 1.42.3
       rope-sequence: 1.3.4
 
   prosemirror-inputrules@1.5.1:
     dependencies:
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
 
   prosemirror-keymap@1.2.3:
     dependencies:
-      prosemirror-state: 1.4.3
+      prosemirror-state: 1.4.4
       w3c-keyname: 2.2.8
-
-  prosemirror-model@1.25.1:
-    dependencies:
-      orderedmap: 2.1.1
 
   prosemirror-model@1.25.11:
     dependencies:
@@ -19407,21 +19395,15 @@ snapshots:
 
   prosemirror-schema-list@1.5.1:
     dependencies:
-      prosemirror-model: 1.25.1
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
-
-  prosemirror-state@1.4.3:
-    dependencies:
-      prosemirror-model: 1.25.1
-      prosemirror-transform: 1.10.4
-      prosemirror-view: 1.40.0
+      prosemirror-model: 1.25.11
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
 
   prosemirror-state@1.4.4:
     dependencies:
-      prosemirror-model: 1.25.1
-      prosemirror-transform: 1.10.4
-      prosemirror-view: 1.40.0
+      prosemirror-model: 1.25.11
+      prosemirror-transform: 1.12.0
+      prosemirror-view: 1.42.3
 
   prosemirror-tables@1.8.5:
     dependencies:
@@ -19431,25 +19413,15 @@ snapshots:
       prosemirror-transform: 1.12.0
       prosemirror-view: 1.42.3
 
-  prosemirror-transform@1.10.4:
-    dependencies:
-      prosemirror-model: 1.25.1
-
   prosemirror-transform@1.12.0:
     dependencies:
-      prosemirror-model: 1.25.1
-
-  prosemirror-view@1.40.0:
-    dependencies:
-      prosemirror-model: 1.25.1
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
+      prosemirror-model: 1.25.11
 
   prosemirror-view@1.42.3:
     dependencies:
       prosemirror-model: 1.25.11
-      prosemirror-state: 1.4.3
-      prosemirror-transform: 1.10.4
+      prosemirror-state: 1.4.4
+      prosemirror-transform: 1.12.0
 
   proto-list@1.2.4:
     optional: true
@@ -21107,4 +21079,4 @@ snapshots:
 
   zod@4.5.4: {}
 
-  zod@4.6.1: {}
+  zod@4.6.2: {}

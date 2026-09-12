@@ -172,6 +172,31 @@ export class CreateAssignmentQuestionDto {
   @MaxLength(200)
   topic?: string;
 
+  @ApiPropertyOptional({
+    description: 'Cognitive question type category (e.g. reasoning, calculation, numerical, conceptual, other)',
+    default: 'reasoning',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  question_category?: string;
+
+  @ApiPropertyOptional({
+    enum: ['easy', 'medium', 'hard'],
+    default: 'medium',
+  })
+  @IsOptional()
+  @IsEnum(['easy', 'medium', 'hard'])
+  question_difficulty?: 'easy' | 'medium' | 'hard';
+
+  @ApiPropertyOptional({
+    description: 'Subtopic or section for granular analytics',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  subtopic?: string;
+
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()
   @IsArray()
@@ -231,6 +256,29 @@ export class UpdateAssignmentQuestionDto {
   @IsString()
   @MaxLength(200)
   topic?: string;
+
+  @ApiPropertyOptional({
+    description: 'Cognitive question type category (e.g. reasoning, calculation, numerical, conceptual, other)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  question_category?: string;
+
+  @ApiPropertyOptional({
+    enum: ['easy', 'medium', 'hard'],
+  })
+  @IsOptional()
+  @IsEnum(['easy', 'medium', 'hard'])
+  question_difficulty?: 'easy' | 'medium' | 'hard';
+
+  @ApiPropertyOptional({
+    description: 'Subtopic or section for granular analytics',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  subtopic?: string;
 
   @ApiPropertyOptional({ type: [AssignmentQuestionOptionDto] })
   @IsOptional()

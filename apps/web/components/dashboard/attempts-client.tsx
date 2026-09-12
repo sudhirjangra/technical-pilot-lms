@@ -53,6 +53,7 @@ import {
   type MyTestAttempt,
   type SubmitResult,
 } from '@/server/student/tests.server';
+import { PersonalizedImprovement } from './personalized-improvement';
 
 type Attempt = MyAssignmentAttempt | MyTestAttempt;
 
@@ -516,6 +517,14 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
                 </div>
               </div>
 
+              {/* Personalized Improvement Suggestions & Graphs */}
+              <PersonalizedImprovement
+                topicBreakdown={detailData.topicBreakdown}
+                categoryBreakdown={(detailData as any).categoryBreakdown}
+                difficultyBreakdown={(detailData as any).difficultyBreakdown}
+                questionReview={detailData.questionReview}
+              />
+
               {/* Topic Breakdown & Categories Pie/Bar Chart */}
               {detailData.topicBreakdown && detailData.topicBreakdown.length > 0 && (
                 <div className="space-y-4 rounded-xl border p-4 bg-muted/10">
@@ -757,10 +766,36 @@ export function AttemptsClient({ attempts }: { attempts: Attempt[] }) {
                               {idx + 1}. {q.questionText}
                             </p>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                            {(q as any).questionDifficulty && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px] px-1.5 py-0 capitalize font-medium',
+                                  (q as any).questionDifficulty === 'easy' &&
+                                    'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+                                  (q as any).questionDifficulty === 'medium' &&
+                                    'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
+                                  (q as any).questionDifficulty === 'hard' &&
+                                    'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
+                                )}
+                              >
+                                {(q as any).questionDifficulty}
+                              </Badge>
+                            )}
+                            {(q as any).questionCategory && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                                {(q as any).questionCategory}
+                              </Badge>
+                            )}
                             {q.topic && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                 {q.topic}
+                              </Badge>
+                            )}
+                            {(q as any).subtopic && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                                {(q as any).subtopic}
                               </Badge>
                             )}
                             <Badge

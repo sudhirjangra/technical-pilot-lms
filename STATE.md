@@ -18,7 +18,7 @@
 
 ### Pending
 
-- **Current active task:** `TP-ANALYSIS-001 - Question categorization`.
+- **Current active task:** `TP-ANALYSIS-003 - Student-facing analysis`.
 - All unchecked requirements in **Pending Requirements Queue** remain pending. They must be promoted one at a time into `Immediate Next Step`.
 - The final verification checklist remains open until the corresponding behavior is verified end to end, even where implementation work is already recorded above.
 
@@ -146,13 +146,23 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
   - **TP-REF-004 & TP-REF-005**: Implemented cash conversion workflow with atomic balance locking, admin review dashboard (Mark Paid / Reject with point refund), manual email-based payout instructions, and zero Razorpay auto-deductions.
   - **Database Migration**: Created `018_referral_system.sql` (`referral_settings`, `referrals`, `user_wallets`, `wallet_transactions`, `cash_conversion_requests`, `coupons` table updates and RLS policies).
   - **Files Changed**: `packages/supabase/migrations/018_referral_system.sql`, `packages/supabase/src/types/index.ts`, `apps/api/src/features/referrals/*`, `apps/api/src/features/auth/auth.service.ts`, `apps/api/src/features/payments/payments.service.ts`, `apps/web/app/dashboard/referrals/page.tsx`, `apps/web/components/dashboard/referrals-client.tsx`, `apps/web/app/admin/referrals/page.tsx`, `apps/web/components/admin/referrals-client.tsx`, `apps/web/components/courses/course-view-client.tsx`, `apps/web/components/auth/form/sign-up.form.tsx`, `apps/web/server/student/referrals.server.ts`, `apps/web/server/admin/referrals.server.ts`.
+- [x] **TP-ANALYSIS-001 - Question categorization**
+  - Questions support course/subject, topic, subtopic/section, cognitive question category (`reasoning`, `calculation`, `numerical`, `conceptual`, `other`), and difficulty levels (`easy`, `medium`, `hard`).
+  - Persisted in Supabase PostgreSQL (`019_question_categorization.sql`) and MongoDB attempt snapshots (`questionCategory`, `questionDifficulty`, `subtopic`, `categoryBreakdown`, `difficultyBreakdown`).
+  - Integrated into admin question builder (`CourseDetailClient`), CSV/JSON bulk import and export templates, student assessment submissions, review modals, and personalized recommendations visualization.
+  - **Files Changed**: `packages/supabase/migrations/019_question_categorization.sql`, `packages/supabase/migrations/public_schema.sql`, `packages/supabase/src/types/index.ts`, `apps/api/src/common/modules/mongodb.service.ts`, `apps/api/src/common/utils/question-import.util.ts`, `apps/api/src/common/utils/question-import.util.spec.ts`, `apps/api/src/features/assignments/*`, `apps/api/src/features/tests/*`, `apps/api/src/common/services/attempt-migration.service.ts`, `apps/web/server/admin/{assignments,tests}.server.ts`, `apps/web/server/student/{assignments,tests}.server.ts`, `apps/web/components/admin/course-detail-client.tsx`, `apps/web/components/dashboard/personalized-improvement.tsx`, `apps/web/components/dashboard/test-viewer.tsx`, `apps/web/components/dashboard/attempts-client.tsx`, `apps/web/public/templates/question-import-template.{csv,json}`.
+
+- [x] **TP-ANALYSIS-002 - Weak-point detection**
+  - Analyzed assignment and test attempt performance to identify weak topics, cognitive question categories, and difficulty levels based on real percentage accuracy thresholds instead of question count.
+  - Formatted custom admin question categories dynamically without enforcing restrictive pre-defined choices or fabricating default values (`reasoning`, `medium`, or `General`).
+  - Rendered conditional visualizations (accuracy bar charts for categories, stacked correct vs. missed for difficulty, and topic mastery fallbacks) only when the relevant metadata is present, completely preventing empty graphs.
+  - **Files Changed**: `apps/api/src/common/utils/question-import.util.ts`, `apps/api/src/common/utils/question-import.util.spec.ts`, `apps/api/src/features/assignments/assignments.service.ts`, `apps/api/src/features/tests/tests.service.ts`, `apps/web/server/admin/{assignments,tests}.server.ts`, `apps/web/server/student/{assignments,tests}.server.ts`, `apps/web/components/admin/course-detail-client.tsx`, `apps/web/components/dashboard/personalized-improvement.tsx`, `packages/supabase/migrations/019_question_categorization.sql`, `packages/supabase/migrations/public_schema.sql`.
 
 ## Immediate Next Step
 
-- [ ] **TP-ANALYSIS-001 - Question categorization**
-  - Questions must support course/subject, topic, subtopic/section, question type such as calculation/reasoning/numerical/other, and difficulty values easy/medium/hard.
-  - Persist the fields for assignment and test questions, expose them in admin creation/edit/import flows, and preserve existing questions when fields are absent.
-  - Acceptance: questions retain categorized metadata across creation, update, and bulk import without breaking existing assessment flows.
+- [ ] **TP-ANALYSIS-003 - Student-facing analysis**
+  - Show overall performance, weak topics/sections, weak question types, performance by difficulty, and suggestions for what to study or practice next.
+  - Use the student's actual attempt data and protect access to only the owning student's analysis.
 
 ## Pending Requirements Queue
 
@@ -196,11 +206,12 @@ Promote only the next unchecked task to `Immediate Next Step`. Do not implement 
 
 ### Student Analysis
 
-- [ ] **TP-ANALYSIS-001 - Question categorization**
+- [x] **TP-ANALYSIS-001 - Question categorization**
   - Questions must support course/subject, topic, subtopic/section, question type such as calculation/reasoning/numerical/other, and difficulty values easy/medium/hard.
   - Persist the fields for assignment and test questions, expose them in admin creation/edit/import flows, and preserve existing questions when fields are absent.
+  - Acceptance: questions retain categorized metadata across creation, update, and bulk import without breaking existing assessment flows.
 
-- [ ] **TP-ANALYSIS-002 - Weak-point detection**
+- [x] **TP-ANALYSIS-002 - Weak-point detection**
   - Analyze actual assignment/test attempt performance to identify weak topics, sections, question types, and difficulty levels.
   - Do not label a category weak based only on the number of questions. Use correct/incorrect results and meaningful performance calculations.
 

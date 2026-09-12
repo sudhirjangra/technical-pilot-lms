@@ -336,45 +336,45 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
             </p>
           )}
           <div className="w-full overflow-x-auto px-2 sm:px-6">
-            <Table className="text-xs sm:text-sm">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8 px-2 py-1.5" />
-                  <SortableHeader sortKey="name" sort={sort} onSort={handleSort}>
-                    Name
-                  </SortableHeader>
-                  <SortableHeader
-                    sortKey="slug"
-                    sort={sort}
-                    onSort={handleSort}
-                    className="hidden md:table-cell"
-                  >
-                    Slug
-                  </SortableHeader>
-                  <SortableHeader
-                    sortKey="sort_order"
-                    sort={sort}
-                    onSort={handleSort}
-                    className="hidden sm:table-cell"
-                  >
-                    Order
-                  </SortableHeader>
-                  <SortableHeader sortKey="is_active" sort={sort} onSort={handleSort}>
-                    Active
-                  </SortableHeader>
-                  <TableHead className="px-2 py-1.5 text-right text-xs uppercase">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <Sortable
-                value={pagination.pageItems}
-                getItemValue={(category) => category.id}
-                onMove={({ activeIndex, overIndex }) =>
-                  handleCategoryDragReorder(activeIndex, overIndex)
-                }
-                orientation="vertical"
-              >
+            <Sortable
+              value={pagination.pageItems}
+              getItemValue={(category) => category.id}
+              onMove={({ activeIndex, overIndex }) =>
+                handleCategoryDragReorder(activeIndex, overIndex)
+              }
+              orientation="vertical"
+            >
+              <Table className="text-xs sm:text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8 px-2 py-1.5" />
+                    <SortableHeader sortKey="name" sort={sort} onSort={handleSort}>
+                      Name
+                    </SortableHeader>
+                    <SortableHeader
+                      sortKey="slug"
+                      sort={sort}
+                      onSort={handleSort}
+                      className="hidden md:table-cell"
+                    >
+                      Slug
+                    </SortableHeader>
+                    <SortableHeader
+                      sortKey="sort_order"
+                      sort={sort}
+                      onSort={handleSort}
+                      className="hidden sm:table-cell"
+                    >
+                      Order
+                    </SortableHeader>
+                    <SortableHeader sortKey="is_active" sort={sort} onSort={handleSort}>
+                      Active
+                    </SortableHeader>
+                    <TableHead className="px-2 py-1.5 text-right text-xs uppercase">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
                 <SortableContent asChild>
                   <TableBody>
                     {pagination.pageItems.map((category) => {
@@ -456,8 +456,8 @@ export function CategoriesClient({ categories }: { categories: Category[] }) {
                     })}
                   </TableBody>
                 </SortableContent>
-              </Sortable>
-            </Table>
+              </Table>
+            </Sortable>
           </div>
           <div className="px-5 pb-3 sm:px-6">
             <TablePagination

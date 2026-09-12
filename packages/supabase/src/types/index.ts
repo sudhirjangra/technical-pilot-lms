@@ -651,6 +651,85 @@ lesson_type?: LessonType;
         };
         Relationships: [];
       };
+      questions: {
+        Row: {
+          id: string;
+          test_id: string | null;
+          assignment_id: string | null;
+          question_text: string;
+          question_type: 'mcq' | 'msq' | 'text';
+          points: number;
+          explanation: string | null;
+          sort_order: number;
+          question_number: number | null;
+          correct_text_answer: string | null;
+          topic: string | null;
+          question_category: string;
+          question_difficulty: 'easy' | 'medium' | 'hard';
+          subtopic: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          test_id?: string | null;
+          assignment_id?: string | null;
+          question_text: string;
+          question_type: 'mcq' | 'msq' | 'text';
+          points?: number;
+          explanation?: string | null;
+          sort_order?: number;
+          question_number?: number | null;
+          correct_text_answer?: string | null;
+          topic?: string | null;
+          question_category?: string;
+          question_difficulty?: 'easy' | 'medium' | 'hard';
+          subtopic?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          test_id?: string | null;
+          assignment_id?: string | null;
+          question_text?: string;
+          question_type?: 'mcq' | 'msq' | 'text';
+          points?: number;
+          explanation?: string | null;
+          sort_order?: number;
+          question_number?: number | null;
+          correct_text_answer?: string | null;
+          topic?: string | null;
+          question_category?: string;
+          question_difficulty?: 'easy' | 'medium' | 'hard';
+          subtopic?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      question_options: {
+        Row: {
+          id: string;
+          question_id: string;
+          option_text: string;
+          is_correct: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          option_text: string;
+          is_correct?: boolean;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          option_text?: string;
+          is_correct?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
     };
     Enums: {
       user_role: UserRole;

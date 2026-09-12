@@ -114,4 +114,84 @@ describe('question-import.util', () => {
       ).toThrow('require at least 2 non-blank options');
     });
   });
+
+  describe('TP-ANALYSIS-001 - Question Categorization & Difficulty', () => {
+    it('should parse question_category, question_difficulty, and subtopic', () => {
+      const json = JSON.stringify([
+        {
+          question_text: 'Calculate the ground speed given 100kt TAS and 20kt headwind.',
+          question_type: 'mcq',
+          points: 2,
+          topic: 'Navigation',
+          question_category: 'calculation',
+          question_difficulty: 'hard',
+          subtopic: 'Ground Speed',
+          option_a: '80 kt',
+          option_b: '120 kt',
+          answer: 'A',
+        },
+      ]);
+
+      const result = parseQuestionImportFile({
+        buffer: Buffer.from(json, 'utf-8'),
+        filename: 'questions.json',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].topic).toBe('Navigation');
+      expect(result[0].question_category).toBe('calculation');
+      expect(result[0].question_difficulty).toBe('hard');
+      expect(result[0].subtopic).toBe('Ground Speed');
+    });
+
+    it('should keep category and difficulty optional (undefined) when omitted', () => {
+      const json = JSON.stringify([
+        {
+          question_text: 'What does VFR stand for?',
+          question_type: 'mcq',
+          points: 1,
+          option_a: 'Visual Flight Rules',
+          option_b: 'Very Fast Route',
+          answer: 'A',
+        },
+      ]);
+
+      const result = parseQuestionImportFile({
+        buffer: Buffer.from(json, 'utf-8'),
+        filename: 'questions.json',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].question_category).toBeUndefined();
+      expect(result[0].question_difficulty).toBeUndefined();
+      expect(result[0].subtopic).toBeUndefined();
+    });
+
+    it('should support admin custom question category (e.g. technical_general)', () => {
+      const json = JSON.stringify([
+        {
+          question_text: "What is the primary purpose of an aircraft's wings?",
+          question_type: 'mcq',
+          points: 1,
+          topic: 'DGCA/SACAA Technical General',
+          question_category: 'technical_general',
+          question_difficulty: 'easy',
+          subtopic: 'Aircraft Basic Principles',
+          option_a: 'To produce lift',
+          option_b: 'To produce fuel',
+          answer: 'A',
+        },
+      ]);
+
+      const result = parseQuestionImportFile({
+        buffer: Buffer.from(json, 'utf-8'),
+        filename: 'questions.json',
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].question_category).toBe('technical_general');
+      expect(result[0].question_difficulty).toBe('easy');
+      expect(result[0].subtopic).toBe('Aircraft Basic Principles');
+    });
+  });
 });

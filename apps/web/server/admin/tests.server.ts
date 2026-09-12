@@ -26,6 +26,9 @@ const QuestionSchema = z
     points: z.coerce.number().default(1),
     explanation: z.string().nullable().optional(),
     topic: z.string().nullable().optional(),
+    question_category: z.string().nullable().optional(),
+    question_difficulty: z.enum(['easy', 'medium', 'hard']).nullable().optional(),
+    subtopic: z.string().nullable().optional(),
     sort_order: z.coerce.number().default(0),
   })
   .passthrough();
@@ -195,6 +198,9 @@ export async function createTestQuestion(
     points?: number;
     explanation?: string;
     topic?: string;
+    question_category?: string;
+    question_difficulty?: 'easy' | 'medium' | 'hard';
+    subtopic?: string;
     sort_order?: number;
     options?: { option_text: string; is_correct: boolean }[];
   },
@@ -222,6 +228,9 @@ export async function updateTestQuestion(
     points?: number;
     explanation?: string;
     topic?: string;
+    question_category?: string;
+    question_difficulty?: 'easy' | 'medium' | 'hard';
+    subtopic?: string;
     sort_order?: number;
     options?: { option_text: string; is_correct: boolean }[];
   },

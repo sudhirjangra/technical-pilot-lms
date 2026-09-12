@@ -6,6 +6,8 @@ import { CourseDetailClient } from '@/components/admin/course-detail-client';
 import { requireAdminPermission } from '@/server/admin/permissions.server';
 import { notFound } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminCourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminPermission('courses:read', 'courses:write');
   const { id } = await params;

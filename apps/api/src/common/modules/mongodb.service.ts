@@ -19,6 +19,9 @@ export interface QuestionReviewItem {
   questionText: string;
   questionType: string;
   topic: string | null;
+  questionCategory?: string | null;
+  questionDifficulty?: string | null;
+  subtopic?: string | null;
   isCorrect: boolean | null;
   timeSpentSeconds: number;
   points: number;
@@ -34,6 +37,24 @@ export interface QuestionReviewItem {
 
 export interface TopicBreakdownItem {
   topic: string;
+  total: number;
+  correct: number;
+  totalTime: number;
+  points: number;
+  earnedPoints: number;
+}
+
+export interface CategoryBreakdownItem {
+  category: string;
+  total: number;
+  correct: number;
+  totalTime: number;
+  points: number;
+  earnedPoints: number;
+}
+
+export interface DifficultyBreakdownItem {
+  difficulty: string;
   total: number;
   correct: number;
   totalTime: number;
@@ -65,6 +86,8 @@ export interface MongoAttemptDocument {
   total_count: number;
   avg_time_per_question: number;
   topic_breakdown: TopicBreakdownItem[];
+  category_breakdown?: CategoryBreakdownItem[];
+  difficulty_breakdown?: DifficultyBreakdownItem[];
   question_review: QuestionReviewItem[];
   created_at: Date;
   updated_at: Date;

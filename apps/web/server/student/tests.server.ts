@@ -18,6 +18,9 @@ const StudentQuestionSchema = z.object({
   test_id: z.string().nullable().optional(),
   question_text: z.string(),
   question_type: z.enum(['mcq', 'msq', 'text']).catch('mcq'),
+  question_category: z.string().nullable().optional(),
+  question_difficulty: z.enum(['easy', 'medium', 'hard']).nullable().optional(),
+  subtopic: z.string().nullable().optional(),
   question_number: z.coerce.number().nullable().optional(),
   points: z.coerce.number().default(1),
   explanation: z.string().nullable().optional(),
@@ -93,9 +96,30 @@ const QuestionReviewSchema = z.object({
   options: z.array(QuestionReviewOptionSchema).optional().default([]),
   textAnswer: z.string().nullable().optional(),
   topic: z.string().nullable().optional(),
+  questionCategory: z.string().nullable().optional(),
+  questionDifficulty: z.enum(['easy', 'medium', 'hard']).nullable().optional(),
+  subtopic: z.string().nullable().optional(),
   timeSpentSeconds: z.coerce.number().default(0),
   questionType: z.enum(['mcq', 'msq', 'text']).catch('mcq'),
   questionText: z.string().default(''),
+});
+
+const CategoryBreakdownSchema = z.object({
+  category: z.string(),
+  total: z.coerce.number(),
+  correct: z.coerce.number(),
+  totalTime: z.coerce.number(),
+  points: z.coerce.number(),
+  earnedPoints: z.coerce.number(),
+});
+
+const DifficultyBreakdownSchema = z.object({
+  difficulty: z.enum(['easy', 'medium', 'hard']).catch('medium'),
+  total: z.coerce.number(),
+  correct: z.coerce.number(),
+  totalTime: z.coerce.number(),
+  points: z.coerce.number(),
+  earnedPoints: z.coerce.number(),
 });
 
 const TopicBreakdownSchema = z.object({
@@ -119,6 +143,8 @@ const SubmitResultSchema = z.object({
     questionReview: z.array(QuestionReviewSchema).default([]),
     totalTimeSeconds: z.coerce.number().default(0),
     topicBreakdown: z.array(TopicBreakdownSchema).default([]),
+    categoryBreakdown: z.array(CategoryBreakdownSchema).default([]),
+    difficultyBreakdown: z.array(DifficultyBreakdownSchema).default([]),
     avgTimePerQuestion: z.coerce.number().default(0),
   }),
 });
@@ -131,6 +157,8 @@ export type StudentQuestionOption = z.infer<typeof StudentQuestionOptionSchema>;
 export type TestAttempt = z.infer<typeof AttemptSchema>;
 export type AttemptSummary = z.infer<typeof AttemptSummarySchema>;
 export type TopicBreakdown = z.infer<typeof TopicBreakdownSchema>;
+export type CategoryBreakdown = z.infer<typeof CategoryBreakdownSchema>;
+export type DifficultyBreakdown = z.infer<typeof DifficultyBreakdownSchema>;
 export type TestForLesson = {
   test: StudentTest;
   attempt: TestAttempt | null;
@@ -246,6 +274,8 @@ const AttemptDetailResponseSchema = z.object({
     passed: z.boolean().nullable().optional(),
     questionReview: z.array(QuestionReviewSchema).default([]),
     topicBreakdown: z.array(TopicBreakdownSchema).default([]),
+    categoryBreakdown: z.array(CategoryBreakdownSchema).default([]),
+    difficultyBreakdown: z.array(DifficultyBreakdownSchema).default([]),
     avgTimePerQuestion: z.coerce.number().default(0),
     totalTimeSeconds: z.coerce.number().default(0),
     totalCount: z.coerce.number().default(0),
@@ -276,6 +306,8 @@ export async function getStudentAttemptDetail(
       questionReview: attempt.questionReview,
       totalTimeSeconds: attempt.totalTimeSeconds,
       topicBreakdown: attempt.topicBreakdown,
+      categoryBreakdown: attempt.categoryBreakdown ?? [],
+      difficultyBreakdown: attempt.difficultyBreakdown ?? [],
       avgTimePerQuestion: attempt.avgTimePerQuestion,
     },
   };

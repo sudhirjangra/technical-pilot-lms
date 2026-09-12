@@ -95,12 +95,6 @@ export function RichTextEditor({
   );
 
   useEffect(() => {
-    return () => {
-      editor?.destroy();
-    };
-  }, [editor]);
-
-  useEffect(() => {
     if (!editor) return;
     if (isUpdatingRef.current) {
       isUpdatingRef.current = false;

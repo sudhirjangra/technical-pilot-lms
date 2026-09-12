@@ -121,6 +121,9 @@ export class AttemptMigrationService {
         questionText: q.question_text || 'Assessment Question',
         questionType: q.question_type || 'mcq',
         topic: q.topic ?? null,
+        questionCategory: (q as any).question_category || 'reasoning',
+        questionDifficulty: (q as any).question_difficulty || 'medium',
+        subtopic: (q as any).subtopic || null,
         isCorrect: answer?.is_correct ?? null,
         timeSpentSeconds: Number(answer?.time_spent_seconds) || 0,
         points,
@@ -207,6 +210,70 @@ export class AttemptMigrationService {
       topicMap.entries(),
     ).map(([topic, stats]) => ({ topic, ...stats }));
 
+    const categoryMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+    const difficultyMap = new Map<
+      string,
+      {
+        total: number;
+        correct: number;
+        totalTime: number;
+        points: number;
+        earnedPoints: number;
+      }
+    >();
+
+    for (const item of questionReview) {
+      const cat = item.questionCategory || 'reasoning';
+      const diff = item.questionDifficulty || 'medium';
+
+      const curCat = categoryMap.get(cat) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
+      const curDiff = difficultyMap.get(diff) ?? {
+        total: 0,
+        correct: 0,
+        totalTime: 0,
+        points: 0,
+        earnedPoints: 0,
+      };
+
+      curCat.total += 1;
+      curDiff.total += 1;
+      if (item.isCorrect === true) {
+        curCat.correct += 1;
+        curDiff.correct += 1;
+      }
+      curCat.totalTime += item.timeSpentSeconds;
+      curDiff.totalTime += item.timeSpentSeconds;
+      curCat.points += item.points;
+      curDiff.points += item.points;
+      curCat.earnedPoints += item.pointsEarned;
+      curDiff.earnedPoints += item.pointsEarned;
+
+      categoryMap.set(cat, curCat);
+      difficultyMap.set(diff, curDiff);
+    }
+
+    const categoryBreakdown = Array.from(categoryMap.entries()).map(
+      ([category, stats]) => ({ category, ...stats }),
+    );
+    const difficultyBreakdown = Array.from(difficultyMap.entries()).map(
+      ([difficulty, stats]) => ({ difficulty, ...stats }),
+    );
+
     const totalCount = questionReview.length;
     const correctCount = questionReview.filter(
       (q) => q.isCorrect === true,
@@ -279,6 +346,8 @@ export class AttemptMigrationService {
       total_count: totalCount,
       avg_time_per_question: avgTimePerQuestion,
       topic_breakdown: topicBreakdown,
+      category_breakdown: categoryBreakdown,
+      difficulty_breakdown: difficultyBreakdown,
       question_review: questionReview,
     };
   }
@@ -334,7 +403,9 @@ export class AttemptMigrationService {
       // Fetch questions and question options
       const { data: questions } = await this.supabase
         .from('questions')
-        .select('id, question_type, points, explanation, topic, question_text')
+        .select(
+          'id, question_type, points, explanation, topic, question_text, question_category, question_difficulty, subtopic',
+        )
         .eq('assignment_id', attempt.assignment_id);
 
       const questionIds = (questions ?? []).map((q) => q.id);
@@ -418,7 +489,9 @@ export class AttemptMigrationService {
       // Fetch questions and question options
       const { data: questions } = await this.supabase
         .from('questions')
-        .select('id, question_type, points, explanation, topic, question_text')
+        .select(
+          'id, question_type, points, explanation, topic, question_text, question_category, question_difficulty, subtopic',
+        )
         .eq('test_id', attempt.test_id);
 
       const questionIds = (questions ?? []).map((q) => q.id);

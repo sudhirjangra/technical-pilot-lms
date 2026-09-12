@@ -11,6 +11,8 @@ import { redirect } from 'next/navigation';
 import { getMyPermissions } from '@/server/admin/permissions.server';
 import { ReactNode } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
   if (!session?.user || (session.user.role !== 'admin' && session.user.role !== 'sub_admin')) {
