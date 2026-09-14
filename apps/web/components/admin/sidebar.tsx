@@ -2,7 +2,6 @@
 
 import LogoIcon from '@/components/logo-icon';
 import { removeSession } from '@/server/auth.server';
-import { APP_NAME } from '@repo/constants/app';
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/shadcn/avatar';
 import {
   DropdownMenu,
@@ -182,8 +181,6 @@ export function AdminSidebar({
         .slice(0, 2)
     : (user?.email?.[0] ?? 'A').toUpperCase();
 
-  const logoSize = isCollapsed ? 28 : 32;
-
   const handleSignOut = async () => {
     setIsSigningOut(true);
     const token = user?.tokens?.session_token;
@@ -211,19 +208,16 @@ export function AdminSidebar({
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" className="border-r border-sidebar-border overflow-hidden">
-      <SidebarHeader className="flex flex-row h-14 min-h-14 max-h-14 shrink-0 items-center border-b border-sidebar-border px-3 py-0 box-border">
+      <SidebarHeader className="flex flex-row h-14 min-h-14 max-h-14 shrink-0 items-center justify-center border-b border-sidebar-border px-3 py-0 box-border">
         <Link href="/admin" className="flex items-center gap-2.5 group">
           <div className="shrink-0 transition-transform group-hover:scale-105">
-            <LogoIcon width={logoSize} height={logoSize} className="transition-all duration-200" />
+            <LogoIcon
+              src={isCollapsed ? undefined : '/assets/logo/logow.png'}
+              width={isCollapsed ? 28 : 150}
+              height={32}
+              className="transition-all duration-200"
+            />
           </div>
-          <span
-            className={cn(
-              'font-bold text-sm text-sidebar-foreground truncate transition-all duration-200 group-hover:text-primary',
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
-            )}
-          >
-            {APP_NAME}
-          </span>
         </Link>
       </SidebarHeader>
 
