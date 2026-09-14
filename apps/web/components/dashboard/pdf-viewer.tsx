@@ -21,7 +21,7 @@ interface PDFViewerProps {
  * Loads protected PDF bytes through the application proxy and allows secure downloads for enrolled students.
  */
 export function PDFViewer({ lessonId, studentEmail, lessonTitle }: PDFViewerProps) {
-  const [pdfData, setPdfData] = useState<ArrayBuffer | null>(null);
+  const [pdfData, setPdfData] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +30,11 @@ export function PDFViewer({ lessonId, studentEmail, lessonTitle }: PDFViewerProp
     fetch(`/api/lessons/${lessonId}/pdf-url`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error('Failed to load PDF');
-        setPdfData(await response.arrayBuffer());
+        const buffer = await response.arrayBuffer();
+        if (!buffer || buffer.byteLength === 0) {
+          throw new Error('Received empty PDF document');
+        }
+        setPdfData(new Blob([buffer], { type: 'application/pdf' }));
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -58,5 +62,5 @@ export function PDFViewer({ lessonId, studentEmail, lessonTitle }: PDFViewerProp
     );
   }
 
-  return <PDFDocument pdfData={pdfData} lessonTitle={lessonTitle} />;
+  return <PDFDocument pdfData={pdfData} lessonTitle={lessonTitle} lessonId={lessonId} />;
 }

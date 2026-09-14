@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -11,11 +11,12 @@ import { Button } from '@repo/shadcn/button';
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface PDFDocumentProps {
-  pdfData: ArrayBuffer;
+  pdfData: ArrayBuffer | Blob;
   lessonTitle?: string;
+  lessonId?: string;
 }
 
-export function PDFDocument({ pdfData, lessonTitle }: PDFDocumentProps) {
+export function PDFDocument({ pdfData, lessonTitle, lessonId }: PDFDocumentProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [pageWidth, setPageWidth] = useState(800);
   const [numPages, setNumPages] = useState(0);
@@ -35,21 +36,47 @@ export function PDFDocument({ pdfData, lessonTitle }: PDFDocumentProps) {
     return () => resizeObserver.disconnect();
   }, []);
 
+  const documentFile = useMemo(() => {
+    if (pdfData instanceof Blob) {
+      return pdfData;
+    }
+    return new Blob([pdfData.slice(0)], { type: 'application/pdf' });
+  }, [pdfData]);
+
   const handleDownload = () => {
-    if (!pdfData) return;
-    const blob = new Blob([pdfData], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
     const cleanTitle = (lessonTitle || 'lesson-notes')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
-    a.download = `${cleanTitle || 'lesson-notes'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const filename = `${cleanTitle || 'lesson-notes'}.pdf`;
+
+    let downloadBlob: Blob | null = null;
+    if (pdfData instanceof Blob && pdfData.size > 0) {
+      downloadBlob = pdfData;
+    } else if (pdfData instanceof ArrayBuffer && pdfData.byteLength > 0) {
+      downloadBlob = new Blob([pdfData.slice(0)], { type: 'application/pdf' });
+    }
+
+    if (downloadBlob && downloadBlob.size > 0) {
+      const url = URL.createObjectURL(downloadBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return;
+    }
+
+    if (lessonId) {
+      const a = document.createElement('a');
+      a.href = `/api/lessons/${lessonId}/pdf-url?download=true&title=${encodeURIComponent(cleanTitle)}`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   };
 
   return (
@@ -71,7 +98,7 @@ export function PDFDocument({ pdfData, lessonTitle }: PDFDocumentProps) {
       </div>
 
       <Document
-        file={pdfData}
+        file={documentFile}
         onLoadSuccess={({ numPages: loadedPages }) => {
           setNumPages(loadedPages);
           setPageNumber(1);

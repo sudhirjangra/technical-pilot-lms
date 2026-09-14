@@ -56,6 +56,7 @@ export class LessonsController {
     const pdf = await this.lessonsService.getPdf(id, req);
     return reply
       .type('application/pdf')
+      .header('Content-Length', pdf.length)
       .header('Content-Disposition', 'inline')
       .header('Cache-Control', 'private, no-store')
       .header('X-Content-Type-Options', 'nosniff')

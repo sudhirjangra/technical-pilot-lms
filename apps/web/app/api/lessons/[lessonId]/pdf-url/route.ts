@@ -15,7 +15,17 @@ export async function GET(_req: NextRequest, { params }: Context) {
     return NextResponse.json({ error: 'Lesson ID required' }, { status: 400 });
   }
 
-  const isDownload = _req.nextUrl.searchParams.get('download') === 'true' || _req.nextUrl.searchParams.get('download') === '1';
+  const isDownload =
+    _req.nextUrl.searchParams.get('download') === 'true' ||
+    _req.nextUrl.searchParams.get('download') === '1';
+  const titleParam = _req.nextUrl.searchParams.get('title');
+  const safeTitle = titleParam
+    ? titleParam
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+    : 'lesson-notes';
+  const filename = `${safeTitle || 'lesson-notes'}.pdf`;
 
   try {
     // Proxy PDF bytes so the browser never receives a Supabase URL or object key.
@@ -29,11 +39,17 @@ export async function GET(_req: NextRequest, { params }: Context) {
       return NextResponse.json(error, { status: apiRes.status });
     }
 
-    return new NextResponse(apiRes.body, {
+    const pdfBuffer = await apiRes.arrayBuffer();
+    if (!pdfBuffer || pdfBuffer.byteLength === 0) {
+      return NextResponse.json({ error: 'PDF content is empty' }, { status: 502 });
+    }
+
+    return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': isDownload ? 'attachment; filename="lesson-notes.pdf"' : 'inline',
+        'Content-Length': String(pdfBuffer.byteLength),
+        'Content-Disposition': isDownload ? `attachment; filename="${filename}"` : 'inline',
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },

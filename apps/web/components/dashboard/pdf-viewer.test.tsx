@@ -31,4 +31,20 @@ describe('PDFViewer', () => {
     expect(screen.queryByText('CONTENT RESERVED')).toBeNull();
     expect(screen.queryByText('student@example.com')).toBeNull();
   });
+
+  it('shows error when PDF response is empty (0 bytes)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: async () => new ArrayBuffer(0),
+      }),
+    );
+
+    render(<PDFViewer lessonId="lesson-empty" studentEmail="student@example.com" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Received empty PDF document/i)).toBeTruthy();
+    });
+  });
 });

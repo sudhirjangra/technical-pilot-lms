@@ -51,12 +51,25 @@ export class LessonsService {
         .replace(/^-|-$/g, '');
     const filePath = `${safe(chapter.courses.slug)}/${safe(chapter.title)}/${safe(lesson.title)}.pdf`;
     const buffer = await part.toBuffer();
-    const { error: uploadError } = await this.supabase.storage
+    let { error: uploadError } = await this.supabase.storage
       .from('course-materials')
       .upload(filePath, buffer, {
         contentType: 'application/pdf',
         upsert: true,
       });
+
+    if (uploadError && /bucket not found/i.test(uploadError.message)) {
+      await this.supabase.storage.createBucket('course-materials', {
+        public: false,
+      });
+      ({ error: uploadError } = await this.supabase.storage
+        .from('course-materials')
+        .upload(filePath, buffer, {
+          contentType: 'application/pdf',
+          upsert: true,
+        }));
+    }
+
     if (uploadError) throw new BadRequestException(uploadError.message);
 
     const { data, error } = await this.supabase
@@ -145,18 +158,47 @@ export class LessonsService {
 
     if (pdfNote?.file_path) {
       try {
-        const { data: pdfBlob, error: downloadError } =
-          await this.supabase.storage
+        const rawPath = (pdfNote.file_path as string).trim();
+        const normalizedPath = rawPath
+          .replace(/^course-materials\//, '')
+          .replace(/^pdf-notes\//, '')
+          .replace(/^\//, '');
+
+        let pdfBlob: Blob | null = null;
+
+        // Try 'course-materials' bucket with normalizedPath
+        const res1 = await this.supabase.storage
+          .from('course-materials')
+          .download(normalizedPath);
+        if (!res1.error && res1.data) {
+          pdfBlob = res1.data;
+        } else if (rawPath !== normalizedPath) {
+          const res2 = await this.supabase.storage
             .from('course-materials')
-            .download(pdfNote.file_path as string);
-        if (!downloadError && pdfBlob) {
+            .download(rawPath);
+          if (!res2.error && res2.data) {
+            pdfBlob = res2.data;
+          }
+        }
+
+        // Try 'pdf-notes' bucket if not found in 'course-materials'
+        if (!pdfBlob) {
+          const res3 = await this.supabase.storage
+            .from('pdf-notes')
+            .download(normalizedPath);
+          if (!res3.error && res3.data) {
+            pdfBlob = res3.data;
+          }
+        }
+
+        if (pdfBlob) {
           const buffer = Buffer.from(await pdfBlob.arrayBuffer());
           if (buffer.length > 50) {
             return buffer;
           }
         }
-      } catch {
-        // Fallback to generating note PDF from database string
+      } catch (storageErr) {
+        console.error('Failed to download PDF from Supabase storage:', storageErr);
       }
     }
 
