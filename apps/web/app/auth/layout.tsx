@@ -1,7 +1,6 @@
 import HeroAviation from '@/components/hero-aviation';
 import LogoIcon from '@/components/logo-icon';
 import FollowCursor from '@repo/shadcn/follow-cursor';
-import { APP_NAME } from '@repo/constants/app';
 import { ModeSwitcher } from '@repo/shadcn/mode-switcher';
 import Link from 'next/link';
 import { ReactNode } from 'react';
@@ -12,9 +11,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <FollowCursor color="oklch(0.55 0.16 160 / 0.18)" />
       {/* Top nav bar - only visible on small screens */}
       <header className="flex items-center justify-between px-6 py-4 lg:hidden border-b border-border/50 bg-background/80 backdrop-blur-md z-20">
-        <Link href="/" className="flex items-center gap-2">
-          <LogoIcon width={28} height={28} />
-          <span className="font-semibold text-sm">{APP_NAME}</span>
+        <Link href="/" className="flex items-center">
+          <LogoIcon src="/assets/logo/logow.png" width={150} height={32} />
         </Link>
         <ModeSwitcher />
       </header>
@@ -27,9 +25,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <aside className="hidden lg:flex lg:w-[58%] xl:w-[62%] 2xl:w-[65%] shrink-0 flex-col justify-between relative z-10">
           <div className="relative flex flex-col h-full p-8 xl:p-12 z-10">
             {/* Logo + name */}
-            <Link href="/" className="flex items-center gap-3">
-              <LogoIcon width={36} height={36} />
-              <span className="font-bold text-lg tracking-tight text-foreground">{APP_NAME}</span>
+            <Link href="/" className="flex items-center">
+              <LogoIcon src="/assets/logo/logow.png" width={180} height={40} />
             </Link>
 
             {/* Aviation Animated Visual from Root */}
