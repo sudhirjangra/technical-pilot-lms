@@ -22,6 +22,7 @@ import {
   Gift,
   GraduationCap,
   LogOut,
+  Receipt,
   Settings,
   Trophy,
 } from '@repo/shadcn/lucide';
@@ -65,6 +66,7 @@ const navGroups = [
     items: [
       { label: 'Doubt Sessions', href: '/dashboard/doubt-sessions', icon: CalendarDays, exact: false },
       { label: 'Refer & Earn', href: '/dashboard/referrals', icon: Gift, exact: false },
+      { label: 'Payment History', href: '/dashboard/payments', icon: Receipt, exact: false },
     ],
   },
 ];

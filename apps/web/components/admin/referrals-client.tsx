@@ -33,19 +33,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/shadcn/tabs';
 import { Textarea } from '@repo/shadcn/textarea';
 import {
   AlertCircle,
+  ArrowUpDown,
+  ArrowUpRight,
   Banknote,
   Check,
   Clock,
+  Download,
+  Filter,
   Gift,
   Mail,
   Phone,
   Search,
   Settings2,
   TrendingUp,
+  Trophy,
   Users,
   X,
 } from '@repo/shadcn/lucide';
-import { useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@repo/shadcn/select';
+import Link from 'next/link';
+import { useState, useMemo } from 'react';
 
 interface ReferralsClientProps {
   initialOverview?: AdminReferralOverview | null;
@@ -93,26 +106,199 @@ export function ReferralsAdminClient({
   const [adminNotes, setAdminNotes] = useState('');
   const [submittingAction, setSubmittingAction] = useState(false);
 
-  // Search query for referrals
+  // Search & filter controls
   const [referralSearch, setReferralSearch] = useState('');
+  const [referralStatusFilter, setReferralStatusFilter] = useState<'all' | 'purchased' | 'registered'>('all');
+  const [referralSortBy, setReferralSortBy] = useState<
+    'top_referrers' | 'recent' | 'points_desc' | 'amount_desc' | 'oldest'
+  >('top_referrers');
   const [requestStatusFilter, setRequestStatusFilter] = useState('all');
 
-  const filteredReferrals = referrals.filter((r) => {
-    const term = referralSearch.toLowerCase();
-    const referrerMatch =
-      r.referrer?.full_name?.toLowerCase().includes(term) ||
-      r.referrer?.email?.toLowerCase().includes(term);
-    const refereeMatch =
-      r.referee?.full_name?.toLowerCase().includes(term) ||
-      r.referee?.email?.toLowerCase().includes(term);
-    const codeMatch = r.referral_code?.toLowerCase().includes(term);
-    return referrerMatch || refereeMatch || codeMatch;
-  });
+  // Aggregated Top Referrers calculation
+  const topReferrers = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        referrerId: string;
+        referrer: { id?: string; full_name?: string | null; email?: string | null };
+        referralCode: string;
+        totalReferred: number;
+        totalPurchased: number;
+        totalSalesAmount: number;
+        totalPointsAwarded: number;
+      }
+    >();
+
+    for (const r of referrals) {
+      const key = r.referrer_id || r.referral_code;
+      const existing = map.get(key) || {
+        referrerId: r.referrer_id,
+        referrer: r.referrer || { id: r.referrer_id, full_name: 'Unknown User', email: '' },
+        referralCode: r.referral_code,
+        totalReferred: 0,
+        totalPurchased: 0,
+        totalSalesAmount: 0,
+        totalPointsAwarded: 0,
+      };
+
+      existing.totalReferred += 1;
+      if (r.status === 'purchased' || r.total_purchases_count > 0) {
+        existing.totalPurchased += 1;
+      }
+      existing.totalSalesAmount += Number(r.total_purchased_amount) || 0;
+      existing.totalPointsAwarded += Number(r.total_points_awarded) || 0;
+
+      map.set(key, existing);
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      // Sort primarily by points awarded, then by total friends invited
+      if (b.totalPointsAwarded !== a.totalPointsAwarded) {
+        return b.totalPointsAwarded - a.totalPointsAwarded;
+      }
+      return b.totalReferred - a.totalReferred;
+    });
+  }, [referrals]);
+
+  // Rank lookup map for sorting by top referrers
+  const referrerRankMap = useMemo(() => {
+    const map = new Map<string, number>();
+    topReferrers.forEach((tr, index) => {
+      map.set(tr.referrerId, index + 1);
+      map.set(tr.referralCode, index + 1);
+    });
+    return map;
+  }, [topReferrers]);
+
+  // Filtered & sorted referrals
+  const filteredReferrals = useMemo(() => {
+    return referrals
+      .filter((r) => {
+        const term = referralSearch.toLowerCase();
+        const referrerMatch =
+          r.referrer?.full_name?.toLowerCase().includes(term) ||
+          r.referrer?.email?.toLowerCase().includes(term);
+        const refereeMatch =
+          r.referee?.full_name?.toLowerCase().includes(term) ||
+          r.referee?.email?.toLowerCase().includes(term);
+        const codeMatch = r.referral_code?.toLowerCase().includes(term);
+        const matchesSearch = !term || referrerMatch || refereeMatch || codeMatch;
+
+        if (!matchesSearch) return false;
+
+        if (referralStatusFilter === 'purchased') {
+          return r.status === 'purchased' || r.total_purchases_count > 0;
+        }
+        if (referralStatusFilter === 'registered') {
+          return (
+            r.status !== 'purchased' &&
+            (r.total_purchases_count === 0 || !r.total_purchases_count)
+          );
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (referralSortBy === 'top_referrers') {
+          const rankA = referrerRankMap.get(a.referrer_id) ?? 999999;
+          const rankB = referrerRankMap.get(b.referrer_id) ?? 999999;
+          if (rankA !== rankB) return rankA - rankB;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+        if (referralSortBy === 'points_desc') {
+          return (b.total_points_awarded || 0) - (a.total_points_awarded || 0);
+        }
+        if (referralSortBy === 'amount_desc') {
+          return (b.total_purchased_amount || 0) - (a.total_purchased_amount || 0);
+        }
+        if (referralSortBy === 'oldest') {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        // default: recent
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+  }, [
+    referrals,
+    referralSearch,
+    referralStatusFilter,
+    referralSortBy,
+    referrerRankMap,
+  ]);
 
   const filteredRequests = requests.filter((req) => {
     if (requestStatusFilter === 'all') return true;
     return req.status === requestStatusFilter;
   });
+
+  // Export CSV functions
+  const exportReferralsCsv = () => {
+    const headers = [
+      'Referrer Name',
+      'Referrer Email',
+      'Referral Code',
+      'Friend Name',
+      'Friend Email',
+      'Date Joined',
+      'Status',
+      'Purchased Amount (INR)',
+      'Points Awarded',
+    ];
+    const rows = filteredReferrals.map((r) => [
+      `"${r.referrer?.full_name || 'User'}"`,
+      `"${r.referrer?.email || ''}"`,
+      `"${r.referral_code || ''}"`,
+      `"${r.referee?.full_name || 'Friend'}"`,
+      `"${r.referee?.email || ''}"`,
+      `"${new Date(r.created_at).toLocaleDateString()}"`,
+      `"${r.status === 'purchased' || r.total_purchases_count > 0 ? 'Purchased' : 'Registered'}"`,
+      r.total_purchased_amount || 0,
+      r.total_points_awarded || 0,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `referrals_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Referrals CSV exported successfully');
+  };
+
+  const exportPayoutRequestsCsv = () => {
+    const headers = [
+      'Student Name',
+      'Student Email',
+      'Student Phone',
+      'Points Requested',
+      'Amount (INR)',
+      'Status',
+      'Date Requested',
+      'Admin Notes',
+    ];
+    const rows = filteredRequests.map((req) => [
+      `"${req.student?.full_name || 'Student'}"`,
+      `"${req.student?.email || ''}"`,
+      `"${req.student?.phone || ''}"`,
+      req.points_requested,
+      req.inr_amount,
+      `"${req.status}"`,
+      `"${new Date(req.created_at).toLocaleDateString()}"`,
+      `"${req.admin_notes || ''}"`,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `payout_requests_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Payout requests CSV exported successfully');
+  };
 
   const handleResolveRequest = async () => {
     if (!selectedRequest || !actionType) return;
@@ -255,7 +441,7 @@ export function ReferralsAdminClient({
 
       {/* Tabs */}
       <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md mb-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-2xl mb-4">
           <TabsTrigger value="requests" className="gap-1.5 text-xs">
             <Banknote className="size-3.5" />
             Payout Requests ({requests.filter((r) => r.status === 'pending').length})
@@ -263,6 +449,10 @@ export function ReferralsAdminClient({
           <TabsTrigger value="referrals" className="gap-1.5 text-xs">
             <Users className="size-3.5" />
             All Referrals ({referrals.length})
+          </TabsTrigger>
+          <TabsTrigger value="top-referrers" className="gap-1.5 text-xs">
+            <Trophy className="size-3.5 text-amber-500" />
+            Top Referrers ({topReferrers.length})
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5 text-xs">
             <Settings2 className="size-3.5" />
@@ -281,19 +471,31 @@ export function ReferralsAdminClient({
                 </CardDescription>
               </div>
 
-              {/* Status Filter */}
-              <div className="flex gap-1.5 bg-muted/40 p-1 rounded-lg border border-border">
-                {['all', 'pending', 'paid', 'rejected'].map((st) => (
-                  <Button
-                    key={st}
-                    variant={requestStatusFilter === st ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-7 text-xs capitalize"
-                    onClick={() => setRequestStatusFilter(st)}
-                  >
-                    {st}
-                  </Button>
-                ))}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Status Filter */}
+                <div className="flex gap-1.5 bg-muted/40 p-1 rounded-lg border border-border">
+                  {['all', 'pending', 'paid', 'rejected'].map((st) => (
+                    <Button
+                      key={st}
+                      variant={requestStatusFilter === st ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="h-7 text-xs capitalize"
+                      onClick={() => setRequestStatusFilter(st)}
+                    >
+                      {st}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportPayoutRequestsCsv}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <Download className="size-3.5" />
+                  Export CSV
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -419,23 +621,74 @@ export function ReferralsAdminClient({
         {/* Tab 2: All Referrals */}
         <TabsContent value="referrals">
           <Card className="border-border">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3">
-              <div>
-                <CardTitle className="text-base font-semibold">All Referral Relationships</CardTitle>
-                <CardDescription className="text-xs">
-                  Inspect who referred whom, course enrollment status, and reward distribution
-                </CardDescription>
+            <CardHeader className="flex flex-col gap-4 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-base font-semibold">All Referral Relationships</CardTitle>
+                  <CardDescription className="text-xs">
+                    Inspect who referred whom, course enrollment status, and reward distribution
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportReferralsCsv}
+                  className="h-8 text-xs gap-1.5 self-start sm:self-auto"
+                >
+                  <Download className="size-3.5" />
+                  Export CSV
+                </Button>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Search student or code..."
-                  value={referralSearch}
-                  onChange={(e) => setReferralSearch(e.target.value)}
-                  className="pl-8 h-8 text-xs"
-                />
+              {/* Controls bar: Search, Status Filter, Sort By */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                {/* Search Bar */}
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search student, email, or code..."
+                    value={referralSearch}
+                    onChange={(e) => setReferralSearch(e.target.value)}
+                    className="pl-8 h-8 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Status Filter buttons */}
+                  <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border text-xs">
+                    {(['all', 'purchased', 'registered'] as const).map((filter) => (
+                      <Button
+                        key={filter}
+                        variant={referralStatusFilter === filter ? 'secondary' : 'ghost'}
+                        size="sm"
+                        className="h-7 text-xs capitalize"
+                        onClick={() => setReferralStatusFilter(filter)}
+                      >
+                        {filter === 'all' ? 'All' : filter === 'purchased' ? 'Purchased' : 'Registered'}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Sort By Dropdown */}
+                  <div className="flex items-center gap-1.5">
+                    <Select
+                      value={referralSortBy}
+                      onValueChange={(val) => setReferralSortBy(val as any)}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-[170px]">
+                        <ArrowUpDown className="size-3 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="recent" className="text-xs">Newest First</SelectItem>
+                        <SelectItem value="oldest" className="text-xs">Oldest First</SelectItem>
+                        <SelectItem value="top_referrers" className="text-xs">Top Referrers First</SelectItem>
+                        <SelectItem value="points_desc" className="text-xs">Highest Points</SelectItem>
+                        <SelectItem value="amount_desc" className="text-xs">Highest Purchases</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -462,13 +715,33 @@ export function ReferralsAdminClient({
                         <tr key={r.id} className="hover:bg-muted/30">
                           <td className="py-3 px-3">
                             <div className="font-semibold text-foreground">
-                              {r.referrer?.full_name || 'User'}
+                              {r.referrer_id ? (
+                                <Link
+                                  href={`/admin/students/${r.referrer_id}`}
+                                  className="hover:underline hover:text-primary inline-flex items-center gap-1"
+                                >
+                                  {r.referrer?.full_name || 'User'}
+                                  <ArrowUpRight className="size-3 text-muted-foreground opacity-60" />
+                                </Link>
+                              ) : (
+                                <span>{r.referrer?.full_name || 'User'}</span>
+                              )}
                             </div>
                             <div className="text-[11px] text-muted-foreground">{r.referrer?.email}</div>
                           </td>
                           <td className="py-3 px-3">
                             <div className="font-semibold text-foreground">
-                              {r.referee?.full_name || 'Friend'}
+                              {r.referee_id ? (
+                                <Link
+                                  href={`/admin/students/${r.referee_id}`}
+                                  className="hover:underline hover:text-primary inline-flex items-center gap-1"
+                                >
+                                  {r.referee?.full_name || 'Friend'}
+                                  <ArrowUpRight className="size-3 text-muted-foreground opacity-60" />
+                                </Link>
+                              ) : (
+                                <span>{r.referee?.full_name || 'Friend'}</span>
+                              )}
                             </div>
                             <div className="text-[11px] text-muted-foreground">{r.referee?.email}</div>
                           </td>
@@ -497,6 +770,115 @@ export function ReferralsAdminClient({
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Top Referrers Leaderboard */}
+        <TabsContent value="top-referrers">
+          <Card className="border-border">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Trophy className="size-4 text-amber-500" />
+                  Top Referrers Leaderboard
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Ranked by reward points earned and total enrolled friends referred
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-xs self-start sm:self-auto font-medium">
+                {topReferrers.length} Active Referrers
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              {topReferrers.length === 0 ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  No referral activity recorded yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-[11px] text-muted-foreground uppercase border-b border-border bg-muted/20">
+                      <tr>
+                        <th className="py-2.5 px-3">Rank</th>
+                        <th className="py-2.5 px-3">Referrer</th>
+                        <th className="py-2.5 px-3">Referral Code</th>
+                        <th className="py-2.5 px-3 text-center">Invited Friends</th>
+                        <th className="py-2.5 px-3 text-center">Purchases</th>
+                        <th className="py-2.5 px-3 text-right">Revenue Generated</th>
+                        <th className="py-2.5 px-3 text-right">Points Earned</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {topReferrers.map((tr, index) => {
+                        const rank = index + 1;
+                        return (
+                          <tr key={tr.referrerId || tr.referralCode} className="hover:bg-muted/30">
+                            <td className="py-3 px-3">
+                              {rank === 1 ? (
+                                <span className="inline-flex items-center justify-center size-6 rounded-full bg-amber-500/20 text-amber-600 font-bold text-xs">
+                                  🥇 1
+                                </span>
+                              ) : rank === 2 ? (
+                                <span className="inline-flex items-center justify-center size-6 rounded-full bg-slate-300/40 text-slate-700 dark:text-slate-200 font-bold text-xs">
+                                  🥈 2
+                                </span>
+                              ) : rank === 3 ? (
+                                <span className="inline-flex items-center justify-center size-6 rounded-full bg-amber-700/20 text-amber-700 font-bold text-xs">
+                                  🥉 3
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center justify-center size-6 rounded-full bg-muted text-muted-foreground font-semibold text-xs">
+                                  #{rank}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-semibold text-foreground">
+                                {tr.referrerId ? (
+                                  <Link
+                                    href={`/admin/students/${tr.referrerId}`}
+                                    className="hover:underline hover:text-primary inline-flex items-center gap-1"
+                                  >
+                                    {tr.referrer?.full_name || 'User'}
+                                    <ArrowUpRight className="size-3 text-muted-foreground opacity-60" />
+                                  </Link>
+                                ) : (
+                                  <span>{tr.referrer?.full_name || 'User'}</span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {tr.referrer?.email || '—'}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 font-mono font-medium text-primary">
+                              {tr.referralCode}
+                            </td>
+                            <td className="py-3 px-3 text-center font-medium">
+                              {tr.totalReferred}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <Badge
+                                variant={tr.totalPurchased > 0 ? 'default' : 'secondary'}
+                                className={`text-[10px] ${tr.totalPurchased > 0 ? 'bg-emerald-600 text-white' : ''}`}
+                              >
+                                {tr.totalPurchased} converted
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-3 text-right font-medium text-foreground">
+                              ₹{tr.totalSalesAmount.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                              +{tr.totalPointsAwarded.toLocaleString()} pts
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

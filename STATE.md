@@ -14,7 +14,12 @@
 - SMTP transactional emails (course purchase receipt, new course launch announcement, course archived notice, password changes, sign-in/new device logins) and course archiving access control/notifications (TP-EMAIL-001, TP-ARCHIVE-001, TP-ARCHIVE-002) are implemented.
 - Referral & Wallet Reward system (TP-STUDENT-003, TP-REF-001 through TP-REF-005): Unique `TP...` referral codes, friend sign-up tracking with prefill URL, exclusive referee course discount coupons (default 20%), referrer wallet reward points on purchase (default 10%), admin conversion ratio (default 5 pts = ₹1), manual cash conversion requests with immutable double-entry ledger and admin review/payout management.
 - Question Categorization & Difficulty taxonomy (TP-ANALYSIS-001, TP-ANALYSIS-002): Cognitive category (`reasoning`, `calculation`, `numerical`, `conceptual`, `other`) and difficulty levels (`easy`, `medium`, `hard`) persisted across Supabase, MongoDB attempt snapshots, bulk import/export, and performance analytics.
-- Supabase migrations through `019_question_categorization.sql` and `public_schema.sql` are present in the repository. Applying migrations remains an environment operation.
+- Student Payment History & Invoices: Dedicated student payment history page (`/dashboard/payments`) with transaction search, summary metrics, printable invoice/receipt viewer dialog, sidebar navigation, and dashboard recent payments widget.
+- Student Pending Assignments Widget: Highlighted all non-completed assignments across enrolled courses directly on `/dashboard` with one-click lesson navigation.
+- Admin Student Device Management: Real-time inspection of active student device sessions, remote single device logout, logout-all-devices, and administrative device ban/unban controls (enforced at API session/refresh validation) backed by migration `021_device_management.sql`.
+- Admin Doubt Session Booked Student Details: Interactive booking viewer on doubt slot cards displaying booked student profiles, contact emails, phone numbers, booking status, and direct profile navigation.
+- Admin Referral Dashboard Enhancements: Added Top Referrers leaderboard with dynamic ranking, comprehensive sorting (top referrers, highest points, purchases, newest/oldest), status filter toggles (purchased vs registered), direct student profile links, and one-click CSV export for both referrals and payout requests.
+- Supabase migrations through `021_device_management.sql` and `public_schema.sql` are present in the repository. Applying migrations remains an environment operation.
 
 
 ### Pending

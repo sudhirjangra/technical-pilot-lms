@@ -57,4 +57,79 @@ export class UsersService {
     if (error) throw new NotFoundException('User not found');
     return data;
   }
+
+  async getUserDevices(userId: string) {
+    const { data, error } = await this.supabase
+      .from('devices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_active_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  }
+
+  async logoutUserDevice(userId: string, deviceId: string) {
+    const { data: existing, error: findError } = await this.supabase
+      .from('devices')
+      .select('id')
+      .eq('id', deviceId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (findError || !existing) {
+      throw new NotFoundException('Device session not found');
+    }
+
+    const { error } = await this.supabase
+      .from('devices')
+      .delete()
+      .eq('id', deviceId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(error.message);
+    return { success: true, message: 'Device logged out successfully' };
+  }
+
+  async logoutAllUserDevices(userId: string) {
+    const { error } = await this.supabase
+      .from('devices')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw new Error(error.message);
+    return { success: true, message: 'All devices logged out successfully' };
+  }
+
+  async toggleBanDevice(userId: string, deviceId: string, isBanned: boolean) {
+    const { data: existing, error: findError } = await this.supabase
+      .from('devices')
+      .select('id')
+      .eq('id', deviceId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (findError || !existing) {
+      throw new NotFoundException('Device not found');
+    }
+
+    const { data, error } = await this.supabase
+      .from('devices')
+      .update({
+        is_banned: isBanned,
+        banned_at: isBanned ? new Date().toISOString() : null,
+      })
+      .eq('id', deviceId)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return {
+      success: true,
+      message: isBanned
+        ? 'Device banned successfully'
+        : 'Device unbanned successfully',
+      data,
+    };
+  }
 }

@@ -470,7 +470,9 @@ CREATE TABLE public.devices (
     device_name text DEFAULT 'unknown'::text NOT NULL,
     platform public.device_platform DEFAULT 'web'::public.device_platform NOT NULL,
     last_active_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    is_banned boolean DEFAULT false NOT NULL,
+    banned_at timestamp with time zone
 );
 
 

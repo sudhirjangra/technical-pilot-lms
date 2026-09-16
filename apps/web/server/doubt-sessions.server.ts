@@ -183,3 +183,46 @@ export async function cancelBooking(bookingId: string) {
   if (error) return { error };
   return { success: true };
 }
+
+export const SlotBookingStudentSchema = z
+  .object({
+    id: z.string(),
+    slot_id: z.string(),
+    student_id: z.string(),
+    status: z.string(),
+    booked_at: z.string(),
+    cancelled_at: z.string().nullable().optional(),
+    meeting_link: z.string().nullable().optional(),
+    profiles: z
+      .object({
+        id: z.string(),
+        full_name: z.string().nullable().optional(),
+        email: z.string().optional(),
+        phone: z.string().nullable().optional(),
+        avatar_url: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+export type SlotBookingStudent = z.infer<typeof SlotBookingStudentSchema>;
+
+export async function getSlotBookings(
+  slotId: string,
+): Promise<SlotBookingStudent[]> {
+  const h = await headers(false);
+  const [error, data] = await safeFetch(
+    z.array(SlotBookingStudentSchema),
+    `/doubt-sessions/slots/${slotId}/bookings`,
+    {
+      headers: h,
+      cache: 'no-store',
+    },
+  );
+  if (error) {
+    console.error('getSlotBookings failed:', error);
+    return [];
+  }
+  return data ?? [];
+}

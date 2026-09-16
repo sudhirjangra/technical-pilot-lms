@@ -547,7 +547,7 @@ export class DoubtSessionsService {
     ] as string[];
     const { data: profiles } = await this.supabase
       .from('profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, email, phone, avatar_url')
       .in('id', studentIds);
 
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));

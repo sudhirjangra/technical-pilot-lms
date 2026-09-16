@@ -843,12 +843,17 @@ export class AuthService {
 
     const { data: device } = await this.supabase
       .from('devices')
-      .select('id')
+      .select('id, is_banned')
       .eq('id', dto.session_token)
       .eq('user_id', dto.user_id)
       .maybeSingle();
 
     if (!device) throw new NotFoundException('Session not found');
+    if (device.is_banned) {
+      throw new UnauthorizedException(
+        'This device has been banned by an administrator.',
+      );
+    }
 
     const { data: profile } = await this.supabase
       .from('profiles')
@@ -913,6 +918,11 @@ export class AuthService {
     }
 
     if (!data) throw new NotFoundException('Session not found');
+    if (data.is_banned) {
+      throw new UnauthorizedException(
+        'This device has been banned by an administrator.',
+      );
+    }
     return data;
   }
 
