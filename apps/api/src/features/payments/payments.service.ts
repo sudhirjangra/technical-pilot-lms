@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createHmac } from 'crypto';
 import { Logger } from 'nestjs-pino';
-import { CreateOrderDto, VerifyPaymentDto } from './dto';
+import { CreateOrderDto, FailPaymentDto, VerifyPaymentDto } from './dto';
 
 @Injectable()
 export class PaymentsService {
@@ -173,7 +173,7 @@ export class PaymentsService {
       };
     }
 
-    if (existingPayment.status !== 'pending')
+    if (existingPayment.status !== 'pending' && existingPayment.status !== 'failed')
       throw new BadRequestException('Payment is not awaiting verification');
 
     // Update payment record
@@ -187,7 +187,7 @@ export class PaymentsService {
       })
       .eq('razorpay_order_id', dto.razorpay_order_id)
       .eq('student_id', studentId)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'failed'])
       .select('*')
       .single();
     if (error || !payment)
@@ -264,27 +264,37 @@ export class PaymentsService {
     const event = body['event'] as string;
     const payload = body['payload'] as Record<string, unknown>;
 
-    if (event === 'payment.captured') {
-      const paymentEntity = (payload['payment'] as Record<string, unknown>)[
-        'entity'
-      ] as Record<string, unknown>;
-      const orderId = paymentEntity['order_id'] as string;
-      const paymentId = paymentEntity['id'] as string;
+    if (event === 'payment.captured' || event === 'order.paid') {
+      const paymentEntity = payload['payment']
+        ? ((payload['payment'] as Record<string, unknown>)['entity'] as Record<string, unknown>)
+        : null;
+      const orderEntity = payload['order']
+        ? ((payload['order'] as Record<string, unknown>)['entity'] as Record<string, unknown>)
+        : null;
 
-      // Mark payment completed if still pending
+      const orderId = (paymentEntity?.['order_id'] ?? orderEntity?.['id']) as string;
+      const paymentId = (paymentEntity?.['id'] ?? null) as string | null;
+
+      if (!orderId) return { received: true };
+
+      const updateData: Record<string, unknown> = {
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      };
+      if (paymentId) {
+        updateData['razorpay_payment_id'] = paymentId;
+      }
+
+      // Mark payment completed if pending or failed
       const { data: payment } = await this.supabase
         .from('payments')
-        .update({
-          razorpay_payment_id: paymentId,
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('razorpay_order_id', orderId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'failed'])
         .select(
           'id, student_id, course_id, amount, invoice_number, razorpay_order_id, coupon_code',
         )
-        .single();
+        .maybeSingle();
 
       if (payment) {
         // Ensure enrollment exists
@@ -346,20 +356,176 @@ export class PaymentsService {
         });
       }
     } else if (event === 'payment.failed') {
-      const paymentEntity = (payload['payment'] as Record<string, unknown>)[
+      const paymentEntity = (payload['payment'] as Record<string, unknown>)?.[
         'entity'
-      ] as Record<string, unknown>;
-      const orderId = paymentEntity['order_id'] as string;
-      const paymentId = paymentEntity['id'] as string;
+      ] as Record<string, unknown> | undefined;
+      const orderId = paymentEntity?.['order_id'] as string | undefined;
+      const paymentId = paymentEntity?.['id'] as string | undefined;
 
-      await this.supabase
-        .from('payments')
-        .update({ razorpay_payment_id: paymentId, status: 'failed' })
-        .eq('razorpay_order_id', orderId)
-        .eq('status', 'pending');
+      if (orderId) {
+        await this.supabase
+          .from('payments')
+          .update({
+            razorpay_payment_id: paymentId ?? null,
+            status: 'failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('razorpay_order_id', orderId)
+          .in('status', ['pending', 'failed']);
+      }
     }
 
     return { received: true };
+  }
+
+  /** Student: record payment failure reported from Razorpay checkout handler */
+  async recordPaymentFailure(dto: FailPaymentDto, studentId: string) {
+    const { data: existingPayment, error: lookupError } = await this.supabase
+      .from('payments')
+      .select('id, status, razorpay_payment_id')
+      .eq('razorpay_order_id', dto.razorpay_order_id)
+      .eq('student_id', studentId)
+      .maybeSingle();
+
+    if (lookupError || !existingPayment) {
+      throw new NotFoundException('Payment record not found');
+    }
+
+    // Never overwrite an already completed payment
+    if (existingPayment.status === 'completed') {
+      return { message: 'Payment already completed', status: 'completed' };
+    }
+
+    const { data: updated, error } = await this.supabase
+      .from('payments')
+      .update({
+        razorpay_payment_id:
+          dto.razorpay_payment_id ?? existingPayment.razorpay_payment_id,
+        status: 'failed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingPayment.id)
+      .select('*')
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+
+    this.logger.warn(
+      {
+        orderId: dto.razorpay_order_id,
+        paymentId: dto.razorpay_payment_id,
+        studentId,
+        errorCode: dto.error_code,
+        errorDescription: dto.error_description,
+      },
+      'Payment recorded as failed from client checkout',
+    );
+
+    return {
+      message: 'Payment marked as failed',
+      status: 'failed',
+      payment: updated,
+    };
+  }
+
+  /** Synchronize pending payment status by querying Razorpay orders payments API */
+  private async syncPendingPaymentWithRazorpay(payment: any): Promise<any> {
+    if (!payment?.razorpay_order_id || payment.status !== 'pending') {
+      return payment;
+    }
+
+    try {
+      const authHeader = Buffer.from(
+        `${this.razorpayKeyId}:${this.razorpayKeySecret}`,
+      ).toString('base64');
+
+      const res = await fetch(
+        `https://api.razorpay.com/v1/orders/${payment.razorpay_order_id}/payments`,
+        {
+          headers: {
+            Authorization: `Basic ${authHeader}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        return payment;
+      }
+
+      const json = (await res.json()) as {
+        items?: Array<Record<string, unknown>>;
+      };
+      const items = json.items ?? [];
+
+      // Check if any payment attempt was captured/successful
+      const capturedPayment = items.find(
+        (item) => item['status'] === 'captured',
+      );
+      if (capturedPayment) {
+        const paymentId = capturedPayment['id'] as string;
+        const { data: updated } = await this.supabase
+          .from('payments')
+          .update({
+            razorpay_payment_id: paymentId,
+            status: 'completed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payment.id)
+          .select('*, courses(id, title, slug, thumbnail_url)')
+          .single();
+
+        // Ensure enrollment exists
+        await this.supabase.from('enrollments').upsert(
+          {
+            student_id: payment.student_id,
+            course_id: payment.course_id,
+            status: 'active',
+            enrolled_at: new Date().toISOString(),
+          },
+          { onConflict: 'student_id,course_id' },
+        );
+
+        return (
+          updated ?? {
+            ...payment,
+            status: 'completed',
+            razorpay_payment_id: paymentId,
+          }
+        );
+      }
+
+      // Check if any payment attempt failed
+      const failedPayment = items.find((item) => item['status'] === 'failed');
+      if (failedPayment) {
+        const paymentId = failedPayment['id'] as string;
+        const { data: updated } = await this.supabase
+          .from('payments')
+          .update({
+            razorpay_payment_id: paymentId,
+            status: 'failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payment.id)
+          .select('*, courses(id, title, slug, thumbnail_url)')
+          .single();
+
+        return (
+          updated ?? {
+            ...payment,
+            status: 'failed',
+            razorpay_payment_id: paymentId,
+          }
+        );
+      }
+
+      return payment;
+    } catch (err) {
+      this.logger.warn(
+        { err, orderId: payment.razorpay_order_id },
+        'Failed to sync payment status with Razorpay API',
+      );
+      return payment;
+    }
   }
 
   private async sendPurchaseReceiptEmail(
@@ -431,6 +597,24 @@ export class PaymentsService {
 
     const { data, error } = await query;
     if (error) throw new BadRequestException(error.message);
+
+    if (!data || data.length === 0) return [];
+
+    // Sync pending payments if any exist (limit to 10 latest pending)
+    const pendingPayments = data
+      .filter((p: any) => p.status === 'pending' && p.razorpay_order_id)
+      .slice(0, 10);
+
+    if (pendingPayments.length > 0) {
+      const syncedPayments = await Promise.all(
+        pendingPayments.map((p: any) =>
+          this.syncPendingPaymentWithRazorpay(p),
+        ),
+      );
+      const syncedMap = new Map(syncedPayments.map((p) => [p.id, p]));
+      return data.map((p: any) => syncedMap.get(p.id) ?? p);
+    }
+
     return data;
   }
 
@@ -442,6 +626,24 @@ export class PaymentsService {
       .eq('student_id', studentId)
       .order('created_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
+
+    if (!data || data.length === 0) return [];
+
+    // Sync any pending payments with Razorpay
+    const pendingPayments = data.filter(
+      (p: any) => p.status === 'pending' && p.razorpay_order_id,
+    );
+
+    if (pendingPayments.length > 0) {
+      const syncedPayments = await Promise.all(
+        pendingPayments.map((p: any) =>
+          this.syncPendingPaymentWithRazorpay(p),
+        ),
+      );
+      const syncedMap = new Map(syncedPayments.map((p) => [p.id, p]));
+      return data.map((p: any) => syncedMap.get(p.id) ?? p);
+    }
+
     return data;
   }
 }

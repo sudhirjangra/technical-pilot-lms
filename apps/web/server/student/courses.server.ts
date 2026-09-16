@@ -310,6 +310,31 @@ export async function verifyPayment(payment: {
   return error ? { error: typeof error === 'string' ? error : 'Payment verification failed' } : {};
 }
 
+export async function reportPaymentFailure(details: {
+  razorpay_order_id: string;
+  razorpay_payment_id?: string;
+  error_description?: string;
+  error_code?: string;
+}): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+
+  const [error] = await safeFetch(
+    z.object({ status: z.string() }).passthrough(),
+    '/payments/fail',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(details),
+      cache: 'no-store',
+    },
+  );
+  return error ? { error: typeof error === 'string' ? error : 'Failed to record failure' } : {};
+}
+
 export async function getCourseProgress(
   courseId: string,
   courseMeta?: { title?: string | null; thumbnailUrl?: string | null },

@@ -38,12 +38,29 @@ export class JwtRefreshGuard implements CanActivate {
 
     const { data } = await this.supabase
       .from('devices')
-      .select('id')
+      .select('id, is_banned')
       .eq('user_id', request.user.id)
       .eq('device_fingerprint', token)
       .maybeSingle();
 
     if (!data) throw new UnauthorizedException('Invalid Refresh Token');
+    if (data.is_banned) {
+      throw new UnauthorizedException(
+        'This device has been banned by an administrator.',
+      );
+    }
+
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('is_active')
+      .eq('id', request.user.id)
+      .maybeSingle();
+
+    if (profile?.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator.',
+      );
+    }
     return true;
   }
 

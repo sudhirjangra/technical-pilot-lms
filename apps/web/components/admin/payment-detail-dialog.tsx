@@ -203,7 +203,7 @@ export function PaymentDetailDialog({
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
                 <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Amount Paid
+                  {payment.status === 'completed' ? 'Amount Paid' : 'Order Amount'}
                 </span>
                 <p className="text-2xl font-bold text-foreground mt-0.5">
                   ₹{Number(payment.amount).toLocaleString('en-IN')}

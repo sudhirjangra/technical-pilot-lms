@@ -55,6 +55,31 @@ export class UsersService {
       .select('id, email, role, full_name, is_active')
       .single();
     if (error) throw new NotFoundException('User not found');
+
+    if (!isActive) {
+      // 1. Immediately revoke all active sessions for this user
+      await this.supabase.from('devices').delete().eq('user_id', id);
+
+      // 2. Ban user in Supabase Auth to revoke refresh tokens and block auth
+      try {
+        await this.supabase.auth.admin.updateUserById(id, {
+          ban_duration: '876000h',
+        });
+        await this.supabase.auth.admin.signOut(id);
+      } catch {
+        // Continue even if Supabase Auth call fails
+      }
+    } else {
+      // Unban in Supabase Auth when reactivating
+      try {
+        await this.supabase.auth.admin.updateUserById(id, {
+          ban_duration: 'none',
+        });
+      } catch {
+        // Continue even if Supabase Auth call fails
+      }
+    }
+
     return data;
   }
 

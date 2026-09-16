@@ -21,6 +21,7 @@ import {
   Legend as RechartsLegend,
 } from 'recharts';
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
   BarChart3,
@@ -488,12 +489,12 @@ export function DashboardClient({
         <Card className="border-border shadow-sm">
           <CardHeader className="p-3.5 sm:p-5 flex flex-row items-center justify-between border-b border-border/50">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-              <Receipt className="size-4 text-primary shrink-0" />
-              Recent Invoices & Payment History
+              <CreditCard className="size-4 text-primary shrink-0" />
+              Recent Payment History
             </CardTitle>
             <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" asChild>
               <Link href="/dashboard/payments">
-                View All Invoices <ArrowRight className="size-3" />
+                View All Payments <ArrowRight className="size-3" />
               </Link>
             </Button>
           </CardHeader>
@@ -504,7 +505,7 @@ export function DashboardClient({
                   <tr>
                     <th className="py-2.5 px-3">Date</th>
                     <th className="py-2.5 px-3">Course</th>
-                    <th className="py-2.5 px-3">Invoice #</th>
+                    <th className="py-2.5 px-3">Order ID</th>
                     <th className="py-2.5 px-3">Amount</th>
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3 text-right">Details</th>
@@ -516,6 +517,7 @@ export function DashboardClient({
                       p.status === 'captured' ||
                       p.status === 'paid' ||
                       p.status === 'completed';
+                    const isFailed = p.status === 'failed';
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
@@ -529,25 +531,36 @@ export function DashboardClient({
                           {p.courses?.title ?? 'Course Enrollment'}
                         </td>
                         <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
-                          {p.invoice_number ?? '—'}
+                          {p.razorpay_order_id
+                            ? p.razorpay_order_id.length > 14
+                              ? `${p.razorpay_order_id.slice(0, 14)}...`
+                              : p.razorpay_order_id
+                            : '—'}
                         </td>
                         <td className="py-2.5 px-3 font-bold text-foreground">
                           ₹{Number(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-2.5 px-3">
                           {isSuccess ? (
-                            <Badge variant="default" className="bg-emerald-600 text-white text-[10px]">
+                            <Badge variant="default" className="bg-emerald-600 text-white text-[10px] gap-1">
+                              <CheckCircle2 className="size-3" />
                               Paid
                             </Badge>
+                          ) : isFailed ? (
+                            <Badge variant="destructive" className="text-[10px] gap-1">
+                              <AlertCircle className="size-3" />
+                              Failed
+                            </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-[10px]">
-                              {p.status}
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] gap-1">
+                              <Clock3 className="size-3" />
+                              Pending
                             </Badge>
                           )}
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" asChild>
-                            <Link href="/dashboard/payments">View Receipt</Link>
+                            <Link href="/dashboard/payments">View Details</Link>
                           </Button>
                         </td>
                       </tr>

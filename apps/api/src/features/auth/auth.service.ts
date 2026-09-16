@@ -412,6 +412,12 @@ export class AuthService {
       throw new NotFoundException('Profile not found');
     }
 
+    if (profile.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator. Please contact support for assistance.',
+      );
+    }
+
     // Check device limit
     const { data: existingDevices } = await this.supabase
       .from('devices')
@@ -857,9 +863,15 @@ export class AuthService {
 
     const { data: profile } = await this.supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_active')
       .eq('id', dto.user_id)
       .single();
+
+    if (profile?.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator. Please contact support for assistance.',
+      );
+    }
 
     const tokens = await this.generateTokens(
       userData.user.id,
@@ -923,6 +935,19 @@ export class AuthService {
         'This device has been banned by an administrator.',
       );
     }
+
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('is_active')
+      .eq('id', data.user_id)
+      .maybeSingle();
+
+    if (profile?.is_active === false) {
+      throw new UnauthorizedException(
+        'Your account has been disabled by an administrator.',
+      );
+    }
+
     return data;
   }
 

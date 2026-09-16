@@ -272,6 +272,14 @@ export function StudentDetailClient({
   /* ── Handlers ─────────────────────────────────────────────────── */
 
   const handleToggleActive = async () => {
+    if (
+      isActive &&
+      !confirm(
+        'Are you sure you want to ban/disable this student account? All active device sessions will be immediately terminated and the student will be blocked from accessing resources or logging in.',
+      )
+    ) {
+      return;
+    }
     setLoading(true);
     const result = await toggleStudentActive(student.id, !isActive);
     setLoading(false);
@@ -279,7 +287,7 @@ export function StudentDetailClient({
       toast.error('Failed to update status');
       return;
     }
-    toast.success(`Student ${isActive ? 'disabled' : 'enabled'}`);
+    toast.success(`Student account ${isActive ? 'banned and disabled' : 'enabled'}`);
     router.refresh();
   };
 
@@ -557,13 +565,8 @@ export function StudentDetailClient({
               {student.role}
             </Badge>
             <Badge variant={isActive ? 'default' : 'destructive'} className="text-[10px] sm:text-xs">
-              {isActive ? 'Active' : 'Disabled'}
+              {isActive ? 'Active' : 'Banned / Disabled'}
             </Badge>
-            {student.date_of_birth && (
-              <span className="text-muted-foreground text-[10px] sm:text-xs">
-                DOB: {formatDate(student.date_of_birth)}
-              </span>
-            )}
           </div>
         </div>
         <Button
@@ -573,7 +576,7 @@ export function StudentDetailClient({
           onClick={handleToggleActive}
           disabled={loading}
         >
-          {isActive ? 'Disable Account' : 'Enable Account'}
+          {isActive ? 'Ban / Disable Account' : 'Enable Account'}
         </Button>
       </div>
 

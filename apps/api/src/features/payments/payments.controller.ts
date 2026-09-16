@@ -9,7 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateOrderDto, VerifyPaymentDto } from './dto';
+import { CreateOrderDto, FailPaymentDto, VerifyPaymentDto } from './dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('Payments')
@@ -33,6 +33,15 @@ export class PaymentsController {
     @Req() req: { user: { id: string } },
   ) {
     return this.paymentsService.verifyPayment(dto, req.user.id);
+  }
+
+  /** Student: record payment failure after bank or checkout failure */
+  @Post('fail')
+  failPayment(
+    @Body() dto: FailPaymentDto,
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.paymentsService.recordPaymentFailure(dto, req.user.id);
   }
 
   /** Razorpay webhook — no auth required, signature verified internally */

@@ -5,8 +5,8 @@ import { redirect } from 'next/navigation';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Payment History & Invoices | Technical Pilot',
-  description: 'View your course purchase history, transaction receipts, and invoices.',
+  title: 'Payment History | Technical Pilot',
+  description: 'View your course purchase and payment history.',
 };
 
 export default async function StudentPaymentsPage() {

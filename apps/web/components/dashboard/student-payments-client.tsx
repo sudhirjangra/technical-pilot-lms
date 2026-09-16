@@ -18,17 +18,18 @@ import {
 } from '@repo/shadcn/dialog';
 import {
   CreditCard,
-  Receipt,
   Search,
   CheckCircle2,
   AlertCircle,
   Clock,
-  Printer,
   ExternalLink,
   BookOpen,
   ArrowUpRight,
   ShieldCheck,
+  Copy,
+  Eye,
 } from '@repo/shadcn/lucide';
+import { toast } from '@repo/shadcn/sonner';
 import { APP_NAME } from '@repo/constants/app';
 
 interface StudentPaymentsClientProps {
@@ -41,7 +42,6 @@ interface StudentPaymentsClientProps {
 
 export function StudentPaymentsClient({
   initialPayments,
-  user,
 }: StudentPaymentsClientProps) {
   const [payments] = useState<StudentPayment[]>(initialPayments);
   const [search, setSearch] = useState('');
@@ -70,8 +70,9 @@ export function StudentPaymentsClient({
     (p) => p.status === 'captured' || p.status === 'paid' || p.status === 'completed',
   ).length;
 
-  const handlePrint = () => {
-    window.print();
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
   };
 
   return (
@@ -80,11 +81,11 @@ export function StudentPaymentsClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-3xl font-bold tracking-tight flex items-center gap-2.5">
-            <Receipt className="size-6 sm:size-8 text-primary" />
-            Payment History & Invoices
+            <CreditCard className="size-6 sm:size-8 text-primary" />
+            Payment History
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Review all your course purchase receipts, order references, and tax invoices.
+            Review all your course orders, payment references, and transaction statuses.
           </p>
         </div>
         <Button variant="outline" size="sm" asChild className="h-9 gap-1.5 self-start sm:self-auto">
@@ -144,15 +145,15 @@ export function StudentPaymentsClient({
       <Card className="border-border">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
           <div>
-            <CardTitle className="text-base font-semibold">Transactions & Invoices</CardTitle>
+            <CardTitle className="text-base font-semibold">Transactions & Orders</CardTitle>
             <CardDescription className="text-xs">
-              All transactions processed for your account
+              All orders and payments processed for your account
             </CardDescription>
           </div>
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search course, invoice, order ID..."
+              placeholder="Search course, order ID, payment ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-8 text-xs"
@@ -171,11 +172,11 @@ export function StudentPaymentsClient({
                   <tr>
                     <th className="py-2.5 px-3">Date</th>
                     <th className="py-2.5 px-3">Course</th>
-                    <th className="py-2.5 px-3">Invoice #</th>
-                    <th className="py-2.5 px-3">Order / Reference</th>
+                    <th className="py-2.5 px-3">Order ID</th>
+                    <th className="py-2.5 px-3">Payment ID</th>
                     <th className="py-2.5 px-3">Amount</th>
                     <th className="py-2.5 px-3">Status</th>
-                    <th className="py-2.5 px-3 text-right">Receipt</th>
+                    <th className="py-2.5 px-3 text-right">Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -185,6 +186,7 @@ export function StudentPaymentsClient({
                       p.status === 'paid' ||
                       p.status === 'completed';
                     const isPending = p.status === 'created' || p.status === 'pending';
+                    const isFailed = p.status === 'failed';
 
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
@@ -226,14 +228,20 @@ export function StudentPaymentsClient({
                           </div>
                         </td>
                         <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
-                          {p.invoice_number ?? '—'}
-                        </td>
-                        <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
                           <span title={p.razorpay_order_id ?? ''}>
                             {p.razorpay_order_id
                               ? p.razorpay_order_id.length > 14
                                 ? `${p.razorpay_order_id.slice(0, 14)}...`
                                 : p.razorpay_order_id
+                              : '—'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
+                          <span title={p.razorpay_payment_id ?? ''}>
+                            {p.razorpay_payment_id
+                              ? p.razorpay_payment_id.length > 14
+                                ? `${p.razorpay_payment_id.slice(0, 14)}...`
+                                : p.razorpay_payment_id
                               : '—'}
                           </span>
                         </td>
@@ -259,9 +267,14 @@ export function StudentPaymentsClient({
                               Pending
                             </Badge>
                           )}
-                          {!isSuccess && !isPending && (
+                          {isFailed && (
                             <Badge variant="destructive" className="text-[10px] gap-1">
                               <AlertCircle className="size-3" />
+                              Failed
+                            </Badge>
+                          )}
+                          {!isSuccess && !isPending && !isFailed && (
+                            <Badge variant="secondary" className="text-[10px] gap-1">
                               {p.status}
                             </Badge>
                           )}
@@ -273,8 +286,8 @@ export function StudentPaymentsClient({
                             className="h-7 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
                             onClick={() => setSelectedPayment(p)}
                           >
-                            <Receipt className="size-3" />
-                            View Receipt
+                            <Eye className="size-3" />
+                            View Details
                           </Button>
                         </td>
                       </tr>
@@ -287,16 +300,16 @@ export function StudentPaymentsClient({
         </CardContent>
       </Card>
 
-      {/* Invoice / Receipt Modal */}
+      {/* Order Details Modal */}
       <Dialog
         open={!!selectedPayment}
         onOpenChange={(open) => {
           if (!open) setSelectedPayment(null);
         }}
       >
-        <DialogContent className="max-w-lg p-5 sm:p-6 print:m-0 print:p-0 print:border-none print:shadow-none">
+        <DialogContent className="max-w-md p-5 sm:p-6">
           {selectedPayment && (
-            <div className="space-y-4" id="printable-receipt">
+            <div className="space-y-4">
               <DialogHeader className="border-b pb-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -306,117 +319,157 @@ export function StudentPaymentsClient({
                     <div>
                       <DialogTitle className="text-base font-bold">{APP_NAME}</DialogTitle>
                       <DialogDescription className="text-xs">
-                        Official Payment Receipt & Tax Invoice
+                        Order Details
                       </DialogDescription>
                     </div>
                   </div>
-                  <Badge
-                    variant="default"
-                    className="bg-emerald-600 text-white text-[10px] uppercase tracking-wider"
-                  >
-                    Paid
-                  </Badge>
+                  {selectedPayment.status === 'completed' ||
+                  selectedPayment.status === 'paid' ||
+                  selectedPayment.status === 'captured' ? (
+                    <Badge
+                      variant="default"
+                      className="bg-emerald-600 text-white text-[10px] uppercase tracking-wider gap-1"
+                    >
+                      <CheckCircle2 className="size-3" />
+                      Paid
+                    </Badge>
+                  ) : selectedPayment.status === 'failed' ? (
+                    <Badge
+                      variant="destructive"
+                      className="text-[10px] uppercase tracking-wider gap-1"
+                    >
+                      <AlertCircle className="size-3" />
+                      Failed
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] uppercase tracking-wider gap-1"
+                    >
+                      <Clock className="size-3" />
+                      Pending
+                    </Badge>
+                  )}
                 </div>
               </DialogHeader>
 
-              {/* Invoice Metadata */}
-              <div className="grid grid-cols-2 gap-2 text-xs border-b pb-3">
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Invoice Number</span>
-                  <span className="font-mono font-semibold">{selectedPayment.invoice_number ?? 'N/A'}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-muted-foreground block text-[10px]">Date of Purchase</span>
-                  <span className="font-medium">
-                    {new Date(selectedPayment.created_at).toLocaleString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px]">Billed To</span>
-                  <span className="font-medium text-foreground">
-                    {user.full_name || user.email || 'Enrolled Student'}
-                  </span>
-                  <span className="block text-[11px] text-muted-foreground">{user.email}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-muted-foreground block text-[10px]">Payment Provider</span>
-                  <span className="font-medium">Razorpay PG (INR)</span>
-                  {selectedPayment.razorpay_payment_id && (
-                    <span className="block font-mono text-[10px] text-muted-foreground truncate max-w-[150px] ml-auto">
-                      ID: {selectedPayment.razorpay_payment_id}
+              {/* Basic Details with Order ID */}
+              <div className="space-y-3 text-xs">
+                <div className="rounded-lg border bg-muted/20 p-3 space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground text-[11px] shrink-0">Course</span>
+                    <span className="font-semibold text-foreground text-right">
+                      {selectedPayment.courses?.title ?? 'Course Enrollment'}
                     </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Itemized list */}
-              <div className="space-y-2 border-b pb-3">
-                <div className="flex justify-between text-xs text-muted-foreground font-semibold">
-                  <span>Description</span>
-                  <span>Amount</span>
-                </div>
-                <div className="flex items-start justify-between text-xs gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">
-                      {selectedPayment.courses?.title ?? 'Course Access License'}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Order Reference: {selectedPayment.razorpay_order_id ?? 'Direct Order'}
-                    </p>
                   </div>
-                  <span className="font-semibold text-foreground whitespace-nowrap">
-                    ₹{Number(selectedPayment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground text-[11px] shrink-0">Order ID</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-mono font-medium text-foreground truncate text-[11px]">
+                        {selectedPayment.razorpay_order_id ?? '—'}
+                      </span>
+                      {selectedPayment.razorpay_order_id && (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(selectedPayment.razorpay_order_id!, 'Order ID')}
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-0.5"
+                          title="Copy Order ID"
+                        >
+                          <Copy className="size-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground text-[11px] shrink-0">Payment ID</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-mono font-medium text-foreground truncate text-[11px]">
+                        {selectedPayment.razorpay_payment_id || 'Not completed'}
+                      </span>
+                      {selectedPayment.razorpay_payment_id && (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(selectedPayment.razorpay_payment_id!, 'Payment ID')}
+                          className="text-muted-foreground hover:text-foreground shrink-0 p-0.5"
+                          title="Copy Payment ID"
+                        >
+                          <Copy className="size-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground text-[11px] shrink-0">Date</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(selectedPayment.created_at).toLocaleString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border/60 pt-2">
+                    <span className="font-semibold text-foreground text-xs">Amount</span>
+                    <span className="font-bold text-sm text-foreground">
+                      ₹{Number(selectedPayment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Status Notice */}
+                {selectedPayment.status === 'completed' ||
+                selectedPayment.status === 'paid' ||
+                selectedPayment.status === 'captured' ? (
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px]">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                    <span>Payment verified successfully. Your course access is active.</span>
+                  </div>
+                ) : selectedPayment.status === 'failed' ? (
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 text-[11px]">
+                    <AlertCircle className="size-4 shrink-0 text-rose-600" />
+                    <span>Payment attempt failed or was declined by the bank.</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px]">
+                    <Clock className="size-4 shrink-0 text-amber-600" />
+                    <span>Payment is pending verification or awaiting completion.</span>
+                  </div>
+                )}
               </div>
 
-              {/* Total & Summary */}
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span>₹{Number(selectedPayment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Taxes (GST Inclusive)</span>
-                  <span>₹0.00</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-foreground border-t pt-2">
-                  <span>Total Paid</span>
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    ₹{Number(selectedPayment.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground text-center">
-                This is a computer-generated receipt for Technical Pilot LMS enrollment. For queries, contact support@technicalpilot.com.
-              </div>
-
-              <DialogFooter className="flex-row justify-between sm:justify-between items-center gap-2 pt-2">
+              <DialogFooter className="flex-row justify-between sm:justify-between items-center gap-2 pt-2 border-t">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  onClick={handlePrint}
+                  className="h-8 text-xs"
+                  onClick={() => setSelectedPayment(null)}
                 >
-                  <Printer className="size-3.5" />
-                  Print / Save PDF
+                  Close
                 </Button>
-                {selectedPayment.courses?.slug && (
+                {selectedPayment.status === 'completed' ||
+                selectedPayment.status === 'paid' ||
+                selectedPayment.status === 'captured' ? (
                   <Button size="sm" className="h-8 text-xs gap-1.5" asChild>
                     <Link href={`/dashboard/courses/${selectedPayment.course_id}`}>
                       <ExternalLink className="size-3.5" />
                       Go to Course
                     </Link>
                   </Button>
-                )}
+                ) : selectedPayment.courses?.slug ? (
+                  <Button size="sm" className="h-8 text-xs gap-1.5" asChild>
+                    <Link href={`/courses/${selectedPayment.courses.slug}`}>
+                      <ExternalLink className="size-3.5" />
+                      Try Again
+                    </Link>
+                  </Button>
+                ) : null}
               </DialogFooter>
             </div>
           )}

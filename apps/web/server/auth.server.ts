@@ -426,16 +426,16 @@ export const resetPassword = safeAction
  */
 export const getSessionById = async () => {
   const session = await auth();
+  if (!session?.user?.tokens?.session_token) {
+    return ['No active session token', null] as const;
+  }
   return await safeFetch(
     GetSessionSchema,
-    `/auth/session/${session?.user?.tokens.session_token}`,
+    `/auth/session/${session.user.tokens.session_token}`,
     {
-      next: {
-        tags: ['next-auth-session'],
-        revalidate: 86400, // 24 hours
-      },
+      cache: 'no-store',
       headers: {
-        Authorization: `Bearer ${session?.user?.tokens.access_token}`,
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
       },
     },
   );
@@ -616,14 +616,20 @@ export const validateSessionIfExist = async (): Promise<{
   disabled: boolean;
 }> => {
   const [error, data] = await getSessionById();
-  // Must match the API wording exactly — a loose "disabled" check also matched plain
-  // expired/missing sessions, so signed-out users were told their account was disabled.
-  const disabled = error?.includes('disabled by an administrator') ?? false;
+  const disabled =
+    error?.includes('disabled by an administrator') ||
+    error?.includes('account has been disabled') ||
+    error?.includes('banned by an administrator') ||
+    false;
   if (error) {
     if (process.env.NODE_ENV !== 'production') console.log('Validate session error', error);
-    // Only sign out if the error indicates the session is truly invalid (404) or the
-    // account has been disabled by an admin, not when the API is just unreachable.
-    if (error.includes('Session not found') || error.includes('Invalid Access Token') || disabled) {
+    // Sign out if session is missing (404), invalid (401), banned, or account disabled
+    if (
+      error.includes('Session not found') ||
+      error.includes('Invalid Access Token') ||
+      error.includes('banned') ||
+      disabled
+    ) {
       await signOut({
         redirect: false,
       });
