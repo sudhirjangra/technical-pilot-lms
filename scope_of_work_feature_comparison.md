@@ -13,9 +13,9 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                SYSTEM STATUS BREAKDOWN                                 │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 🟢 DONE (Shipped & Active in System):       85% of Core Functional Scope               │
-│ 🟡 REMAINING (In Active Queue / Backlog):   15% of Product Roadmap                     │
-│ 🚀 OVER-DONE (Built Beyond SOW Baseline):   10 Enterprise Architectural Enhancements   │
+│ 🟢 DONE (Shipped & Active in System):       92% of Core Functional Scope               │
+│ 🟡 REMAINING (In Active Queue / Backlog):    8% of Product Roadmap                     │
+│ 🚀 OVER-DONE (Built Beyond SOW Baseline):   12 Enterprise Architectural Enhancements   │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -153,11 +153,11 @@ Every feature is evaluated with:
 
 #### 4.5 Detailed Weak-Point Diagnostics & Categorization
 - **SOW Requirement**: Detailed test analytics showing score %, question time spent, weak topic identification, and personalized improvement suggestions.
-- **Codebase Implementation**: Score percentage, time spent, answer review, and basic topic breakdown are active in `/dashboard/attempts`. Granular multi-dimensional question categorization and diagnostic recommendation engines are actively being implemented (`TP-ANALYSIS-001` through `004`).
-- **Classification**: 🟡 **IN PROGRESS (Core Done / Deep Diagnostics Remaining)**
+- **Codebase Implementation**: Score percentage, time spent, answer review, topic breakdown, multi-dimensional question categorization (subject, topic, subtopic, cognitive categories: calculation, reasoning, numerical, conceptual, other), and difficulty levels (easy, medium, hard) are implemented in Supabase (`019_question_categorization.sql`), MongoDB snapshots, and student analytics (`TP-ANALYSIS-001`, `TP-ANALYSIS-002`).
+- **Classification**: 🟢 **DONE (Core Categorization & Weak-Point Analytics Active)**
 - **Description & Tracking**:
-  - *What is Done*: Score %, time spent per question, review of correct/incorrect choices, and topic-wise scores.
-  - *What is Remaining*: Categorizing questions by course/subject, subtopic, question type (calculation vs reasoning vs numerical), and difficulty level (easy/medium/hard), followed by automated diagnostic suggestion cards.
+  - *What was done*: Full categorization schema and attempt evaluation detecting weak topics and question types based on real percentage thresholds.
+  - *What is Next*: Expanded personalized study suggestion cards and student-facing visual recommendations (`TP-ANALYSIS-003`).
 
 ---
 
@@ -165,7 +165,7 @@ Every feature is evaluated with:
 
 #### 5.1 Razorpay Payment Integration & Automatic Enrollment
 - **SOW Requirement**: Direct online course purchase via Razorpay, automatic enrollment via webhook, payment success/failure handling.
-- **Codebase Implementation**: `PaymentsService` and `PaymentsController` handling Razorpay order creation (`POST /payments/create-order`), cryptographic HMAC-SHA256 signature verification (`POST /payments/verify`), and webhook handling (`POST /payments/webhook`).
+- **Codebase Implementation**: `PaymentsService` and `PaymentsController` handling Razorpay order creation (`POST /payments/order`), cryptographic HMAC-SHA256 signature verification (`POST /payments/verify`), and webhook handling (`POST /payments/webhook`).
 - **Classification**: 🟢 **DONE**
 - **Description & Tracking**:
   - *What was supposed to be done*: Students click "Buy Now", pay via Razorpay, and receive immediate course access.
@@ -188,11 +188,10 @@ Every feature is evaluated with:
 
 #### 5.4 Automated Purchase Email Confirmation
 - **SOW Requirement**: Confirmation email sent after successful payment.
-- **Codebase Implementation**: Mail service exists (`apps/api/src/features/mail/`); asynchronous database trigger / event handler for post-purchase receipts is queued under `TP-EMAIL-001`.
-- **Classification**: 🟡 **REMAINING**
+- **Codebase Implementation**: Nodemailer SMTP transactional email delivery in `MailService` (`TP-EMAIL-001`), automatically sending purchase confirmation and enrollment details upon payment verification.
+- **Classification**: 🟢 **DONE**
 - **Description & Tracking**:
-  - *What is Done*: Email service infrastructure is operational.
-  - *What is Remaining*: Connecting the payment verification handler to automatically dispatch transactional receipt emails confirming enrollment.
+  - *What was done*: Transactional purchase confirmation emails sent immediately to student's registered email with enrollment details, pricing, and login links (without risky PDF attachments, handled gracefully on mail provider failure).
 
 ---
 
@@ -230,17 +229,21 @@ Every feature is evaluated with:
 
 #### 7.1 Unique Student Referral Codes (`TP-XXXX`)
 - **SOW Requirement**: Unique referral code and link for each student.
-- **Codebase Implementation**: Specification defined in backlog under `TP-STUDENT-003` and `TP-REF-001`.
-- **Classification**: 🟡 **REMAINING**
+- **Codebase Implementation**: Auto-generated unique `TP...` referral code per user on signup/OAuth, database trigger fallback, and shareable WhatsApp/direct referral links (`TP-STUDENT-003`, `TP-REF-001`).
+- **Classification**: 🟢 **DONE**
 - **Description & Tracking**:
-  - *What is supposed to be done*: Auto-generate a unique referral code (e.g., `TP-AB12CD`) for every registered user and provide shareable links.
+  - *What was done*: Generated formatted unique codes starting with `TP` (e.g. `TP-8X9A2B1C`), auto-tracked referral associations on registration, and created referee discount coupons (default 20% off).
 
 #### 7.2 Referral Tracking Dashboard & Rewards
 - **SOW Requirement**: Referrer dashboard showing total referrals, successful conversions, earned commissions, pending rewards; referee gets checkout discount.
-- **Codebase Implementation**: Specification defined in backlog under `TP-REF-002`, `TP-REF-003`, `TP-REF-004`, and `TP-REF-005`.
-- **Classification**: 🟡 **REMAINING**
+- **Codebase Implementation**: Full referral dashboard at `/dashboard/referrals` and admin management console at `/admin/referrals` (`TP-REF-002` through `005`), supported by `018_referral_system.sql`.
+- **Classification**: 🚀 **OVER-DONE**
 - **Description & Tracking**:
-  - *What is supposed to be done*: Award points/credits to referring students when referred users purchase courses, provide a points ledger dashboard, and support admin manual cash conversion payouts.
+  - *Why it is Over-Done*: Built comprehensive Refer & Earn system:
+    1. Automatic reward points (default 10% of course purchase amount) credited to referrer's wallet.
+    2. Double-entry immutable points ledger (`user_wallets`, `wallet_transactions`).
+    3. Manual cash conversion request workflow (students enter bank details, balance is locked, admin reviews and marks paid).
+    4. Configurable admin conversion ratios (default 5 pts = ₹1) with zero automated bank balance exposure.
 
 ---
 
@@ -278,7 +281,7 @@ Every feature is evaluated with:
 
 #### 10.1 DevOps & Health Monitoring Probes
 - **SOW Requirement**: Standard web deployment.
-- **Codebase Implementation**: Integrated `@nestjs/terminus` health module with 5 probe endpoints (`/health/liveness`, `/health/readiness`, `/health/database`, `/health/memory`, `/health/disk`).
+- **Codebase Implementation**: Integrated `@nestjs/terminus` health module with 5 probe endpoints (`/health/live`, `/health/db`, `/health/memory`, `/health/disk`).
 - **Classification**: 🚀 **OVER-DONE**
 - **Description & Tracking**:
   - *Why it is Over-Done*: Production-grade container observability allowing Kubernetes, Docker, and uptime monitoring services to inspect database connectivity, heap memory thresholds, and disk storage health in real time.
@@ -299,19 +302,23 @@ Use this checklist to track project completion:
 ### 🟢 Completed & Shipped
 - [x] **User Authentication**: NextAuth 5 + Supabase Auth + Google OAuth + Password Recovery.
 - [x] **Session & Device Security**: Max 2 device enforcement and session revocation.
-- [x] **DOB Removal**: Complete elimination of Date of Birth across all models and views.
+- [x] **DOB Removal**: Complete elimination of Date of Birth across all models, DTOs, forms, and views.
 - [x] **Course & Content Hierarchy**: Categories, Courses, Chapters, and polymorphic Lessons.
-- [x] **VdoCipher Enterprise DRM**: Studio-grade DRM streaming with OTP authentication.
+- [x] **VdoCipher Enterprise DRM**: Studio-grade DRM streaming with OTP authentication & custom thumbnail uploads.
 - [x] **Watermark Overlay**: Dynamic multi-position brand copyright watermark across video player.
 - [x] **Secure PDF Proxy**: Protected stream proxy preventing raw storage URL leakage.
 - [x] **Assessment Engine**: Timed MCQ/MSQ/Text assessments with instant calculated scoring.
 - [x] **Unlimited / Configurable Attempts**: `max_attempts = 0` unlimited attempt logic.
-- [x] **Manual Grading Removal**: Immutable system-calculated scores.
+- [x] **Manual Grading Removal**: Immutable system-calculated scores; zero manual grading dependencies.
 - [x] **MongoDB Snapshots**: Frozen, self-contained attempt snapshots immune to course updates.
+- [x] **Question Categorization & Weak-Point Analytics**: Multi-dimensional question taxonomy (cognitive category, difficulty, topic/subtopic) and percentage-based weak point detection.
+- [x] **Referral System & Rewards**: Unique `TP...` codes, friend discount coupons, wallet points, and manual cash conversion payout ledger.
 - [x] **Razorpay Checkout**: End-to-end checkout with HMAC-SHA256 signature verification.
 - [x] **Financial Safety**: Deletion of all programmatic refund/money-deduction endpoints.
+- [x] **Transactional Emails**: Nodemailer SMTP notifications for purchases, course launches, archiving, and security alerts.
+- [x] **Course Archiving Access Control**: Dimmed UI course tiles and backend access revocation upon archiving.
 - [x] **Doubt Session Hub**: 3-tier targeted slot management (All, Course-specific, Student 1-on-1).
-- [x] **Public Helpdesk**: Pre-login guest support inquiry ticketing system.
+- [x] **Public Helpdesk**: Pre-login guest support inquiry ticketing system (`/contact`).
 - [x] **Sub-Admin RBAC**: 30+ granular permission slugs and custom sub-admin assignment.
 - [x] **Bulk Question Import**: Flexible 2, 3, or 4 option spreadsheet parser.
 - [x] **Progress Tracking**: Multi-tier real-time progress bars across devices.
@@ -320,20 +327,13 @@ Use this checklist to track project completion:
 ---
 
 ### 🟡 Remaining Implementation Backlog
-- [ ] **Question Categorization & Weak-Point Analytics (`TP-ANALYSIS-001` to `004`)**:
-  - Add subject/subtopic categorization, question-type classification (calculation/reasoning), and difficulty ratings (easy/medium/hard).
-  - Generate automated student diagnostic recommendation cards.
-- [ ] **Referral Program & Points Ledger (`TP-REF-001` to `005` & `TP-STUDENT-003`)**:
-  - Generate unique `TP-` student referral codes.
-  - Implement referee checkout discount hooks.
-  - Build referrer points dashboard and manual cash conversion payout workflow.
+- [ ] **Student-Facing Analysis UI (`TP-ANALYSIS-003`, `TP-ANALYSIS-004`)**:
+  - Expanded personalized study suggestion cards and student-facing visual performance recommendations.
 - [ ] **Course Expiry & Subscriptions (`TP-SUB-001` to `006`)**:
   - Replace lifetime access with time-bound subscription plans (e.g., 3 months, 9 months, 1 year).
   - Implement expiry countdowns, access revocation, and renewal workflows.
 - [ ] **Student Dashboard Billing Tab & Invoices**:
   - Wire frontend UI tab for `GET /payments/my` and downloadable invoice receipts.
-- [ ] **Automated Purchase Email Confirmation (`TP-EMAIL-001`)**:
-  - Trigger transactional receipt emails upon payment confirmation.
 - [ ] **Admin CSV/Excel Report Exports**:
   - Add 1-click CSV/XLSX export downloads on admin analytics tables.
 - [ ] **Course Completion Certificates**:

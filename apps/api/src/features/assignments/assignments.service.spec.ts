@@ -548,6 +548,8 @@ describe('AssignmentsService', () => {
       }),
       isConnected: jest.fn().mockReturnValue(true),
       getAttemptByAttemptId: jest.fn().mockResolvedValue(null),
+      deleteAttemptDraft: jest.fn().mockResolvedValue(undefined),
+      saveAttemptDraft: jest.fn().mockResolvedValue(undefined),
     };
 
     const attemptMigrationService = {};

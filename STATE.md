@@ -13,7 +13,8 @@
 - Direct VdoCipher custom video thumbnail upload, student course name display, assessment navigation exit guards, and lesson editor RangeError fixes are implemented.
 - SMTP transactional emails (course purchase receipt, new course launch announcement, course archived notice, password changes, sign-in/new device logins) and course archiving access control/notifications (TP-EMAIL-001, TP-ARCHIVE-001, TP-ARCHIVE-002) are implemented.
 - Referral & Wallet Reward system (TP-STUDENT-003, TP-REF-001 through TP-REF-005): Unique `TP...` referral codes, friend sign-up tracking with prefill URL, exclusive referee course discount coupons (default 20%), referrer wallet reward points on purchase (default 10%), admin conversion ratio (default 5 pts = ₹1), manual cash conversion requests with immutable double-entry ledger and admin review/payout management.
-- Supabase migrations through `018_referral_system.sql` are present in the repository. Applying migrations remains an environment operation.
+- Question Categorization & Difficulty taxonomy (TP-ANALYSIS-001, TP-ANALYSIS-002): Cognitive category (`reasoning`, `calculation`, `numerical`, `conceptual`, `other`) and difficulty levels (`easy`, `medium`, `hard`) persisted across Supabase, MongoDB attempt snapshots, bulk import/export, and performance analytics.
+- Supabase migrations through `019_question_categorization.sql` and `public_schema.sql` are present in the repository. Applying migrations remains an environment operation.
 
 
 ### Pending
@@ -31,7 +32,7 @@ Detailed requirements and acceptance criteria are preserved in the **Technical P
 - Course, category, chapter, lesson, video, PDF, assignment, test, question-bank import, grading, enrollment, payment, notification, doubt-session, progress, and analytics flows are implemented in the current codebase.
 - VdoCipher OTP playback, watermarking, concurrent playback checks, private PDF proxying, Supabase course media uploads, Razorpay verification/webhooks, and responsive admin/student UX are implemented.
 - Student and admin assessment attempt history, progress inspection, access-revoked handling, and the combined attempts page are implemented as the current baseline. Manual grading is no longer part of the current implementation.
-- Migrations through `017_contact_queries_support.sql` have been written in the repository. Applying database migrations is an environment operation, not a coding task.
+- Migrations through `019_question_categorization.sql` have been written in the repository. Applying database migrations is an environment operation, not a coding task.
 - [x] **TP-DISCOVERY-001 - Inspect affected flows and define migration boundaries**
   - **Inspected Code Paths**:
     - Submission & History: `apps/api/src/features/assignments/` and `apps/api/src/features/tests/` (controllers, services, DTOs), `apps/web/server/student/{assignments,tests}.server.ts`, `apps/web/components/dashboard/attempts-client.tsx`, `apps/web/components/dashboard/attempts-history-client.tsx`, `apps/web/components/admin/student-detail-client.tsx`.
