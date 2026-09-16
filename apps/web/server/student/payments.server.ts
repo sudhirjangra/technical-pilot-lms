@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { safeFetch } from '@/lib';
 import { z } from 'zod';
 
-export const StudentPaymentSchema = z
+const StudentPaymentSchema = z
   .object({
     id: z.string(),
     student_id: z.string(),

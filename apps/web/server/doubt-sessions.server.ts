@@ -184,7 +184,7 @@ export async function cancelBooking(bookingId: string) {
   return { success: true };
 }
 
-export const SlotBookingStudentSchema = z
+const SlotBookingStudentSchema = z
   .object({
     id: z.string(),
     slot_id: z.string(),
