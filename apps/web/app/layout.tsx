@@ -37,6 +37,7 @@ const roboto_mono = Roboto_Mono({
 
 export const metadata = {
   metadataBase: new URL(APP_URL),
+  applicationName: APP_NAME,
   title: {
     default: APP_NAME,
     template: `%s | ${APP_NAME}`,
@@ -67,6 +68,11 @@ export const metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  appleWebApp: {
+    capable: true,
+    title: APP_NAME,
+    statusBarStyle: 'default',
   },
   icons: {
     icon: [
