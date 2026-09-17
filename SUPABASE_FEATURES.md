@@ -1,36 +1,36 @@
-# Supabase Features Roadmap — Technical Pilot LMS
+# Supabase Features Reference & Roadmap — Technical Pilot LMS
 
-> Current state: Supabase used only for Auth + PostgreSQL + RLS. Realtime, Storage, Edge Functions, pg_cron, pgvector all unused.
+> Current state: Supabase provides PostgreSQL, Auth, RLS, and Storage (`course-media`, `pdf-notes`). Database migrations through `019_question_categorization.sql` are written and included in `public_schema.sql`. MongoDB serves as the assessment attempt history store.
 
 ---
 
 ## Status Summary
 
-| # | Feature | Status |
-|---|---------|--------|
-| 1 | Storage — Replace Local Filesystem | ✅ Accepted |
-| 2 | Storage — Course & Category Thumbnails | ✅ Accepted |
-| 3 | Storage — Assignment Submission Viewer | ✅ Accepted |
-| 4 | Auth — TOTP MFA | ✅ Accepted |
-| 5 | Realtime — Doubt Session Live Booking | ✅ Accepted |
-| 6 | Realtime — Admin Live Dashboard Stats | ✅ Accepted |
-| 7 | Realtime — New Lesson Published Notification | ✅ Accepted |
-| 8 | Realtime — Meeting Link Delivery | ✅ Accepted |
-| 9 | Realtime — Assignment Feedback Notification | ✅ Accepted |
-| 10 | PostgreSQL Full-Text Search | 🔜 Later |
-| 11 | pg_cron — Auto-Clean Expired Video Sessions | ❓ Needs clarification |
-| 12 | pg_cron — Auto-Cancel Past Doubt Slots | ✅ Accepted |
-| 13 | pg_cron — Enrollment Auto-Expiry | ✅ Accepted |
-| 14 | Database Webhooks — Payment Confirmation Email | ✅ Accepted |
-| 15 | pgvector — Course Recommendations | 🔜 Later |
-| 16 | Database Trigger — Auto Certificate on Completion | ✅ Accepted |
-| 17 | Edge Function — Razorpay Webhook Handler | ✅ Accepted |
-| 18 | Edge Function — VdoCipher OTP Proxy | ✅ Accepted |
-| 19 | Edge Function — PDF Page Count on Upload | ✅ Accepted |
-| 20 | Auth Admin — Global Session Invalidation | ✅ Accepted |
-| 21 | RLS Enhancement — Direct Client Safety | ✅ Accepted |
-| 22 | Auth Hook — Inject Role into JWT Claims | ✅ Accepted |
-| 23 | Built-in Monitoring | ✅ Accepted |
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 1 | Storage — Private PDF Notes & Course Media | ✅ Implemented | Supabase Storage buckets `pdf-notes` and `course-media` |
+| 2 | Storage — Course & Category Thumbnails | ✅ Implemented | Direct upload & public asset CDN handling |
+| 3 | Storage — Assignment Submission Viewer | 🔜 Planned | Stored in MongoDB snapshots & Supabase Storage |
+| 4 | Auth — TOTP MFA | 🔜 Later | Standard session auth + device limits active |
+| 5 | Realtime — Doubt Session Live Booking | 🔜 Later | Doubt targeting + notifications active |
+| 6 | Realtime — Admin Live Dashboard Stats | 🔜 Later | Polling / server action fetch active |
+| 7 | Realtime — New Lesson Published Notification | 🔜 Later | In-app notification dispatch active |
+| 8 | Realtime — Meeting Link Delivery | 🔜 Later | In-app notification + calendar slot active |
+| 9 | Realtime — Assignment Feedback Notification | 🔜 Later | Automatic scoring feedback active |
+| 10 | PostgreSQL Full-Text Search | 🔜 Later | Category and name filtering active |
+| 11 | pg_cron — Auto-Clean Expired Video Sessions | ❓ Optional | Handled by VdoCipher short-lived OTP |
+| 12 | pg_cron — Auto-Cancel Past Doubt Slots | 🔜 Later | Query-level date filtering active |
+| 13 | pg_cron — Enrollment Auto-Expiry | 🔜 Pending | Part of Subscription/Expiry epic (`TP-SUB`) |
+| 14 | Database Webhooks / SMTP — Transactional Emails | ✅ Implemented | Nodemailer SMTP service for purchases, notices, passwords |
+| 15 | pgvector — Course Recommendations | 🔜 Later | Optional future enhancement |
+| 16 | Database Trigger — Auto Certificate on Completion | 🔜 Later | Post-launch roadmap |
+| 17 | Edge Function — Razorpay Webhook Handler | ℹ️ Handled | NestJS API verified webhook handler active |
+| 18 | Edge Function — VdoCipher OTP Proxy | ℹ️ Handled | NestJS API proxy active |
+| 19 | Edge Function — PDF Page Count on Upload | 🔜 Later | Client/Server parsing |
+| 20 | Auth Admin — Global Session Invalidation | ✅ Implemented | Device revocation in profile and admin console |
+| 21 | RLS Enhancement — Direct Client Safety | ✅ Implemented | RLS policies configured across all 19+ migrations |
+| 22 | Auth Hook — Inject Role into JWT Claims | ✅ Implemented | Profile role synchronization in NextAuth JWT |
+| 23 | Built-in Monitoring | ✅ Implemented | Terminus probes `/health`, `/health/db`, etc. |
 
 ---
 

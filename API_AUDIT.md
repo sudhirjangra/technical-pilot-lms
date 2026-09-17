@@ -1,6 +1,6 @@
 # Technical Pilot LMS — API Reference & Usage Audit
 
-This document provides a comprehensive audit and specification of all **156 endpoints** across **18 domains** exposed by the Technical Pilot LMS NestJS API (`http://localhost:8000/api-docs#`).
+This document provides a comprehensive audit and specification of all **150 endpoints** across **19 domains** exposed by the Technical Pilot LMS NestJS API (`http://localhost:8000/api-docs#`).
 
 ---
 
@@ -8,29 +8,24 @@ This document provides a comprehensive audit and specification of all **156 endp
 
 | Category | Endpoint Count | Description |
 | :--- | :---: | :--- |
-| 🟢 **Active (Web Application)** | **141** | Actively invoked by Next.js server actions, API routes, or React client components. |
+| 🟢 **Active (Web Application)** | **140** | Actively invoked by Next.js server actions, API routes, or React client components. |
 | ⚙️ **Infrastructure / Health** | **5** | DevOps health probes (`@nestjs/terminus`) for uptime, database, memory, and disk monitoring. |
-| 🔗 **External Webhook** | **1** | Server-to-server callback endpoint invoked directly by Razorpay payment gateway. |
-| ⚠️ **Unused in Frontend** | **9** | Endpoints fully implemented in NestJS with active DB logic, but currently lacking UI or caller in `apps/web`. |
-| **Total Endpoints** | **156** | |
+| 🔗 **External Webhook** | **1** | Server-to-server callback endpoint invoked directly by Razorpay payment gateway (`POST /payments/webhook`). |
+| ⚠️ **Unused / Secondary in Frontend** | **4** | Endpoints fully implemented in NestJS with active DB logic, but currently secondary or lacking dedicated UI. |
+| **Total Endpoints** | **150** | Across 19 Feature Domain Modules |
 
 ---
 
-## 2. Unused Endpoints Audit & Roadmap Recommendations
+## 2. Unused / Secondary Endpoints Audit
 
-The following **9 endpoints** exist in the backend API but are **not called** anywhere in `apps/web`:
+The following **4 endpoints** exist in the backend API but are currently secondary:
 
 | # | Domain | Method & Path | Controller Method | Reason / Why Unused in Frontend | Recommended Action |
 | :-: | :--- | :--- | :--- | :--- | :--- |
 | **1** | **Analytics** | `GET /analytics/courses/{courseId}/chapters/{chapterId}` | `AnalyticsController.getChapterAnalytics` | Granular chapter drop-off analytics. The UI already fetches all chapters via `GET /analytics/courses/{id}`. | Keep for future deep-dive chapter analytics view. |
 | **2** | **Analytics** | `GET /analytics/students/{studentId}/courses/{courseId}` | `AnalyticsController.getStudentCourseAnalytics` | Single student course progress drill-down. The student detail view uses `GET /analytics/students/{id}` and `GET /progress/student/{id}`. | Keep for dedicated student-per-course report. |
-| **3** | **Assignments** | `GET /assignments/{id}/attempts` | `AssignmentsController.getAssignmentAttempts` | Admin endpoint to list all student attempts for an assignment. | Add "View All Attempts" table in Admin Assignment editor. |
-| **4** | **Lessons** | `GET /lessons/chapter/{chapterId}` | `LessonsController.findByChapter` | Lessons list by chapter. The frontend loads lessons eagerly inside `GET /chapters/course/{courseId}`. | Keep as alternate lightweight endpoint or deprecate. |
-| **5** | **Payments** | `GET /payments/my` | `PaymentsController.getMyPayments` | Student payment history & invoice list. Frontend student dashboard does not yet have a "Billing / Invoices" tab. | Wire into a new Student Dashboard "Billing" tab. |
-| **6** | **Payments** | `POST /payments/{id}/refund` | `PaymentsController.refund` | Admin refund processing via Razorpay. The admin payments UI currently has a status filter for refunds but no action button. | Add a "Refund Payment" modal button in Admin Payments table. |
-| **7** | **Tests** | `GET /tests/{id}/attempts` | `TestsController.getTestAttempts` | Admin endpoint to list all student attempts for a test. | Add "View All Attempts" table in Admin Test editor. |
-| **8** | **Doubt Sessions** | `GET /doubt-sessions/slots/{id}/bookings` | `DoubtSessionsController.getSlotBookings` | Admin view of student bookings for a specific slot. Admin UI currently relies on the embedded `current_bookings` count. | Add "View Attendees" dialog on Admin doubt slot card. |
-| **9** | **Doubt Sessions** | `PATCH /doubt-sessions/bookings/{id}` | `DoubtSessionsController.updateBooking` | Admin update booking status / meeting link. | Add manual booking reschedule / status update modal in Admin. |
+| **3** | **Lessons** | `GET /lessons/chapter/{chapterId}` | `LessonsController.findByChapter` | Lessons list by chapter. The frontend loads lessons eagerly inside `GET /chapters/course/{courseId}`. | Keep as alternate lightweight endpoint. |
+| **4** | **Doubt Sessions** | `PATCH /doubt-sessions/bookings/{id}` | `DoubtSessionsController.updateBooking` | Admin update booking status / meeting link. | Add manual booking reschedule / status update modal in Admin. |
 
 ---
 

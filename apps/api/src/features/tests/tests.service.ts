@@ -808,45 +808,8 @@ export class TestsService {
 
     if (updateError) throw new BadRequestException(updateError.message);
 
-    // Upsert test_answers
-    for (const answer of dto.answers) {
-      const result = answerResults.find(
-        (r) => r.questionId === answer.questionId,
-      );
-      const q = (questions ?? []).find((qq) => qq.id === answer.questionId);
-
-      const { data: upsertedAnswer, error: answerError } = await this.supabase
-        .from('test_answers')
-        .upsert(
-          {
-            attempt_id: attemptId,
-            question_id: answer.questionId,
-            text_answer: answer.textAnswer ?? null,
-            is_correct: result?.isCorrect ?? null,
-            time_spent_seconds: answer.timeSpentSeconds ?? 0,
-          },
-          { onConflict: 'attempt_id,question_id' },
-        )
-        .select('id')
-        .single();
-
-      if (answerError) throw new BadRequestException(answerError.message);
-
-      // For MCQ/MSQ, upsert junction table
-      if (q?.question_type !== 'text' && answer.selectedOptionIds?.length) {
-        await this.supabase
-          .from('test_answer_options')
-          .delete()
-          .eq('test_answer_id', upsertedAnswer.id);
-
-        await this.supabase.from('test_answer_options').insert(
-          answer.selectedOptionIds.map((optId) => ({
-            test_answer_id: upsertedAnswer.id,
-            option_id: optId,
-          })),
-        );
-      }
-    }
+    // Clean up temporary in-progress draft from MongoDB
+    await this.mongoService.deleteAttemptDraft(attemptId);
 
     if (testRel?.lesson_id) {
       await this.syncLessonCompletion(
@@ -889,37 +852,17 @@ export class TestsService {
 
     if (!attempt) throw new NotFoundException('Attempt not found');
 
-    const { data: upsertedAnswer, error } = await this.supabase
-      .from('test_answers')
-      .upsert(
-        {
-          attempt_id: attemptId,
-          question_id: questionId,
-          text_answer: dto.textAnswer ?? null,
-          time_spent_seconds: dto.timeSpentSeconds,
-        },
-        { onConflict: 'attempt_id,question_id' },
-      )
-      .select('id')
-      .single();
-
-    if (error) throw new BadRequestException(error.message);
-
-    if (dto.selectedOptionIds?.length !== undefined) {
-      await this.supabase
-        .from('test_answer_options')
-        .delete()
-        .eq('test_answer_id', upsertedAnswer.id);
-
-      if (dto.selectedOptionIds.length > 0) {
-        await this.supabase.from('test_answer_options').insert(
-          dto.selectedOptionIds.map((optId) => ({
-            test_answer_id: upsertedAnswer.id,
-            option_id: optId,
-          })),
-        );
-      }
-    }
+    await this.mongoService.saveAttemptDraft(
+      attemptId,
+      studentId,
+      'test',
+      questionId,
+      {
+        selectedOptionIds: dto.selectedOptionIds,
+        textAnswer: dto.textAnswer ?? null,
+        timeSpentSeconds: dto.timeSpentSeconds,
+      },
+    );
   }
 
   // ── End student endpoints ──────────────────────────────────────────────────

@@ -19,3 +19,20 @@ export class VerifyPaymentDto {
   @IsString()
   razorpay_signature: string;
 }
+
+export class FailPaymentDto {
+  @IsString()
+  razorpay_order_id: string;
+
+  @IsOptional()
+  @IsString()
+  razorpay_payment_id?: string;
+
+  @IsOptional()
+  @IsString()
+  error_description?: string;
+
+  @IsOptional()
+  @IsString()
+  error_code?: string;
+}

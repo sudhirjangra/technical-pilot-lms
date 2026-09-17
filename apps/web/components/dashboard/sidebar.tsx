@@ -19,6 +19,7 @@ import {
   CalendarDays,
   ChevronsUpDown,
   ClipboardList,
+  CreditCard,
   Gift,
   GraduationCap,
   LogOut,
@@ -65,6 +66,7 @@ const navGroups = [
     items: [
       { label: 'Doubt Sessions', href: '/dashboard/doubt-sessions', icon: CalendarDays, exact: false },
       { label: 'Refer & Earn', href: '/dashboard/referrals', icon: Gift, exact: false },
+      { label: 'Payment History', href: '/dashboard/payments', icon: CreditCard, exact: false },
     ],
   },
 ];

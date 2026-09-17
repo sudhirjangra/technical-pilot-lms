@@ -1,6 +1,8 @@
 'use client';
 
 import type { PublicCourse, StudentEnrollment } from '@/server/student/courses.server';
+import type { StudentPayment } from '@/server/student/payments.server';
+import type { PendingAssignmentItem } from '@/app/dashboard/page';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -19,14 +21,21 @@ import {
   Legend as RechartsLegend,
 } from 'recharts';
 import {
+  AlertCircle,
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   BookOpen,
   CheckCircle2,
+  ClipboardCheck,
   Clock3,
+  CreditCard,
+  ExternalLink,
+  FileText,
   GraduationCap,
   PieChart as PieChartIcon,
   Play,
+  Receipt,
   ShoppingCart,
   Sparkles,
   TrendingUp,
@@ -163,11 +172,15 @@ export function DashboardClient({
   enrollments,
   availableCourses,
   upcomingDue = [],
+  pendingAssignments = [],
+  recentPayments = [],
   user,
 }: {
   enrollments: StudentEnrollment[];
   availableCourses: PublicCourse[];
   upcomingDue?: DueItem[];
+  pendingAssignments?: PendingAssignmentItem[];
+  recentPayments?: StudentPayment[];
   user: DashboardUser;
 }) {
   const activeCourses = enrollments.filter((e) => e.status === 'active');
@@ -213,7 +226,86 @@ export function DashboardClient({
         />
       </div>
 
-      {/* Assignment Due Reminders */}
+      {/* Pending Assignments Section */}
+      {pendingAssignments.length > 0 && (
+        <Card className="border-border shadow-sm">
+          <CardHeader className="p-3.5 sm:p-5 pb-2 sm:pb-3 flex flex-row items-center justify-between border-b border-border/50">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+              <ClipboardCheck className="size-4 text-primary shrink-0" />
+              Pending Assignments ({pendingAssignments.length})
+            </CardTitle>
+            <span className="text-[11px] text-muted-foreground hidden sm:inline">
+              Complete your assignments to advance course progress
+            </span>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-5 space-y-2.5">
+            {pendingAssignments.map((assignment) => {
+              const hasDue = !!assignment.dueAt;
+              const daysLeft = hasDue
+                ? Math.ceil((new Date(assignment.dueAt!).getTime() - Date.now()) / 86_400_000)
+                : null;
+              const isOverdue = daysLeft !== null && daysLeft < 0;
+
+              return (
+                <div
+                  key={`${assignment.courseId}-${assignment.lessonId}`}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-lg border bg-muted/20 p-3 hover:bg-muted/40 transition-colors"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                        {assignment.lessonTitle}
+                      </p>
+                      {assignment.status === 'in_progress' ? (
+                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-200">
+                          In Progress ({assignment.progressPercent}%)
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Not Started
+                        </Badge>
+                      )}
+                      {assignment.attemptsUsed > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          ({assignment.attemptsUsed} {assignment.attemptsUsed === 1 ? 'attempt' : 'attempts'} used)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+                      <span className="font-medium text-foreground">{assignment.courseTitle}</span>
+                      <span>•</span>
+                      <span>{assignment.chapterTitle}</span>
+                      {hasDue && (
+                        <>
+                          <span>•</span>
+                          <span className={isOverdue ? 'text-destructive font-semibold' : ''}>
+                            {isOverdue
+                              ? `${Math.abs(daysLeft!)}d overdue`
+                              : daysLeft === 0
+                                ? 'Due today'
+                                : `Due in ${daysLeft}d`}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                    <Button size="sm" className="h-8 text-xs gap-1.5 px-3" asChild>
+                      <Link href={`/dashboard/courses/${assignment.courseId}/lessons/${assignment.lessonId}`}>
+                        <Play className="size-3" />
+                        {assignment.status === 'in_progress' ? 'Continue Assignment' : 'Start Assignment'}
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Assignment Due Reminders (Deadlines within 7 days) */}
       {upcomingDue.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
           <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
@@ -390,6 +482,95 @@ export function DashboardClient({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Recent Purchases & Payment History */}
+      {recentPayments.length > 0 && (
+        <Card className="border-border shadow-sm">
+          <CardHeader className="p-3.5 sm:p-5 flex flex-row items-center justify-between border-b border-border/50">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+              <CreditCard className="size-4 text-primary shrink-0" />
+              Recent Payment History
+            </CardTitle>
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" asChild>
+              <Link href="/dashboard/payments">
+                View All Payments <ArrowRight className="size-3" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-5">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="text-[11px] text-muted-foreground uppercase border-b border-border bg-muted/20">
+                  <tr>
+                    <th className="py-2.5 px-3">Date</th>
+                    <th className="py-2.5 px-3">Course</th>
+                    <th className="py-2.5 px-3">Order ID</th>
+                    <th className="py-2.5 px-3">Amount</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {recentPayments.map((p) => {
+                    const isSuccess =
+                      p.status === 'captured' ||
+                      p.status === 'paid' ||
+                      p.status === 'completed';
+                    const isFailed = p.status === 'failed';
+                    return (
+                      <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
+                          {new Date(p.created_at).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="py-2.5 px-3 font-medium text-foreground">
+                          {p.courses?.title ?? 'Course Enrollment'}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                          {p.razorpay_order_id
+                            ? p.razorpay_order_id.length > 14
+                              ? `${p.razorpay_order_id.slice(0, 14)}...`
+                              : p.razorpay_order_id
+                            : '—'}
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-foreground">
+                          ₹{Number(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {isSuccess ? (
+                            <Badge variant="default" className="bg-emerald-600 text-white text-[10px] gap-1">
+                              <CheckCircle2 className="size-3" />
+                              Paid
+                            </Badge>
+                          ) : isFailed ? (
+                            <Badge variant="destructive" className="text-[10px] gap-1">
+                              <AlertCircle className="size-3" />
+                              Failed
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] gap-1">
+                              <Clock3 className="size-3" />
+                              Pending
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" asChild>
+                            <Link href="/dashboard/payments">View Details</Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty state */}

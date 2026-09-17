@@ -93,6 +93,22 @@ export interface MongoAttemptDocument {
   updated_at: Date;
 }
 
+export interface MongoAttemptDraftItem {
+  questionId: string;
+  selectedOptionIds?: string[];
+  textAnswer?: string | null;
+  timeSpentSeconds?: number;
+}
+
+export interface MongoAttemptDraftDocument {
+  attempt_id: string;
+  student_id: string;
+  assessment_type: 'assignment' | 'test';
+  answers: Record<string, MongoAttemptDraftItem>;
+  created_at: Date;
+  updated_at: Date;
+}
+
 @Injectable()
 export class MongoService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MongoService.name);
@@ -152,6 +168,15 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
       });
       await attemptsCollection.createIndex({ assessment_id: 1 });
       await attemptsCollection.createIndex({ created_at: -1 });
+
+      const draftsCollection = this.getDraftsCollection();
+      await draftsCollection.createIndex({ attempt_id: 1 }, { unique: true });
+      await draftsCollection.createIndex({ student_id: 1 });
+      // 7 days TTL auto-cleanup so abandoned drafts never leak storage in 512MB free tier
+      await draftsCollection.createIndex(
+        { updated_at: 1 },
+        { expireAfterSeconds: 604800 },
+      );
     } catch (error) {
       this.logger.warn(
         `Failed to create MongoDB indexes: ${error instanceof Error ? error.message : String(error)}`,
@@ -164,6 +189,13 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
       throw new Error('MongoDB database connection is not initialized');
     }
     return this.db.collection<MongoAttemptDocument>('attempts');
+  }
+
+  getDraftsCollection(): Collection<MongoAttemptDraftDocument> {
+    if (!this.db) {
+      throw new Error('MongoDB database connection is not initialized');
+    }
+    return this.db.collection<MongoAttemptDraftDocument>('attempt_drafts');
   }
 
   isConnected(): boolean {
@@ -265,5 +297,56 @@ export class MongoService implements OnModuleInit, OnModuleDestroy {
       assessment_id: assessmentId,
       student_id: studentId,
     });
+  }
+
+  async saveAttemptDraft(
+    attemptId: string,
+    studentId: string,
+    assessmentType: 'assignment' | 'test',
+    questionId: string,
+    data: {
+      selectedOptionIds?: string[];
+      textAnswer?: string | null;
+      timeSpentSeconds?: number;
+    },
+  ): Promise<void> {
+    if (!this.isConnected()) return;
+
+    const now = new Date();
+    await this.getDraftsCollection().updateOne(
+      { attempt_id: attemptId },
+      {
+        $set: {
+          attempt_id: attemptId,
+          student_id: studentId,
+          assessment_type: assessmentType,
+          [`answers.${questionId}`]: {
+            questionId,
+            selectedOptionIds: data.selectedOptionIds ?? [],
+            textAnswer: data.textAnswer ?? null,
+            timeSpentSeconds: data.timeSpentSeconds ?? 0,
+          },
+          updated_at: now,
+        },
+        $setOnInsert: {
+          created_at: now,
+        },
+      },
+      { upsert: true },
+    );
+  }
+
+  async getAttemptDraft(
+    attemptId: string,
+  ): Promise<MongoAttemptDraftDocument | null> {
+    if (!this.isConnected()) return null;
+
+    return this.getDraftsCollection().findOne({ attempt_id: attemptId });
+  }
+
+  async deleteAttemptDraft(attemptId: string): Promise<void> {
+    if (!this.isConnected()) return;
+
+    await this.getDraftsCollection().deleteOne({ attempt_id: attemptId });
   }
 }

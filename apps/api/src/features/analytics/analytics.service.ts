@@ -698,7 +698,9 @@ export class AnalyticsService {
           .single(),
         this.supabase
           .from('devices')
-          .select('id, device_name, platform, last_active_at, created_at')
+          .select(
+            'id, device_name, platform, last_active_at, created_at, is_banned, banned_at',
+          )
           .eq('user_id', studentId)
           .order('last_active_at', { ascending: false }),
         this.supabase

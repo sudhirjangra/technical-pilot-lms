@@ -9,6 +9,8 @@ import {
   deleteSlot,
   cancelSlot,
   updateSlot,
+  getSlotBookings,
+  type SlotBookingStudent,
 } from '@/server/doubt-sessions.server';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/shadcn/card';
@@ -19,6 +21,13 @@ import { Textarea } from '@repo/shadcn/textarea';
 import { Label } from '@repo/shadcn/label';
 import { Checkbox } from '@repo/shadcn/checkbox';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@repo/shadcn/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -26,12 +35,15 @@ import {
   SelectValue,
 } from '@repo/shadcn/select';
 import {
+  ArrowUpRight,
   Bell,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
   GraduationCap,
+  Mail,
   MessageSquare,
+  Phone,
   Plus,
   Radio,
   Search,
@@ -131,6 +143,26 @@ export function DoubtSlotsClient({
     student_id: '',
   });
   const [editLoading, setEditLoading] = useState(false);
+
+  // Booked students modal state
+  const [bookingsDialogOpen, setBookingsDialogOpen] = useState(false);
+  const [selectedSlotForBookings, setSelectedSlotForBookings] = useState<Slot | null>(null);
+  const [slotBookings, setSlotBookings] = useState<SlotBookingStudent[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  const handleOpenBookings = async (slot: Slot) => {
+    setSelectedSlotForBookings(slot);
+    setBookingsDialogOpen(true);
+    setLoadingBookings(true);
+    try {
+      const bookings = await getSlotBookings(slot.id);
+      setSlotBookings(bookings);
+    } catch {
+      toast.error('Failed to load booked students');
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
 
   // Filter students by search
   const filteredStudents = students.filter((s) => {
@@ -706,9 +738,23 @@ export function DoubtSlotsClient({
                               {slot.status}
                             </Badge>
                             {targetBadge}
-                            <span className="text-xs text-muted-foreground font-medium">
+                            <button
+                              type="button"
+                              className={cn(
+                                "text-xs rounded px-1.5 py-0.5 font-medium transition-colors inline-flex items-center gap-1 cursor-pointer",
+                                slot.current_bookings > 0
+                                  ? "bg-primary/10 text-primary hover:bg-primary/20 font-semibold"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                              onClick={() => handleOpenBookings(slot)}
+                              title="Click to view students who booked this slot"
+                            >
+                              <Users className="size-3" />
                               {slot.current_bookings}/{slot.max_bookings} booked
-                            </span>
+                              {slot.current_bookings > 0 && (
+                                <span className="underline ml-0.5">View</span>
+                              )}
+                            </button>
                           </div>
 
                           {slot.topic && (
@@ -736,6 +782,17 @@ export function DoubtSlotsClient({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                          {slot.current_bookings > 0 && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-8 px-2.5 text-xs gap-1"
+                              onClick={() => handleOpenBookings(slot)}
+                            >
+                              <Users className="size-3" />
+                              Students ({slot.current_bookings})
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -1003,6 +1060,104 @@ export function DoubtSlotsClient({
             </div>
           ))
       )}
+
+      {/* ── Booked Students Dialog ── */}
+      <Dialog
+        open={bookingsDialogOpen}
+        onOpenChange={(open) => {
+          setBookingsDialogOpen(open);
+          if (!open) {
+            setSelectedSlotForBookings(null);
+            setSlotBookings([]);
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg p-5 sm:p-6">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="size-4 text-primary" />
+              Booked Students ({selectedSlotForBookings?.current_bookings ?? 0} / {selectedSlotForBookings?.max_bookings ?? 0})
+            </DialogTitle>
+            {selectedSlotForBookings && (
+              <DialogDescription className="text-xs">
+                {new Date(selectedSlotForBookings.date + 'T00:00').toLocaleDateString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}{' '}
+                • {selectedSlotForBookings.start_time.slice(0, 5)} – {selectedSlotForBookings.end_time.slice(0, 5)}
+                {selectedSlotForBookings.topic ? ` • ${selectedSlotForBookings.topic}` : ''}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {loadingBookings ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">
+              Loading booked student details...
+            </div>
+          ) : slotBookings.length === 0 ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">
+              No students have booked this doubt session slot yet.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              {slotBookings.map((b) => {
+                const profile = b.profiles;
+                return (
+                  <div
+                    key={b.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                        {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'S'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-xs sm:text-sm text-foreground truncate">
+                          {profile?.full_name || 'Student'}
+                        </p>
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+                          {profile?.email && (
+                            <a
+                              href={`mailto:${profile.email}`}
+                              className="hover:underline flex items-center gap-1 text-primary truncate"
+                            >
+                              <Mail className="size-3 shrink-0" />
+                              {profile.email}
+                            </a>
+                          )}
+                          {profile?.phone && (
+                            <span className="flex items-center gap-1">
+                              • <Phone className="size-3 shrink-0" /> {profile.phone}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Booked at: {new Date(b.booked_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <Badge
+                        variant={b.status === 'confirmed' ? 'default' : 'secondary'}
+                        className="text-[10px] capitalize"
+                      >
+                        {b.status}
+                      </Badge>
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
+                        <Link href={`/admin/students/${b.student_id}`}>
+                          Profile <ArrowUpRight className="size-3" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

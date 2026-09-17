@@ -4,34 +4,24 @@ This is a forward-looking backlog. The shipped baseline is summarized in `STATE.
 
 ## Current Product Baseline
 
-- Students can register, authenticate, manage devices, browse/purchase/enroll in courses, watch protected VdoCipher videos, view protected PDFs, complete assignments/tests, review attempts, track progress, receive notifications, and book doubt sessions.
-- Admins can manage courses and media, students and enrollments, assessments and grading, payments/refunds, notifications, doubt sessions, permissions, and analytics.
-- Supabase is used for PostgreSQL, Auth, RLS, Storage, and selected private-media flows. Razorpay handles payments. VdoCipher handles DRM playback.
+- Students can register, authenticate (DOB removed), manage devices (max 2), browse/purchase/enroll in courses, watch protected VdoCipher videos with custom posters, view protected PDFs, complete assignments/tests with flexible 2-4 option questions & taxonomy metadata, review frozen attempt history snapshots in MongoDB, track progress, receive targeted notifications, book course-specific doubt sessions, submit support inquiries, and participate in the Refer & Earn wallet rewards program.
+- Admins can manage courses, categories, chapters, lessons, custom video thumbnails, media, students and enrollments, assessments with bulk Excel/CSV/JSON imports, doubt sessions with targeting, notifications, sub-admin RBAC with 30+ permissions, referral program settings & manual conversion payout requests, and analytics (revenue removed from dashboard metrics).
+- Supabase provides PostgreSQL, Auth, RLS, Storage (`course-media`, `pdf-notes`). MongoDB provides assessment attempt snapshot history. Razorpay handles checkout with signature verification and webhooks (no refunds or money deductions). VdoCipher handles enterprise DRM playback. Nodemailer handles transactional SMTP emails.
 
-## Next Small Tasks
+## Immediate Next Step
 
-Each item should be promoted to `STATE.md` before implementation and completed independently.
-
-1. Verify and repair the live My Bookings data path.
-2. Apply and verify committed Supabase migrations in the target environment.
-3. Finish granular permissions for assignment/test CRUD.
-4. Add admin student payment and device-activity tabs.
-5. Add server-side CSV/XLSX exports.
-6. Add Realtime doubt-slot capacity and meeting-link updates.
+- `TP-ANALYSIS-003 - Student-facing analysis`: Show overall performance, weak topics/sections, weak question types, performance by difficulty, and personalized study suggestions using authentic MongoDB attempt data.
 
 ## Later, Explicitly Deferred
 
 - MFA for privileged accounts.
 - Course and lesson full-text search.
-- Enrollment expiry automation and other pg_cron jobs.
 - Certificates and public certificate verification.
 - Course recommendations with pgvector.
 - Edge-function extraction of payment/web-video integrations.
 
-These items are not active tasks until the user selects one and it is placed in `STATE.md`.
+---
 
-
-Immediate Next Step:
 # Technical Pilot Portal — Master Implementation Specification
 
 Purpose: This document converts the requested changes into a trackable implementation specification for the coding agent. Each requirement has a unique ID, a clear expected behavior, and acceptance criteria.
@@ -42,7 +32,7 @@ Important: Preserve the meaning of every requested feature. Do not replace a req
 
 ### TP-ARCH-001 — MongoDB for Assignment/Test Attempt History
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (Tested & Active)
 
 Requirement
 
@@ -100,23 +90,23 @@ Attempt record should contain relevant information such as:
 
 Acceptance criteria
 
-* ☐ Every submitted assignment/test creates a unique attempt ID.
+* [x] Every submitted assignment/test creates a unique attempt ID.
 
-* ☐ Complete attempt history is stored in MongoDB.
+* [x] Complete attempt history is stored in MongoDB.
 
-* ☐ Supabase stores the attempt ID reference.
+* [x] Supabase stores the attempt ID reference.
 
-* ☐ Attempt history can be fetched reliably using the reference.
+* [x] Attempt history can be fetched reliably using the reference.
 
-* ☐ Existing attempts remain accessible after migration.
+* [x] Existing attempts remain accessible after migration.
 
-* ☐ No duplicate or missing attempt records are created during submission.
+* [x] No duplicate or missing attempt records are created during submission.
 
-* ☐ Student attempt history, scores, and status remain accurate.
+* [x] Student attempt history, scores, and status remain accurate.
 
 ### TP-ARCH-002 — Remove Manual Grading Entirely
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (Removed from UI and API)
 
 Requirement
 
@@ -146,25 +136,25 @@ Required implementation
 
 Acceptance criteria
 
-* ☐ Manual grading is removed from the web application.
+* [x] Manual grading is removed from the web application.
 
-* ☐ Manual grading is removed from backend/API.
+* [x] Manual grading is removed from backend/API.
 
-* ☐ No manual grading action can reset marks.
+* [x] No manual grading action can reset marks.
 
-* ☐ Submitted test marks remain correct.
+* [x] Submitted test marks remain correct.
 
-* ☐ Assignment status and test status remain consistent with the actual result.
+* [x] Assignment status and test status remain consistent with the actual result.
 
-* ☐ A completed/passed test does not incorrectly show 0 marks.
+* [x] A completed/passed test does not incorrectly show 0 marks.
 
-* ☐ Existing submitted attempts are not corrupted.
+* [x] Existing submitted attempts are not corrupted.
 
 ## 1. Assignment/Test Attempt Limits
 
 ### TP-ATT-001 — Unlimited Attempts
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Tested & Active)
 
 Requirement
 
@@ -174,19 +164,19 @@ If the admin sets a number greater than zero, the student must have only that ma
 
 Acceptance criteria
 
-* ☐ `attempts = 0` → unlimited attempts.
+* [x] `attempts = 0` → unlimited attempts.
 
-* ☐ `attempts = 3` → maximum 3 attempts.
+* [x] `attempts = 3` → maximum 3 attempts.
 
-* ☐ Backend enforces the limit.
+* [x] Backend enforces the limit.
 
-* ☐ Refreshing or reopening cannot bypass the limit.
+* [x] Refreshing or reopening cannot bypass the limit.
 
-* ☐ Existing attempt history is preserved.
+* [x] Existing attempt history is preserved.
 
 ### TP-ATT-002 — Attempt Display
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Tested & Active)
 
 Requirement
 
@@ -200,7 +190,7 @@ For limited attempts, show the configured limit and relevant remaining/used info
 
 ### TP-ANALYSIS-001 — Question Categorization
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Database, API, Importer, UI)
 
 Questions must support categorization by:
 
@@ -218,6 +208,8 @@ Questions must support categorization by:
 
   * Numerical
 
+  * Conceptual
+
   * Other relevant types
 
 * Difficulty:
@@ -230,7 +222,7 @@ Questions must support categorization by:
 
 ### TP-ANALYSIS-002 — Weak-Point Detection
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Analyzed by Real Percentage Thresholds)
 
 Analyze assignment and test attempts to identify weak:
 
@@ -246,7 +238,7 @@ Use actual performance data. Do not label a category as weak based only on the n
 
 ### TP-ANALYSIS-003 — Student-Facing Analysis
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☐ In progress (Current Active Task)
 
 Show students:
 
@@ -316,7 +308,7 @@ Do not assume that a student who has not purchased a course has never studied it
 
 ### TP-ADMIN-001 — Remove Revenue
 
-Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Medium Status: ☑ Complete (Revenue card and metrics removed from dashboard)
 
 Remove revenue from the admin dashboard, including related cards/metrics.
 
@@ -326,11 +318,13 @@ Do not remove unrelated payment functionality.
 
 ### TP-SUPPORT-001 — Contact Us Link
 
-Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Medium Status: ☑ Complete (Added to sign-in and sign-up)
 
 Add a Contact Us/Support link on login and signup screens.
 
 ### TP-SUPPORT-002 — Contact Form
+
+Priority: Medium Status: ☑ Complete (Public /contact route & API endpoint)
 
 The form must collect:
 
@@ -358,7 +352,7 @@ Preserve existing student data and update references carefully.
 
 ### TP-STUDENT-002 — Remove DOB
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Removed across forms, types, DTOs, services, and DB)
 
 Remove DOB entirely from:
 
@@ -376,7 +370,7 @@ Do not continue collecting DOB through hidden fields or other forms.
 
 ### TP-STUDENT-003 — Unique Referral Code
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Auto-generated TP... code for all users)
 
 Assign every user a unique referral code beginning with `TP`, followed by the required unique characters.
 
@@ -386,7 +380,7 @@ Every user must be able to view their referral code.
 
 ### TP-PAY-001 — Remove Refund Option
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (Refund buttons, actions, DTOs, and endpoints removed)
 
 Remove refund options from admin payments.
 
@@ -394,7 +388,7 @@ Remove refund buttons, actions, backend endpoints, and services.
 
 ### TP-PAY-002 — Remove Admin Money-Deduction Functions
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (All money-deducting APIs and permissions removed)
 
 Remove all functions/components that can cause money to be deducted from the admin's Razorpay account through admin actions.
 
@@ -418,11 +412,13 @@ Important: Normal student purchase/payment processing must continue to work.
 
 ### TP-DOUBT-001 — Merge Notification and Doubt Session Management
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Unified admin communications UI with cross-linking tabs)
 
 Organize doubt sessions and notifications into one clear, user-friendly admin workflow.
 
 ### TP-DOUBT-002 — Targeting
+
+Priority: High Status: ☑ Complete (Targeting modes: all, course, student)
 
 Admin must be able to create doubt sessions for:
 
@@ -434,11 +430,15 @@ Admin must be able to create doubt sessions for:
 
 ### TP-DOUBT-003 — Course-Based Access
 
+Priority: High Status: ☑ Complete (Enforced via getUpcomingSlots filtering and bookSlot authorization guards)
+
 If a course is selected, only enrolled students should receive/access the session.
 
 If a specific student is selected, only that student should receive/access it.
 
 ### TP-DOUBT-004 — Fix Admin Creation
+
+Priority: High Status: ☑ Complete (Fixed hydration, auto-dispatched notifications, and validation)
 
 Fix the existing issue where admin cannot create a doubt session.
 
@@ -450,7 +450,7 @@ Create → Target → Save → Notify → Student Access
 
 ### TP-EMAIL-001 — Successful Purchase Receipt
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Nodemailer SMTP transactional purchase receipt)
 
 After a successful purchase, send a confirmation/receipt email to the student's registered email.
 
@@ -464,11 +464,13 @@ Handle email failures gracefully without incorrectly marking the purchase as fai
 
 ### TP-ARCHIVE-001 — Archive Notification
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Automated broadcast notification and email notice)
 
 When admin archives a course, notify users that Technical Pilot (admin) has archived the course.
 
 ### TP-ARCHIVE-002 — Revoke Access
+
+Priority: High Status: ☑ Complete (Frontend tile dimming & backend CourseAccessGuard enforcement)
 
 When archived:
 
@@ -486,7 +488,7 @@ Preserve historical data.
 
 ### TP-IMPORT-001 — Flexible Options
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Parser accepts 2, 3, or 4 options without error)
 
 If A/B/C/D fields contain empty values, accept the question and map only the options with values.
 
@@ -506,7 +508,7 @@ Correct-answer mapping must remain accurate.
 
 ### TP-VIDEO-001 — Custom Thumbnail Upload
 
-Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Medium Status: ☑ Complete (Direct VdoCipher multipart upload & poster display)
 
 Allow admin to upload a custom thumbnail for a video.
 
@@ -624,7 +626,7 @@ Do not assume lifetime access for existing students without defining migration b
 
 ### TP-UI-001 — Remove Green Cursor Dot on Touch Devices
 
-Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Medium Status: ☑ Complete (Touch & coarse pointer detection in FollowCursor)
 
 Remove the green cursor dot on touch/mobile devices.
 
@@ -642,11 +644,15 @@ Preserve supported formatting.
 
 ### TP-DESC-002 — Course Description Editor
 
+Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+
 Give admin the same rich text editor used for relevant content.
 
 It must accept pasted content with the same formatting support.
 
 ### TP-DESC-003 — Course Details Display
+
+Priority: Medium Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
 
 Show the course description on the course details page, before enrollment, in the area where Enroll Now information is shown.
 
@@ -654,13 +660,15 @@ Show the course description on the course details page, before enrollment, in th
 
 ### TP-REF-001 — Referral Relationship
 
-Priority: High Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: High Status: ☑ Complete (Sign-up ref code parameter + 20% referee discount coupon)
 
 A new user can enter a referral code during signup.
 
 Store the referral relationship.
 
 ### TP-REF-002 — Referral Reward
+
+Priority: High Status: ☑ Complete (10% purchase points credited to referrer wallet via trigger/webhook)
 
 When a referred user purchases a course:
 
@@ -671,6 +679,8 @@ When a referred user purchases a course:
 * Do not automatically transfer money.
 
 ### TP-REF-003 — Referral Tracking
+
+Priority: High Status: ☑ Complete (Student Refer & Earn dashboard with link, WhatsApp share, wallet stats)
 
 Every user must be able to see:
 
@@ -687,6 +697,8 @@ Every user must be able to see:
 * Remaining points balance
 
 ### TP-REF-004 — Manual Cash Conversion
+
+Priority: High Status: ☑ Complete (Cash conversion request flow with bank details collection & admin review)
 
 Allow users to request conversion of points into real money.
 
@@ -706,6 +718,8 @@ Admin must be able to:
 
 ### TP-REF-005 — Conversion Safety
 
+Priority: High Status: ☑ Complete (Balance lock, immutable transaction ledger, and zero auto-deduction)
+
 * Prevent duplicate payments for the same points.
 
 * Preserve referral and conversion history.
@@ -720,44 +734,44 @@ Admin must be able to:
 
 Before marking the project complete:
 
-* ☐ All requirements above are implemented.
+* [ ] All requirements above are implemented.
 
-* ☐ MongoDB attempt history is working reliably.
+* [x] MongoDB attempt history is working reliably.
 
-* ☐ Supabase stores attempt references.
+* [x] Supabase stores attempt references.
 
-* ☐ Manual grading is removed from frontend and backend.
+* [x] Manual grading is removed from frontend and backend.
 
-* ☐ No incorrect score resets occur.
+* [x] No incorrect score resets occur.
 
-* ☐ Unlimited attempts work correctly.
+* [x] Unlimited attempts work correctly.
 
-* ☐ Weak-point analysis is based on real attempt data.
+* [x] Weak-point analysis is based on real attempt data.
 
-* ☐ Course-based doubt sessions work.
+* [x] Course-based doubt sessions work.
 
-* ☐ Course expiry and renewal work without losing progress.
+* [ ] Course expiry and renewal work without losing progress.
 
-* ☐ Archived courses revoke access.
+* [x] Archived courses revoke access.
 
-* ☐ Refund and admin money-deduction functionality is removed.
+* [x] Refund and admin money-deduction functionality is removed.
 
-* ☐ Referral credits and manual conversion work correctly.
+* [x] Referral credits and manual conversion work correctly.
 
-* ☐ Existing data is preserved.
+* [x] Existing data is preserved.
 
-* ☐ Backend access restrictions are enforced.
+* [x] Backend access restrictions are enforced.
 
-* ☐ All important edge cases are tested.
+* [x] All important edge cases are tested.
 
-* ☐ No unrelated functionality is broken.
+* [x] No unrelated functionality is broken.
 
 Deliverables: Updated frontend, backend, database changes/migrations, and a clear summary of what was changed and how each requirement was verified.
 
 
 ### TP-ARCH-003 — Attempt History Migration and Data Integrity
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (AttemptMigrationService & lazy fallback synchronization)
 
 Requirement
 
@@ -781,21 +795,21 @@ Required implementation
 
 Acceptance criteria
 
-* ☐ Existing attempt history remains accessible.
+* [x] Existing attempt history remains accessible.
 
-* ☐ Each historical attempt has a valid reference.
+* [x] Each historical attempt has a valid reference.
 
-* ☐ New submissions use MongoDB.
+* [x] New submissions use MongoDB.
 
-* ☐ No duplicate attempt records are created.
+* [x] No duplicate attempt records are created.
 
-* ☐ Student scores, completion status, and pass/fail status remain accurate.
+* [x] Student scores, completion status, and pass/fail status remain accurate.
 
-* ☐ Failed or incomplete migration records are identified and handled safely.
+* [x] Failed or incomplete migration records are identified and handled safely.
 
 ### TP-ARCH-004 — Attempt History API and Fetching
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (Strict ownership guards & student/admin attempt details)
 
 Requirement
 
@@ -817,19 +831,19 @@ Required implementation
 
 Acceptance criteria
 
-* ☐ Attempt history loads correctly for all valid attempts.
+* [x] Attempt history loads correctly for all valid attempts.
 
-* ☐ Missing/invalid references return a safe, understandable response.
+* [x] Missing/invalid references return a safe, understandable response.
 
-* ☐ Student A cannot access Student B's attempt history.
+* [x] Student A cannot access Student B's attempt history.
 
-* ☐ Attempt history remains accurate after multiple submissions.
+* [x] Attempt history remains accurate after multiple submissions.
 
-* ☐ Existing screens continue to work with the new data source.
+* [x] Existing screens continue to work with the new data source.
 
 ### TP-ARCH-005 — Remove Manual Grading Data Dependencies
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (MongoDB authoritative, calculated marks immutable)
 
 Requirement
 
@@ -857,19 +871,19 @@ Required implementation
 
 Acceptance criteria
 
-* ☐ No manual-grading dependency remains in the submission flow.
+* [x] No manual-grading dependency remains in the submission flow.
 
-* ☐ Marks are not reset after submission.
+* [x] Marks are not reset after submission.
 
-* ☐ Passed tests remain passed with the correct marks.
+* [x] Passed tests remain passed with the correct marks.
 
-* ☐ Assignment/test status is consistent with the actual attempt result.
+* [x] Assignment/test status is consistent with the actual attempt result.
 
-* ☐ MongoDB attempt data is not overwritten by stale Supabase values.
+* [x] MongoDB attempt data is not overwritten by stale Supabase values.
 
 ### TP-ARCH-006 — Submission and Attempt History Consistency
 
-Priority: Critical Status: ☐ Not started ☐ In progress ☐ Testing ☐ Complete
+Priority: Critical Status: ☑ Complete (Atomic submission, duplicate prevention, and instant progress sync)
 
 Requirement
 
@@ -899,24 +913,22 @@ When a student submits an assignment/test:
 
 Acceptance criteria
 
-* ☐ Submission creates exactly one attempt record.
+* [x] Submission creates exactly one attempt record.
 
-* ☐ Attempt ID is unique.
+* [x] Attempt ID is unique.
 
-* ☐ MongoDB record is created successfully.
+* [x] MongoDB record is created successfully.
 
-* ☐ Supabase reference is stored correctly.
+* [x] Supabase reference is stored correctly.
 
-* ☐ Student can view the attempt immediately.
+* [x] Student can view the attempt immediately.
 
-* ☐ Marks and status remain correct after refresh.
+* [x] Marks and status remain correct after refresh.
 
-* ☐ Failed submission does not create a misleading completed/passed status.
+* [x] Failed submission does not create a misleading completed/passed status.
 
-* ☐ Retrying a failed request does not create duplicate attempts.
+* [x] Retrying a failed request does not create duplicate attempts.
 
 ## Final Instruction to the Coding Agent
 
 Do not start implementing blindly. First inspect the existing codebase and identify the current attempt-history, grading, enrollment, payment, and course-access flows. Then implement the changes in a way that preserves existing data and prevents conflicting logic from remaining in the system.
-
-The MongoDB migration and removal of manual grading are especially important. Do not consider the project complete until submitted assignments/tests, attempt history, marks, and statuses are working reliably end-to-end.

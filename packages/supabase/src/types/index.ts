@@ -78,6 +78,8 @@ export interface Database {
           platform: DevicePlatform;
           last_active_at: string;
           created_at: string;
+          is_banned: boolean;
+          banned_at: string | null;
         };
         Insert: {
           id?: string;
@@ -87,11 +89,15 @@ export interface Database {
           platform?: DevicePlatform;
           last_active_at?: string;
           created_at?: string;
+          is_banned?: boolean;
+          banned_at?: string | null;
         };
         Update: {
           device_fingerprint?: string;
           device_name?: string;
           last_active_at?: string;
+          is_banned?: boolean;
+          banned_at?: string | null;
         };
         Relationships: [];
       };

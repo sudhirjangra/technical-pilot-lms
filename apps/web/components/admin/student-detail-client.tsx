@@ -11,6 +11,9 @@ import {
   getAttemptDetail,
   toggleStudentActive,
   updateEnrollmentStatus,
+  logoutStudentDevice,
+  logoutAllStudentDevices,
+  toggleBanStudentDevice,
 } from '@/server/admin/students.server';
 import type { AdminCourseProgress } from '@/server/admin/enrollments.server';
 import type {
@@ -68,6 +71,9 @@ import {
   FlaskConical,
   User,
   Shield,
+  LogOut,
+  Ban,
+  ShieldAlert,
 } from '@repo/shadcn/lucide';
 
 /* ── Helpers ──────────────────────────────────────────────────────── */
@@ -266,6 +272,14 @@ export function StudentDetailClient({
   /* ── Handlers ─────────────────────────────────────────────────── */
 
   const handleToggleActive = async () => {
+    if (
+      isActive &&
+      !confirm(
+        'Are you sure you want to ban/disable this student account? All active device sessions will be immediately terminated and the student will be blocked from accessing resources or logging in.',
+      )
+    ) {
+      return;
+    }
     setLoading(true);
     const result = await toggleStudentActive(student.id, !isActive);
     setLoading(false);
@@ -273,7 +287,7 @@ export function StudentDetailClient({
       toast.error('Failed to update status');
       return;
     }
-    toast.success(`Student ${isActive ? 'disabled' : 'enabled'}`);
+    toast.success(`Student account ${isActive ? 'banned and disabled' : 'enabled'}`);
     router.refresh();
   };
 
@@ -289,6 +303,46 @@ export function StudentDetailClient({
       return;
     }
     toast.success('Enrollment updated');
+    router.refresh();
+  };
+
+  const handleLogoutDevice = async (deviceId: string) => {
+    if (!confirm('Are you sure you want to log out this device session?')) return;
+    setLoading(true);
+    const result = await logoutStudentDevice(student.id, deviceId);
+    setLoading(false);
+    if (result.error) {
+      toast.error('Failed to log out device');
+      return;
+    }
+    toast.success('Device logged out successfully');
+    router.refresh();
+  };
+
+  const handleLogoutAllDevices = async () => {
+    if (!confirm('Are you sure you want to log out all devices for this student?')) return;
+    setLoading(true);
+    const result = await logoutAllStudentDevices(student.id);
+    setLoading(false);
+    if (result.error) {
+      toast.error('Failed to log out all devices');
+      return;
+    }
+    toast.success('All devices logged out successfully');
+    router.refresh();
+  };
+
+  const handleToggleBanDevice = async (deviceId: string, currentlyBanned: boolean) => {
+    const action = currentlyBanned ? 'unban' : 'ban';
+    if (!confirm(`Are you sure you want to ${action} this device?`)) return;
+    setLoading(true);
+    const result = await toggleBanStudentDevice(student.id, deviceId, !currentlyBanned);
+    setLoading(false);
+    if (result.error) {
+      toast.error(`Failed to ${action} device`);
+      return;
+    }
+    toast.success(`Device ${currentlyBanned ? 'unbanned' : 'banned'} successfully`);
     router.refresh();
   };
 
@@ -511,13 +565,8 @@ export function StudentDetailClient({
               {student.role}
             </Badge>
             <Badge variant={isActive ? 'default' : 'destructive'} className="text-[10px] sm:text-xs">
-              {isActive ? 'Active' : 'Disabled'}
+              {isActive ? 'Active' : 'Banned / Disabled'}
             </Badge>
-            {student.date_of_birth && (
-              <span className="text-muted-foreground text-[10px] sm:text-xs">
-                DOB: {formatDate(student.date_of_birth)}
-              </span>
-            )}
           </div>
         </div>
         <Button
@@ -527,7 +576,7 @@ export function StudentDetailClient({
           onClick={handleToggleActive}
           disabled={loading}
         >
-          {isActive ? 'Disable Account' : 'Enable Account'}
+          {isActive ? 'Ban / Disable Account' : 'Enable Account'}
         </Button>
       </div>
 
@@ -1014,10 +1063,27 @@ export function StudentDetailClient({
         <TabsContent value="sessions" className="mt-4 space-y-5">
           {/* Devices */}
           <Card className="p-4">
-            <CardHeader className="p-0 pb-3">
-              <CardTitle className="text-sm font-semibold">
-                Devices & Sessions
-              </CardTitle>
+            <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm font-semibold">
+                  Devices & Sessions ({devices.length})
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Inspect student devices, terminate sessions, or ban rogue devices.
+                </p>
+              </div>
+              {devices.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs text-destructive hover:bg-destructive/10 gap-1.5 shrink-0"
+                  onClick={handleLogoutAllDevices}
+                  disabled={loading}
+                >
+                  <LogOut className="size-3" />
+                  Log Out All
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               {devices.length === 0 ? (
@@ -1025,44 +1091,94 @@ export function StudentDetailClient({
                   No device data available.
                 </p>
               ) : (
-                <div className="space-y-0">
-                  {devices.map((device) => (
-                    <div
-                      key={device.id}
-                      className="border-border flex items-center gap-3 border-b py-3 last:border-0"
-                    >
-                      <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
-                        {device.platform?.toLowerCase().includes('mobile') ||
-                        device.platform?.toLowerCase().includes('android') ||
-                        device.platform?.toLowerCase().includes('ios') ? (
-                          <Smartphone className="text-muted-foreground size-4" />
-                        ) : (
-                          <Monitor className="text-muted-foreground size-4" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {device.device_name}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">
-                            {device.platform}
-                          </Badge>
-                          <span className="text-muted-foreground text-[11px]">
-                            First seen: {formatDate(device.created_at)}
-                          </span>
+                <div className="space-y-0 divide-y divide-border">
+                  {devices.map((device: any) => {
+                    const isBanned = device.is_banned === true;
+                    return (
+                      <div
+                        key={device.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 last:pb-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={cn(
+                            'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                            isBanned ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground'
+                          )}>
+                            {isBanned ? (
+                              <Ban className="size-4" />
+                            ) : device.platform?.toLowerCase().includes('mobile') ||
+                              device.platform?.toLowerCase().includes('android') ||
+                              device.platform?.toLowerCase().includes('ios') ? (
+                              <Smartphone className="size-4" />
+                            ) : (
+                              <Monitor className="size-4" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="truncate text-sm font-medium">
+                                {device.device_name || 'Web Browser'}
+                              </p>
+                              <Badge variant="outline" className="text-[10px]">
+                                {device.platform}
+                              </Badge>
+                              {isBanned ? (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  Banned
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-200 text-[10px]" variant="outline">
+                                  Active
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 flex-wrap">
+                              <span>First seen: {formatDate(device.created_at)}</span>
+                              <span>•</span>
+                              <span>Last active: {relativeTime(device.last_active_at)}</span>
+                              {device.banned_at && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-destructive font-medium">
+                                    Banned at: {formatDate(device.banned_at)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Admin Action Buttons */}
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={cn(
+                              'h-7 text-xs gap-1',
+                              isBanned
+                                ? 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
+                                : 'text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20'
+                            )}
+                            onClick={() => handleToggleBanDevice(device.id, isBanned)}
+                            disabled={loading}
+                          >
+                            <Ban className="size-3" />
+                            {isBanned ? 'Unban' : 'Ban'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => handleLogoutDevice(device.id)}
+                            disabled={loading}
+                          >
+                            <LogOut className="size-3" />
+                            Log Out
+                          </Button>
                         </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs font-medium">
-                          {relativeTime(device.last_active_at)}
-                        </p>
-                        <p className="text-muted-foreground text-[11px]">
-                          {formatDateTime(device.last_active_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

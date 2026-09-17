@@ -11,7 +11,18 @@
         "AUTH_SESSION_AGE",
         "AUTH_SECRET",
         "AUTH_URL",
-        "NODE_ENV"
+        "NODE_ENV",
+        "SUPABASE_SECRET_KEY",
+        "MAX_DEVICES_PER_USER",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "SESSION_TIMEOUT_DAYS",
+        "ACCESS_TOKEN_EXPIRATION_MINUTES",
+        "REFRESH_TOKEN_EXPIRATION_DAYS",
+        "APP_NAME",
+        "APP_VERSION",
+        "HOST",
+        "ALLOW_CORS_URL"
       ]
     },
     "lint": {

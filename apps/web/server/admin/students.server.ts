@@ -208,3 +208,45 @@ export async function updateEnrollmentStatus(enrollmentId: string, status: strin
   if (error) return { error };
   return { success: true };
 }
+
+export async function logoutStudentDevice(studentId: string, deviceId: string) {
+  const h = await headers();
+  const [error] = await safeFetch(z.any(), `/users/${studentId}/devices/${deviceId}`, {
+    method: 'DELETE',
+    headers: h,
+    cache: 'no-store',
+  });
+  if (error) return { error };
+  return { success: true };
+}
+
+export async function logoutAllStudentDevices(studentId: string) {
+  const h = await headers();
+  const [error] = await safeFetch(z.any(), `/users/${studentId}/devices`, {
+    method: 'DELETE',
+    headers: h,
+    cache: 'no-store',
+  });
+  if (error) return { error };
+  return { success: true };
+}
+
+export async function toggleBanStudentDevice(
+  studentId: string,
+  deviceId: string,
+  isBanned: boolean,
+) {
+  const h = await headers();
+  const [error] = await safeFetch(
+    z.any(),
+    `/users/${studentId}/devices/${deviceId}/ban`,
+    {
+      method: 'PATCH',
+      headers: h,
+      cache: 'no-store',
+      body: JSON.stringify({ is_banned: isBanned }),
+    },
+  );
+  if (error) return { error };
+  return { success: true };
+}

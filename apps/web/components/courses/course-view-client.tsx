@@ -6,6 +6,7 @@ import {
   createPaymentOrder,
   enrollFreeCourse,
   PublicCourse,
+  reportPaymentFailure,
   validateCourseCoupon,
   CouponValidationResult,
   verifyPayment,
@@ -42,7 +43,10 @@ type RazorpayCheckout = new (options: {
     razorpay_signature: string;
   }) => void;
   modal: { ondismiss: () => void };
-}) => { open: () => void };
+}) => {
+  open: () => void;
+  on: (event: string, callback: (response: any) => void) => void;
+};
 
 declare global {
   interface Window {
@@ -161,8 +165,31 @@ export function CourseViewClient({
           toast.success('Payment successful. You are now enrolled.');
           router.push(`/dashboard/courses/${course.id}`);
         },
-        modal: { ondismiss: () => setLoading(false) },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+          },
+        },
       });
+
+      checkout.on('payment.failed', async (response: any) => {
+        setLoading(false);
+        const orderId =
+          response?.error?.metadata?.order_id || order.razorpay_order_id;
+        const paymentId = response?.error?.metadata?.payment_id;
+        const description =
+          response?.error?.description || 'Payment was declined or failed by bank';
+
+        await reportPaymentFailure({
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          error_description: description,
+          error_code: response?.error?.code,
+        });
+
+        toast.error(description);
+      });
+
       checkout.open();
     } catch (error) {
       setLoading(false);
