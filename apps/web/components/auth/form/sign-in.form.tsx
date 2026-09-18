@@ -135,7 +135,7 @@ const SignInForm = () => {
         <CardHeader className="text-center pb-2 sm:pb-3">
           {/* Logo */}
           <div className="flex justify-center mb-3 sm:mb-4">
-            <LogoIcon width={44} height={44} className="w-11 h-11 sm:w-12 sm:h-12" />
+            <LogoIcon width={44} height={44} className="w-auto h-11 sm:h-12" />
           </div>
           <CardTitle className="text-xl sm:text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription

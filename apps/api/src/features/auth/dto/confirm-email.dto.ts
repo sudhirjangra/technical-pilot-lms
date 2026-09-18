@@ -10,8 +10,8 @@ import {
 export class ConfirmEmailDto {
   @ApiProperty()
   @IsString()
-  @MaxLength(8)
-  @MinLength(6)
+  @MinLength(6, { message: 'Token must be 6 digits' })
+  @MaxLength(6, { message: 'Token must be 6 digits' })
   token: string;
 
   @ApiProperty()

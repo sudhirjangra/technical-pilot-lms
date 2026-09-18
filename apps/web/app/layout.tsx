@@ -1,8 +1,9 @@
 import { GlobalRouteLoader } from '@/components/global-route-loader';
 import Providers from '@/components/providers';
+import { PwaRegister } from '@/components/pwa-register';
 import { APP_NAME, APP_URL } from '@repo/constants/app';
 import { cn } from '@repo/shadcn/lib/utils';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono, Roboto, Roboto_Mono } from 'next/font/google';
 import { ReactNode } from 'react';
 
@@ -34,6 +35,18 @@ const roboto_mono = Roboto_Mono({
   weight: ['400', '500', '600', '700'],
   variable: '--font-roboto-mono',
 });
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+  ],
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export const metadata = {
   metadataBase: new URL(APP_URL),
@@ -72,7 +85,12 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     title: APP_NAME,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-touch-fullscreen': 'yes',
   },
   icons: {
     icon: [
@@ -87,7 +105,7 @@ export const metadata = {
       { rel: 'icon', url: '/metadata/favicon.ico', sizes: '16x16 32x32', type: 'image/x-icon' },
     ],
   },
-  manifest: '/metadata/site.webmanifest',
+  manifest: '/manifest.webmanifest',
 } satisfies Metadata;
 
 const RootLayout = async ({
@@ -116,6 +134,7 @@ const RootLayout = async ({
           <GlobalRouteLoader />
           {children}
         </Providers>
+        <PwaRegister />
         <Toaster />
       </body>
     </html>
@@ -125,3 +144,4 @@ const RootLayout = async ({
 export default RootLayout;
 
 export const runtime = 'nodejs';
+

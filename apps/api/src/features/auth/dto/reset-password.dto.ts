@@ -12,8 +12,8 @@ export class ResetPasswordDto {
   @IsString({
     message: 'Reset Token must be a string',
   })
-  @MinLength(6, { message: 'Reset Token must be at least 6 characters' })
-  @MaxLength(8, { message: 'Reset Token must be at most 8 characters' })
+  @MinLength(6, { message: 'Reset Token must be 6 digits' })
+  @MaxLength(6, { message: 'Reset Token must be 6 digits' })
   resetToken: string;
 
   @ApiProperty()

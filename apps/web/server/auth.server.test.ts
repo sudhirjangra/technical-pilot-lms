@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateSessionIfExist } from './auth.server';
 
 vi.mock('next-auth', () => {
@@ -47,6 +47,19 @@ vi.mock('@/lib/device', () => ({
 }));
 
 describe('auth.server', () => {
+  beforeEach(async () => {
+    const { auth } = await import('@/auth');
+    vi.mocked(auth).mockResolvedValue({
+      user: {
+        id: 'user-1',
+        tokens: {
+          session_token: 'sess-token-1',
+          access_token: 'acc-token-1',
+        },
+      },
+    } as any);
+  });
+
   describe('validateSessionIfExist', () => {
     it('returns signedOut: false when session is valid', async () => {
       const { safeFetch } = await import('@/lib');

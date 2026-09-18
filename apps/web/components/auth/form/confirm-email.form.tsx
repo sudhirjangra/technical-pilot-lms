@@ -115,12 +115,12 @@ const ConfirmEmailForm = ({ email }: { email: string }) => {
                     className="w-full"
                     autoFocus
                     onChange={setToken}
-                    maxLength={8}
+                    maxLength={6}
                     minLength={6}
                     pattern={REGEXP_ONLY_DIGITS}
                   >
-                    <InputOTPGroup className="w-full grid grid-cols-8 gap-3">
-                      {Array.from({ length: 8 }).map((_, i) => (
+                    <InputOTPGroup className="w-full grid grid-cols-6 gap-3">
+                      {Array.from({ length: 6 }).map((_, i) => (
                         <InputOTPSlot
                           key={i}
                           className="w-full h-10 rounded-xl first:rounded-xl last:rounded-xl border"

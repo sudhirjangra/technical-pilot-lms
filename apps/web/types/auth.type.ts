@@ -117,7 +117,7 @@ export const ForgotPasswordSchema = z.object({
  */
 export const ResetPasswordSchema = z.object({
   identifier: z.string(),
-  resetToken: z.string().min(6).max(8),
+  resetToken: z.string().length(6, 'Reset code must be 6 digits'),
   newPassword: z.string(),
 });
 
@@ -126,7 +126,7 @@ export const ResetPasswordSchema = z.object({
  */
 export const ConfirmEmailSchema = z.object({
   email: z.string().email(),
-  token: z.string().min(6).max(8),
+  token: z.string().length(6, 'Verification code must be 6 digits'),
 });
 
 export const ResendOtpSchema = z.object({
