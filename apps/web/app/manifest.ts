@@ -9,11 +9,13 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     start_url: '/',
     scope: '/',
-    display: 'fullscreen',
+    display: 'standalone',
     display_override: ['fullscreen', 'standalone', 'window-controls-overlay'],
     orientation: 'portrait-primary',
     theme_color: '#ffffff',
     background_color: '#ffffff',
+    prefer_related_applications: false,
+    categories: ['education', 'training'],
     icons: [
       {
         src: '/metadata/android-chrome-192x192.png',
@@ -40,7 +42,24 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
       {
+        src: '/android-chrome-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/android-chrome-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
         src: '/metadata/apple-touch-icon.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+      {
+        src: '/apple-touch-icon.png',
         sizes: '180x180',
         type: 'image/png',
       },
