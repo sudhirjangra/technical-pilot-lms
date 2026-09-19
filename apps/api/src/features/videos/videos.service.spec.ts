@@ -2,7 +2,10 @@ import { SUPABASE_ADMIN } from '@/common/modules/supabase.module';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import axios from 'axios';
 import { VideosService } from './videos.service';
+
+jest.mock('axios');
 
 describe('VideosService', () => {
   let service: VideosService;

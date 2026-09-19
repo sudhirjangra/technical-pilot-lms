@@ -25,6 +25,8 @@ export const bootstrap = async (app: NestFastifyApplication): Promise<void> => {
   // Set up security headers using helmet (Fastify plugin)
   await app.register(helmet, {
     global: true,
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     permittedCrossDomainPolicies: false,
   });
 

@@ -150,16 +150,34 @@ export function CourseViewClient({
     try {
       if (!window.Razorpay) {
         await new Promise<void>((resolve, reject) => {
+          const existingScript = document.querySelector<HTMLScriptElement>(
+            'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
+          );
+          if (existingScript) {
+            existingScript.addEventListener('load', () => resolve());
+            existingScript.addEventListener('error', () =>
+              reject(new Error('Unable to load payment checkout script')),
+            );
+            return;
+          }
           const script = document.createElement('script');
           script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.async = true;
           script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Unable to load payment checkout'));
+          script.onerror = () =>
+            reject(
+              new Error(
+                'Unable to load payment checkout. Please check your internet connection or ad-blocker.',
+              ),
+            );
           document.body.appendChild(script);
         });
       }
 
       if (!window.Razorpay) throw new Error('Unable to load payment checkout');
       const order = orderResult.order;
+      const isTestKey = order.razorpay_key_id.startsWith('rzp_test_');
+
       const checkout = new window.Razorpay({
         key: order.razorpay_key_id,
         amount: order.amount,
@@ -187,11 +205,16 @@ export function CourseViewClient({
 
       checkout.on('payment.failed', async (response: any) => {
         setLoading(false);
+        console.error('Razorpay payment failed diagnostic:', response);
         const orderId =
           response?.error?.metadata?.order_id || order.razorpay_order_id;
         const paymentId = response?.error?.metadata?.payment_id;
-        const description =
+        let description =
           response?.error?.description || 'Payment was declined or failed by bank';
+
+        if (isTestKey && (response?.error?.code === 'BAD_REQUEST_ERROR' || !response?.error?.step)) {
+          description += ' (Note: Payment gateway is in test mode. Real bank cards are not accepted in test mode.)';
+        }
 
         await reportPaymentFailure({
           razorpay_order_id: orderId,
@@ -206,6 +229,7 @@ export function CourseViewClient({
       checkout.open();
     } catch (error) {
       setLoading(false);
+      console.error('Razorpay checkout exception:', error);
       toast.error(error instanceof Error ? error.message : 'Unable to open payment checkout');
     }
   };

@@ -30,8 +30,11 @@ export class DoubtSessionsController {
   @Post('slots')
   @Roles('ADMIN', 'SUB_ADMIN')
   @Permissions('doubt_sessions:manage')
-  createSlot(@Body() dto: CreateSlotDto, @Req() req: { user: { id: string } }) {
-    return this.service.createSlot(dto, req.user.id);
+  createSlot(
+    @Body() dto: CreateSlotDto,
+    @Req() req: { user: { id?: string; sub?: string } },
+  ) {
+    return this.service.createSlot(dto, (req.user.id || req.user.sub)!);
   }
 
   @Get('slots')
@@ -78,25 +81,28 @@ export class DoubtSessionsController {
   // ── Student endpoints ──
 
   @Get('upcoming')
-  getUpcomingSlots(@Req() req: { user?: { id: string } }) {
-    return this.service.getUpcomingSlots(req.user?.id);
+  getUpcomingSlots(@Req() req: { user?: { id?: string; sub?: string } }) {
+    return this.service.getUpcomingSlots(req.user?.id || req.user?.sub);
   }
 
   @Post('book')
-  bookSlot(@Body() dto: BookSlotDto, @Req() req: { user: { id: string } }) {
-    return this.service.bookSlot(dto, req.user.id);
+  bookSlot(
+    @Body() dto: BookSlotDto,
+    @Req() req: { user: { id?: string; sub?: string } },
+  ) {
+    return this.service.bookSlot(dto, (req.user.id || req.user.sub)!);
   }
 
   @Post('bookings/:id/cancel')
   cancelBooking(
     @Param('id', ParseUUIDPipe) id: string,
-    @Req() req: { user: { id: string } },
+    @Req() req: { user: { id?: string; sub?: string } },
   ) {
-    return this.service.cancelBooking(id, req.user.id);
+    return this.service.cancelBooking(id, (req.user.id || req.user.sub)!);
   }
 
   @Get('my-bookings')
-  getMyBookings(@Req() req: { user: { id: string } }) {
-    return this.service.getMyBookings(req.user.id);
+  getMyBookings(@Req() req: { user: { id?: string; sub?: string } }) {
+    return this.service.getMyBookings((req.user.id || req.user.sub)!);
   }
 }

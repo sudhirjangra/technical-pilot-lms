@@ -361,21 +361,24 @@ export function PaymentDetailDialog({
                 )}
               </div>
 
-              {/* Razorpay Order ID */}
+              {/* Order ID */}
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-2 border border-border/40">
                 <div className="min-w-0">
                   <span className="text-[10px] text-muted-foreground block">Order ID</span>
                   <span className="font-mono text-xs font-medium truncate block">
-                    {payment.razorpay_order_id || 'N/A'}
+                    {payment.invoice_number || payment.razorpay_order_id || 'N/A'}
                   </span>
                 </div>
-                {payment.razorpay_order_id && (
+                {(payment.invoice_number || payment.razorpay_order_id) && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
                     onClick={() =>
-                      copyToClipboard(payment.razorpay_order_id!, 'Order ID')
+                      copyToClipboard(
+                        (payment.invoice_number || payment.razorpay_order_id)!,
+                        'Order ID',
+                      )
                     }
                   >
                     {copiedField === 'Order ID' ? (
@@ -387,24 +390,24 @@ export function PaymentDetailDialog({
                 )}
               </div>
 
-              {/* Invoice Number */}
+              {/* Razorpay Order ID */}
               <div className="flex items-center justify-between rounded-lg bg-background/60 p-2 border border-border/40">
                 <div className="min-w-0">
-                  <span className="text-[10px] text-muted-foreground block">Invoice Number</span>
+                  <span className="text-[10px] text-muted-foreground block">Razorpay Order ID</span>
                   <span className="font-mono text-xs font-medium truncate block">
-                    {payment.invoice_number || 'N/A'}
+                    {payment.razorpay_order_id || 'N/A'}
                   </span>
                 </div>
-                {payment.invoice_number && (
+                {payment.razorpay_order_id && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
                     onClick={() =>
-                      copyToClipboard(payment.invoice_number!, 'Invoice Number')
+                      copyToClipboard(payment.razorpay_order_id!, 'Razorpay Order ID')
                     }
                   >
-                    {copiedField === 'Invoice Number' ? (
+                    {copiedField === 'Razorpay Order ID' ? (
                       <Check className="size-3 text-emerald-500" />
                     ) : (
                       <Copy className="size-3" />

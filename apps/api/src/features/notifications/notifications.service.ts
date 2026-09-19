@@ -26,13 +26,35 @@ export class NotificationsService {
   }
 
   async getAdminNotificationLogs() {
-    const { data, error } = await this.supabase
+    const { data: notifications, error } = await this.supabase
       .from('notifications')
-      .select('*, profiles:recipient_id(id, full_name, email)')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) throw new BadRequestException(error.message);
-    return data;
+    if (!notifications || notifications.length === 0) return [];
+
+    const recipientIds = [
+      ...new Set(notifications.map((n) => n.recipient_id).filter(Boolean)),
+    ];
+    let profilesMap = new Map<
+      string,
+      { id: string; full_name: string | null; email: string }
+    >();
+    if (recipientIds.length > 0) {
+      const { data: profiles } = await this.supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', recipientIds);
+      if (profiles) {
+        profilesMap = new Map(profiles.map((p) => [p.id, p]));
+      }
+    }
+
+    return notifications.map((n) => ({
+      ...n,
+      profiles: profilesMap.get(n.recipient_id) || null,
+    }));
   }
 
   async getUnreadCount(userId: string) {

@@ -16,7 +16,9 @@ export default async function AdminNotificationsPage() {
     getAdminNotificationLogs(),
   ]);
 
-  const students = users.filter((u) => u.role === 'student');
+  const students = users.filter(
+    (u) => (u.role || '').toLowerCase() === 'student' && u.is_active !== false,
+  );
 
   return (
     <div className="p-3 sm:p-6">

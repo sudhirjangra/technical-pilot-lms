@@ -16,7 +16,9 @@ export default async function AdminDoubtSessionsPage() {
     getUsers(),
   ]);
 
-  const students = users.filter((u) => u.role === 'student');
+  const students = users.filter(
+    (u) => (u.role || '').toLowerCase() === 'student' && u.is_active !== false,
+  );
 
   return <DoubtSlotsClient slots={slots} courses={courses} students={students} />;
 }

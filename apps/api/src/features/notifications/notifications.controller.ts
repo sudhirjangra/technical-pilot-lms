@@ -21,26 +21,26 @@ export class NotificationsController {
   // ── Student endpoints ──
 
   @Get('my')
-  getMyNotifications(@Req() req: { user: { id: string } }) {
-    return this.service.getMyNotifications(req.user.id);
+  getMyNotifications(@Req() req: { user: { id?: string; sub?: string } }) {
+    return this.service.getMyNotifications((req.user.id || req.user.sub)!);
   }
 
   @Get('unread-count')
-  getUnreadCount(@Req() req: { user: { id: string } }) {
-    return this.service.getUnreadCount(req.user.id);
+  getUnreadCount(@Req() req: { user: { id?: string; sub?: string } }) {
+    return this.service.getUnreadCount((req.user.id || req.user.sub)!);
   }
 
   @Patch(':id/read')
   markRead(
     @Param('id', ParseUUIDPipe) id: string,
-    @Req() req: { user: { id: string } },
+    @Req() req: { user: { id?: string; sub?: string } },
   ) {
-    return this.service.markRead(id, req.user.id);
+    return this.service.markRead(id, (req.user.id || req.user.sub)!);
   }
 
   @Post('mark-all-read')
-  markAllRead(@Req() req: { user: { id: string } }) {
-    return this.service.markAllRead(req.user.id);
+  markAllRead(@Req() req: { user: { id?: string; sub?: string } }) {
+    return this.service.markAllRead((req.user.id || req.user.sub)!);
   }
 
   // ── Admin endpoints ──

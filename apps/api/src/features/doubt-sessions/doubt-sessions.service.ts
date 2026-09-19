@@ -93,6 +93,9 @@ export class DoubtSessionsService {
     excludeSlotId?: string,
   ) {
     const targetType = slot.target_type || 'all';
+    const normalizedStartTime =
+      slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time;
+
     let query = this.supabase
       .from('doubt_slots')
       .select('id, date, start_time, target_type, course_id, student_id')

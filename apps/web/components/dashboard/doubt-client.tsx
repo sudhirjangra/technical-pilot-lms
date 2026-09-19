@@ -29,7 +29,7 @@ export function StudentDoubtClient({
   const [submitting, setSubmitting] = useState(false);
 
   const bookedSlotIds = new Set(
-    bookings.filter((b) => b.status === 'confirmed').map((b) => b.slot_id),
+    bookings.filter((b) => b.status !== 'cancelled').map((b) => b.slot_id),
   );
 
   const handleBook = async (slotId: string) => {
@@ -112,7 +112,7 @@ export function StudentDoubtClient({
                     {new Date(slot.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)} • {slot.duration_minutes}m
+                    {slot.start_time ? slot.start_time.slice(0, 5) : '--:--'} – {slot.end_time ? slot.end_time.slice(0, 5) : '--:--'} • {slot.duration_minutes}m
                     • {slot.current_bookings}/{slot.max_bookings} booked
                   </p>
                   {slot.description && (
@@ -163,7 +163,7 @@ export function StudentDoubtClient({
                           {new Date(b.doubt_slots.date + 'T00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground">
-                          {b.doubt_slots.start_time.slice(0, 5)} – {b.doubt_slots.end_time.slice(0, 5)}
+                          {b.doubt_slots.start_time ? b.doubt_slots.start_time.slice(0, 5) : '--:--'} – {b.doubt_slots.end_time ? b.doubt_slots.end_time.slice(0, 5) : '--:--'}
                         </p>
                         {meetingLink && (
                           <a href={meetingLink} target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm text-primary hover:underline mt-1 inline-block">

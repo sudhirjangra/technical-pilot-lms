@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { SentryExceptionCaptured } from '@sentry/nestjs';
+import { SentryExceptionCaptured, captureException } from '@sentry/nestjs';
 import { PostgrestError } from '@supabase/supabase-js';
 
 interface FastifyReplyLike {
@@ -98,9 +98,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         'Database query failed',
       );
     } else if (exception instanceof Error) {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = SAFE_CLIENT_MESSAGES[500]!;
       errorCode = 'INTERNAL_ERROR';
       this.logger.error({ error: exception.stack }, 'Unhandled exception');
+      captureException(exception);
+    } else {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = SAFE_CLIENT_MESSAGES[500]!;
+      errorCode = 'UNKNOWN_ERROR';
+      this.logger.error({ exception }, 'Unknown unhandled exception');
+      captureException(exception);
     }
 
     const errorResponse = {
