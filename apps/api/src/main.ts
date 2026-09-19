@@ -1,3 +1,4 @@
+import './instrument';
 import { AppModule } from '@/app.module';
 import { bootstrap } from '@/bootstrap';
 import { NestFactory } from '@nestjs/core';

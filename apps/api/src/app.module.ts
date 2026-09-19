@@ -30,6 +30,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { SentryModule } from '@sentry/nestjs/setup';
 import { AuthModule } from './features/auth/auth.module';
 import { HealthModule } from './features/health/health.module';
 import { MailModule } from './features/mail/mail.module';
@@ -54,6 +55,7 @@ import { MailModule } from './features/mail/mail.module';
     },
   ],
   imports: [
+    SentryModule.forRoot(),
     JwtModule.register({
       global: true,
     }),

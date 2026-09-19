@@ -2,6 +2,7 @@
 
 import {
   getMyReferralSummary,
+  linkReferralCode,
   ReferralSummary,
   requestCashConversion,
 } from '@/server/student/referrals.server';
@@ -57,6 +58,10 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
   const [pointsToConvert, setPointsToConvert] = useState<number>(0);
   const [conversionNotes, setConversionNotes] = useState('');
   const [submittingConversion, setSubmittingConversion] = useState(false);
+
+  // Link referral code state
+  const [inputReferralCode, setInputReferralCode] = useState('');
+  const [linkingReferral, setLinkingReferral] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -134,6 +139,27 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
     }
   };
 
+  const handleLinkReferral = async () => {
+    if (!inputReferralCode.trim()) {
+      toast.error('Please enter a referral code');
+      return;
+    }
+    setLinkingReferral(true);
+    const res = await linkReferralCode(inputReferralCode.trim());
+    setLinkingReferral(false);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success(res.message || 'Referral code linked successfully! Your coupon has been created.');
+    setInputReferralCode('');
+    // Refresh summary
+    const refreshed = await getMyReferralSummary();
+    if (refreshed.data) {
+      setData(refreshed.data);
+    }
+  };
+
   const pointsRatio = settings?.points_per_rupee || 5;
   const estimatedInr = (pointsToConvert / pointsRatio).toFixed(2);
 
@@ -178,7 +204,7 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
       </div>
 
       {/* Available Referral Welcome Coupon (for students who signed up via referral) */}
-      {data?.available_coupon && (
+      {data?.available_coupon ? (
         <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-card p-5 sm:p-6 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
@@ -193,7 +219,7 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
                   </Badge>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  You gained an exclusive {data.available_coupon.discount_percentage}% discount for joining through a friend&apos;s referral! Apply this code during checkout on any course.
+                  You gained an exclusive {data.available_coupon.discount_percentage}% discount for joining through a friend&apos;s referral! This coupon will be automatically applied at checkout across all courses until you make your purchase.
                 </p>
               </div>
             </div>
@@ -215,6 +241,44 @@ export function ReferralsClient({ initialData }: { initialData?: ReferralSummary
               >
                 {copiedCoupon ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
                 {copiedCoupon ? 'Copied' : 'Copy Code'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-card p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-lg bg-primary/15 text-primary shrink-0 mt-0.5 sm:mt-0">
+                <Gift className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground text-base">Have a Friend&apos;s Referral Code?</span>
+                  <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 text-xs font-semibold">
+                    {settings?.referee_discount_percentage || 20}% OFF
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Didn&apos;t enter a referral code during signup? Enter it here to claim your exclusive {settings?.referee_discount_percentage || 20}% discount coupon and link your referral rewards!
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+              <Input
+                placeholder="e.g. TP8K9X2Y"
+                value={inputReferralCode}
+                onChange={(e) => setInputReferralCode(e.target.value.toUpperCase())}
+                className="w-full sm:w-44 font-mono uppercase bg-background"
+                disabled={linkingReferral}
+              />
+              <Button
+                onClick={handleLinkReferral}
+                disabled={linkingReferral || !inputReferralCode.trim()}
+                className="shrink-0"
+              >
+                {linkingReferral ? 'Linking...' : 'Claim Coupon'}
               </Button>
             </div>
           </div>

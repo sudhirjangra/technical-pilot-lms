@@ -292,12 +292,12 @@ export class DoubtSessionsService {
           return true;
         }
         if (slot.target_type === 'course') {
-          return slot.course_id ? enrolledCourseIds.has(slot.course_id) : true;
+          return Boolean(slot.course_id && enrolledCourseIds.has(slot.course_id));
         }
         if (slot.target_type === 'student') {
           return slot.student_id === studentId;
         }
-        return true;
+        return false;
       });
     }
 
@@ -474,7 +474,7 @@ export class DoubtSessionsService {
   async cancelBooking(bookingId: string, studentId: string) {
     const { data: booking, error: bErr } = await this.supabase
       .from('doubt_bookings')
-      .select('*, doubt_slots(id, current_bookings)')
+      .select('id, slot_id, student_id, status')
       .eq('id', bookingId)
       .eq('student_id', studentId)
       .single();
@@ -488,48 +488,56 @@ export class DoubtSessionsService {
       .eq('id', bookingId);
 
     // Decrement slot counter, reopen if was full
-    const slot = booking.doubt_slots as {
-      id: string;
-      current_bookings: number;
-    };
-    const newCount = Math.max(0, (slot?.current_bookings ?? 1) - 1);
-    await this.supabase
-      .from('doubt_slots')
-      .update({ current_bookings: newCount, status: 'available' })
-      .eq('id', slot.id);
+    if (booking.slot_id) {
+      const { data: slot } = await this.supabase
+        .from('doubt_slots')
+        .select('id, current_bookings')
+        .eq('id', booking.slot_id)
+        .maybeSingle();
+
+      if (slot) {
+        const newCount = Math.max(0, (slot.current_bookings ?? 1) - 1);
+        await this.supabase
+          .from('doubt_slots')
+          .update({ current_bookings: newCount, status: 'available' })
+          .eq('id', slot.id);
+      }
+    }
   }
 
   async getMyBookings(studentId: string) {
-    const { data, error } = await this.supabase
+    const { data: bookings, error } = await this.supabase
       .from('doubt_bookings')
       .select(
-        'id, slot_id, student_id, status, booked_at, cancelled_at, meeting_link, updated_at, doubt_slots(*)',
+        'id, slot_id, student_id, status, booked_at, cancelled_at, meeting_link, updated_at',
       )
       .eq('student_id', studentId)
       .neq('status', 'cancelled')
       .order('booked_at', { ascending: false });
     if (error) throw new BadRequestException(error.message);
 
-    if (!data || data.length === 0) return [];
+    if (!bookings || bookings.length === 0) return [];
 
-    // Hydrate course info on slots
-    const rawSlots = data
-      .map((b) =>
-        Array.isArray(b.doubt_slots) ? b.doubt_slots[0] : b.doubt_slots,
-      )
-      .filter(Boolean);
-    const hydratedSlots = await this.hydrateSlots(rawSlots);
+    // Extract slot IDs and fetch slots without schema cache join
+    const slotIds = [
+      ...new Set(bookings.map((b) => b.slot_id).filter(Boolean)),
+    ];
+    let slots: any[] = [];
+    if (slotIds.length > 0) {
+      const { data: rawSlots } = await this.supabase
+        .from('doubt_slots')
+        .select('*')
+        .in('id', slotIds);
+      slots = rawSlots || [];
+    }
+
+    const hydratedSlots = await this.hydrateSlots(slots);
     const slotMap = new Map(hydratedSlots.map((s) => [s.id, s]));
 
-    return data.map((b) => {
-      const slotObj = Array.isArray(b.doubt_slots)
-        ? b.doubt_slots[0]
-        : b.doubt_slots;
-      return {
-        ...b,
-        doubt_slots: slotObj ? slotMap.get(slotObj.id) || slotObj : null,
-      };
-    });
+    return bookings.map((b) => ({
+      ...b,
+      doubt_slots: slotMap.get(b.slot_id) || null,
+    }));
   }
 
   async getSlotBookings(slotId: string) {

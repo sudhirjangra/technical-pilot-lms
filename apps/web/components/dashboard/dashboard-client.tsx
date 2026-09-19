@@ -531,11 +531,7 @@ export function DashboardClient({
                           {p.courses?.title ?? 'Course Enrollment'}
                         </td>
                         <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
-                          {p.razorpay_order_id
-                            ? p.razorpay_order_id.length > 14
-                              ? `${p.razorpay_order_id.slice(0, 14)}...`
-                              : p.razorpay_order_id
-                            : '—'}
+                          {p.invoice_number || p.razorpay_order_id || '—'}
                         </td>
                         <td className="py-2.5 px-3 font-bold text-foreground">
                           ₹{Number(p.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}

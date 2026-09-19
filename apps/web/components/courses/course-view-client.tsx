@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   createPaymentOrder,
@@ -81,27 +81,40 @@ export function CourseViewClient({
   const isFree = Number(effectivePrice) === 0;
   const finalPrice = appliedCoupon ? appliedCoupon.final_price : effectivePrice;
 
-  const handleApplySpecificCoupon = async (codeToApply: string) => {
-    if (!codeToApply.trim()) return;
-    setValidatingCoupon(true);
-    const { error, result } = await validateCourseCoupon(codeToApply, course.id);
-    setValidatingCoupon(false);
+  const handleApplySpecificCoupon = useCallback(
+    async (codeToApply: string, silent = false) => {
+      if (!codeToApply.trim()) return;
+      setValidatingCoupon(true);
+      const { error, result } = await validateCourseCoupon(codeToApply, course.id);
+      setValidatingCoupon(false);
 
-    if (error || !result) {
-      toast.error(error ?? 'Invalid coupon code');
-      return;
+      if (error || !result) {
+        if (!silent) toast.error(error ?? 'Invalid coupon code');
+        return;
+      }
+
+      setAppliedCoupon(result);
+      if (!silent) {
+        toast.success(`Coupon applied! You saved ₹${result.discount_amount}`);
+      }
+    },
+    [course.id],
+  );
+
+  // Auto-apply unapplied coupon when visiting course page
+  useEffect(() => {
+    if (availableCoupon?.code && !appliedCoupon && !isEnrolled && !isFree) {
+      setCouponCode(availableCoupon.code);
+      handleApplySpecificCoupon(availableCoupon.code, true);
     }
-
-    setAppliedCoupon(result);
-    toast.success(`Coupon applied! You saved ₹${result.discount_amount}`);
-  };
+  }, [availableCoupon?.code, appliedCoupon, isEnrolled, isFree, handleApplySpecificCoupon]);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
       toast.error('Please enter a coupon code');
       return;
     }
-    await handleApplySpecificCoupon(couponCode);
+    await handleApplySpecificCoupon(couponCode, false);
   };
 
   const handleRemoveCoupon = () => {
@@ -368,7 +381,7 @@ export function CourseViewClient({
                       <div className="space-y-1.5">
                         <div className="flex gap-2">
                           <Input
-                            placeholder="Referral or coupon code"
+                            placeholder="Enter coupon code"
                             value={couponCode}
                             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                             className="h-9 text-xs uppercase"
@@ -385,7 +398,7 @@ export function CourseViewClient({
                           </Button>
                         </div>
                         <p className="text-[11px] text-muted-foreground">
-                          Have a referral code from a friend? Enter it for an exclusive discount.
+                          Enter your promotional or referral discount coupon code.
                         </p>
                       </div>
                     )}

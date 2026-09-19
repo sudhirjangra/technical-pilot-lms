@@ -39,6 +39,10 @@ export class BroadcastNotificationDto {
   @IsOptional()
   @IsUUID()
   course_id?: string;
+
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
 }
 
 export class SendNotificationDto {

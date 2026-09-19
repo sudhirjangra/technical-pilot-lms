@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nestjs';
 import { Public } from '@/common/decorators';
 import { Controller, Get, Inject } from '@nestjs/common';
 import {
@@ -95,4 +96,18 @@ export class HealthController {
       },
     ]);
   }
+
+  /**
+   * Sentry test error endpoint.
+   */
+  @Public()
+  @Get('debug-sentry')
+  getError() {
+    // Send a log before throwing the error
+    Sentry.logger.info('User triggered test error', {
+      action: 'test_error_endpoint',
+    });
+    throw new Error('My first Sentry error!');
+  }
 }
+

@@ -17,9 +17,19 @@ import { cn } from '@repo/shadcn/lib/utils';
 import { PasswordInput } from '@repo/shadcn/password-input';
 import SubmitButton from '@repo/shadcn/submit-button';
 import { useAction } from 'next-safe-action/hooks';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@repo/shadcn/alert-dialog';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 
 const SignUpForm = () => {
   const searchParams = useSearchParams();
@@ -46,11 +56,23 @@ const SignUpForm = () => {
     }));
   };
 
+  const [showNoRefWarning, setShowNoRefWarning] = useState(false);
+  const referralInputRef = useRef<HTMLInputElement>(null);
+
   const {
     execute,
     isExecuting,
     result: { validationErrors, serverError },
   } = useAction(signUpWithCredentials);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.referral_code.trim()) {
+      setShowNoRefWarning(true);
+      return;
+    }
+    execute(formData);
+  };
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -68,12 +90,7 @@ const SignUpForm = () => {
         </CardHeader>
 
         <CardContent className="pt-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              execute(formData);
-            }}
-          >
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-5">
               <div className="grid gap-2">
                 <Label isRequired htmlFor="full_name">Full name</Label>
@@ -168,6 +185,7 @@ const SignUpForm = () => {
                   )}
                 </div>
                 <Input
+                  ref={referralInputRef}
                   id="referral_code"
                   name="referral_code"
                   type="text"
@@ -214,6 +232,40 @@ const SignUpForm = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Warning Dialog when No Referral Code is Entered */}
+      <AlertDialog open={showNoRefWarning} onOpenChange={setShowNoRefWarning}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base sm:text-lg">No Referral Code Entered</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              You haven&apos;t entered a referral code. If a friend invited you to Technical Pilot, entering their code now unlocks an exclusive <strong className="text-foreground">20% discount coupon</strong> on all courses!
+              <br /><br />
+              Don&apos;t have a code right now? No worries—you can also link a referral code later anytime from your student dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-2">
+            <AlertDialogCancel
+              onClick={() => {
+                setShowNoRefWarning(false);
+                setTimeout(() => referralInputRef.current?.focus(), 150);
+              }}
+              className="text-xs sm:text-sm"
+            >
+              Enter Referral Code
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowNoRefWarning(false);
+                execute(formData);
+              }}
+              className="text-xs sm:text-sm"
+            >
+              Continue Without Code
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

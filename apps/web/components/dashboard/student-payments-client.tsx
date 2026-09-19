@@ -228,12 +228,8 @@ export function StudentPaymentsClient({
                           </div>
                         </td>
                         <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
-                          <span title={p.razorpay_order_id ?? ''}>
-                            {p.razorpay_order_id
-                              ? p.razorpay_order_id.length > 14
-                                ? `${p.razorpay_order_id.slice(0, 14)}...`
-                                : p.razorpay_order_id
-                              : '—'}
+                          <span title={(p.invoice_number || p.razorpay_order_id) ?? ''}>
+                            {p.invoice_number || p.razorpay_order_id || '—'}
                           </span>
                         </td>
                         <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
@@ -367,12 +363,12 @@ export function StudentPaymentsClient({
                     <span className="text-muted-foreground text-[11px] shrink-0">Order ID</span>
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="font-mono font-medium text-foreground truncate text-[11px]">
-                        {selectedPayment.razorpay_order_id ?? '—'}
+                        {selectedPayment.invoice_number || selectedPayment.razorpay_order_id || '—'}
                       </span>
-                      {selectedPayment.razorpay_order_id && (
+                      {(selectedPayment.invoice_number || selectedPayment.razorpay_order_id) && (
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(selectedPayment.razorpay_order_id!, 'Order ID')}
+                          onClick={() => copyToClipboard((selectedPayment.invoice_number || selectedPayment.razorpay_order_id)!, 'Order ID')}
                           className="text-muted-foreground hover:text-foreground shrink-0 p-0.5"
                           title="Copy Order ID"
                         >

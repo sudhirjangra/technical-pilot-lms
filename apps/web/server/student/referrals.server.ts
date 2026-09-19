@@ -146,3 +146,69 @@ export async function requestCashConversion(input: {
   revalidatePath('/dashboard/referrals');
   return { success: true, message: data?.message };
 }
+
+const ActiveCouponSchema = z
+  .object({
+    id: z.string(),
+    code: z.string(),
+    discount_percentage: z.number(),
+    max_uses: z.number(),
+    times_used: z.number(),
+  })
+  .nullable();
+
+export type ActiveCoupon = z.infer<typeof ActiveCouponSchema>;
+
+/** Link a referral code for a student after signup */
+export async function linkReferralCode(
+  referralCode: string,
+): Promise<{ error?: string; success?: boolean; message?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: 'Not authenticated' };
+
+  const [error, data] = await safeFetch(
+    z.object({ success: z.boolean(), message: z.string() }).passthrough(),
+    '/referrals/link',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ referral_code: referralCode.trim() }),
+      cache: 'no-store',
+    },
+  );
+
+  if (error) {
+    return {
+      error: typeof error === 'string' ? error : 'Failed to link referral code',
+    };
+  }
+
+  revalidatePath('/dashboard/referrals');
+  revalidatePath('/courses');
+  revalidatePath('/profile');
+  return { success: true, message: data?.message };
+}
+
+/** Fetch student's current active unapplied coupon */
+export async function getMyActiveCoupon(): Promise<ActiveCoupon | null> {
+  const session = await auth();
+  if (!session?.user) return null;
+
+  const [error, data] = await safeFetch(
+    ActiveCouponSchema,
+    '/referrals/my-active-coupon',
+    {
+      headers: {
+        Authorization: `Bearer ${session.user.tokens.access_token}`,
+      },
+      cache: 'no-store',
+    },
+  );
+
+  if (error || !data) return null;
+  return data;
+}
+

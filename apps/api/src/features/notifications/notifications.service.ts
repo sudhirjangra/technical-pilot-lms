@@ -83,7 +83,7 @@ export class NotificationsService {
     courseId?: string,
     metadata?: Record<string, unknown>,
   ) {
-    let studentIds: string[] | undefined;
+    let targetRecipientIds: string[] = [];
 
     if (courseId) {
       const { data: enrollments, error: enrollmentsErr } = await this.supabase
@@ -92,38 +92,48 @@ export class NotificationsService {
         .eq('course_id', courseId)
         .in('status', ['active', 'completed']);
       if (enrollmentsErr) throw new BadRequestException(enrollmentsErr.message);
-      studentIds = [
+      const studentIds = [
         ...new Set(
           (enrollments ?? []).map((enrollment) => enrollment.student_id),
         ),
       ];
-      if (studentIds.length === 0) return { sent: 0 };
-    }
-
-    let targetRecipientIds: string[] = [];
-
-    if (studentIds && studentIds.length > 0) {
-      // For course broadcasts, target all enrolled student IDs directly
+      if (studentIds.length === 0) {
+        throw new BadRequestException(
+          'No enrolled students found in the selected course to notify.',
+        );
+      }
       targetRecipientIds = studentIds;
     } else {
-      // For global broadcasts, target all active students
+      // For global broadcasts, target all active students (excluding admin and sub_admin)
       const { data: students, error: studentsErr } = await this.supabase
         .from('profiles')
-        .select('id')
-        .in('role', ['student', 'STUDENT'])
-        .neq('is_active', false);
+        .select('id, role, is_active');
       if (studentsErr) throw new BadRequestException(studentsErr.message);
-      targetRecipientIds = (students ?? []).map((s) => s.id);
+
+      targetRecipientIds = (students ?? [])
+        .filter((s) => {
+          const role = (s.role ?? 'student').toLowerCase();
+          const isAdmin = role === 'admin' || role === 'sub_admin';
+          return !isAdmin && s.is_active !== false;
+        })
+        .map((s) => s.id);
     }
 
-    if (targetRecipientIds.length === 0) return { sent: 0 };
+    if (targetRecipientIds.length === 0) {
+      throw new BadRequestException('No active students found to notify.');
+    }
+
+    const mergedMetadata = {
+      ...(metadata ?? {}),
+      ...(courseId ? { course_id: courseId } : {}),
+    };
 
     const rows = targetRecipientIds.map((recipientId) => ({
       recipient_id: recipientId,
       title,
       body: body ?? null,
       type,
-      metadata: metadata ?? {},
+      metadata: mergedMetadata,
     }));
 
     const { error } = await this.supabase.from('notifications').insert(rows);

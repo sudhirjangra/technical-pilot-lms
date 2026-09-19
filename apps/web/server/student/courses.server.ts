@@ -214,6 +214,7 @@ export async function enrollFreeCourse(courseId: string): Promise<{ error?: stri
 
 const PaymentOrderSchema = z.object({
   payment_id: z.string(),
+  order_id: z.string().optional(),
   razorpay_order_id: z.string(),
   razorpay_key_id: z.string(),
   amount: z.coerce.number(),

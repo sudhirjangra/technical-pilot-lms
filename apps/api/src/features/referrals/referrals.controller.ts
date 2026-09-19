@@ -58,6 +58,21 @@ export class ReferralsController {
     );
   }
 
+  @ApiOperation({ summary: 'Link a referral code after signup' })
+  @Post('link')
+  async linkReferral(
+    @User('id') userId: string,
+    @Body() dto: { referral_code: string },
+  ) {
+    return this.referralsService.linkReferralCode(userId, dto.referral_code);
+  }
+
+  @ApiOperation({ summary: 'Get current active unapplied coupon for student' })
+  @Get('my-active-coupon')
+  async getMyActiveCoupon(@User('id') userId: string) {
+    return this.referralsService.getActiveCouponForStudent(userId);
+  }
+
   // ---------------- ADMIN ENDPOINTS ----------------
 
   @ApiOperation({ summary: 'Get admin referral overview KPIs' })

@@ -426,46 +426,117 @@ export class ReferralsService {
       };
     }
 
-    // 2. Check if student entered their referrer's referral code directly (e.g. TP8K9X)
-    const { data: referralRel } = await this.supabase
-      .from('referrals')
-      .select('id, referrer_id, referral_code')
-      .eq('referee_id', studentId)
-      .eq('referral_code', cleanCode)
-      .maybeSingle();
-
-    if (referralRel) {
-      // Check if student already completed a purchase with this referral discount
-      const { data: usedPayment } = await this.supabase
-        .from('payments')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('status', 'completed')
-        .eq('coupon_code', cleanCode)
-        .maybeSingle();
-
-      if (usedPayment) {
-        throw new BadRequestException(
-          'You have already applied this referral discount on a previous purchase.',
-        );
-      }
-
-      const discountPercent = settings.referee_discount_percentage;
-      const discountAmount = Math.round((basePrice * discountPercent) / 100);
-      const finalPrice = Math.max(0, basePrice - discountAmount);
-
-      return {
-        valid: true,
-        code: cleanCode,
-        discount_percentage: discountPercent,
-        discount_amount: discountAmount,
-        original_price: basePrice,
-        final_price: finalPrice,
-      };
+    // Direct referral codes (e.g. TP8K9X) must NOT be applicable as coupons
+    if (cleanCode.startsWith('TP')) {
+      throw new BadRequestException(
+        'Referral codes cannot be used directly as coupons. Only generated coupons can be applied. If you have not linked your referral code yet, link it in your dashboard to receive your discount coupon.',
+      );
     }
 
     // Any other case is invalid
     throw new BadRequestException('Invalid coupon code');
+  }
+
+  /**
+   * Link a referral code after signup.
+   * Creates referral relationship, assigns referee coupon, and notifies referrer.
+   */
+  async linkReferralCode(studentId: string, referralCode: string) {
+    if (!referralCode || !referralCode.trim()) {
+      throw new BadRequestException('Referral code is required');
+    }
+
+    const cleanCode = referralCode.trim().toUpperCase();
+
+    // Check if student already has a referral relationship
+    const { data: existingReferral } = await this.supabase
+      .from('referrals')
+      .select('id, referral_code')
+      .eq('referee_id', studentId)
+      .maybeSingle();
+
+    if (existingReferral) {
+      throw new BadRequestException(
+        `You have already linked referral code ${existingReferral.referral_code}`,
+      );
+    }
+
+    const { data: profile } = await this.supabase
+      .from('profiles')
+      .select('id, referred_by, referral_code')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    if (profile?.referred_by) {
+      throw new BadRequestException('You have already linked a referral code');
+    }
+
+    if (profile?.referral_code === cleanCode) {
+      throw new BadRequestException('You cannot refer yourself');
+    }
+
+    // Process the referral linking
+    const result = await this.processSignupReferral(studentId, cleanCode);
+    if (!result) {
+      throw new BadRequestException('Failed to link referral code. Please check the code and try again.');
+    }
+
+    // Retrieve the newly generated welcome coupon
+    const coupon = await this.getActiveCouponForStudent(studentId);
+
+    return {
+      success: true,
+      message: 'Referral code linked successfully! Your discount coupon has been generated.',
+      coupon,
+    };
+  }
+
+  /**
+   * Get the current active, unapplied coupon for an authenticated student.
+   * Returns null if student has no unapplied coupon.
+   */
+  async getActiveCouponForStudent(studentId: string) {
+    if (!studentId) return null;
+
+    const { data: coupons, error } = await this.supabase
+      .from('coupons')
+      .select('*')
+      .eq('applicable_user_id', studentId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error || !coupons || coupons.length === 0) return null;
+
+    for (const coupon of coupons) {
+      // Check expiration
+      if (coupon.valid_until && new Date(coupon.valid_until) < new Date()) {
+        continue;
+      }
+
+      // Check payments table for completed purchases using this coupon
+      const { count: completedCount } = await this.supabase
+        .from('payments')
+        .select('*', { count: 'exact', head: true })
+        .eq('coupon_code', coupon.code)
+        .eq('status', 'completed');
+
+      const effectiveUses = Math.max(
+        coupon.times_used || 0,
+        completedCount ?? 0,
+      );
+
+      if (effectiveUses < coupon.max_uses) {
+        return {
+          id: coupon.id,
+          code: coupon.code,
+          discount_percentage: Number(coupon.discount_percentage),
+          max_uses: coupon.max_uses,
+          times_used: effectiveUses,
+        };
+      }
+    }
+
+    return null;
   }
 
   /**

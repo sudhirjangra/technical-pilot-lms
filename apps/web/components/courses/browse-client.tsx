@@ -1,12 +1,14 @@
 'use client';
 
 import { PublicCategory, PublicCourse } from '@/server/student/courses.server';
+import { ActiveCoupon } from '@/server/student/referrals.server';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
 import { Input } from '@repo/shadcn/input';
 import { cn } from '@repo/shadcn/lib/utils';
 import {
+  Gift,
   GraduationCap,
   Search,
   SlidersHorizontal,
@@ -19,9 +21,11 @@ import { useMemo, useState } from 'react';
 export function CourseBrowseClient({
   courses,
   categories: allCategories = [],
+  activeCoupon,
 }: {
   courses: PublicCourse[];
   categories?: PublicCategory[];
+  activeCoupon?: ActiveCoupon | null;
 }) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -62,6 +66,16 @@ export function CourseBrowseClient({
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight md:text-3xl">Browse Courses</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Discover courses to build your skills.</p>
       </div>
+
+      {activeCoupon && (
+        <div className="flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm">
+          <Gift className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="flex-1">
+            <span className="font-semibold">Welcome Coupon Auto-Applied: </span>
+            Code <span className="font-mono font-bold bg-background/80 px-1.5 py-0.5 rounded text-foreground border border-emerald-500/30">{activeCoupon.code}</span> giving you <span className="font-semibold text-emerald-600 dark:text-emerald-400">{activeCoupon.discount_percentage}% OFF</span> is automatically applied to courses until your first purchase!
+          </div>
+        </div>
+      )}
 
       {/* Categories */}
       {visibleCategories.length > 0 && (
@@ -172,8 +186,12 @@ export function CourseBrowseClient({
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((course) => {
-            const effectivePrice = course.discount_price ?? course.price;
-            const isFree = Number(effectivePrice) === 0;
+            const basePrice = course.discount_price ?? course.price;
+            const isFree = Number(basePrice) === 0;
+            const couponPercent = activeCoupon?.discount_percentage ?? 0;
+            const hasCoupon = Boolean(activeCoupon && couponPercent > 0 && !isFree);
+            const couponDiscountAmount = hasCoupon ? Math.round((basePrice * couponPercent) / 100) : 0;
+            const finalPrice = hasCoupon ? Math.max(0, basePrice - couponDiscountAmount) : basePrice;
 
             return (
               <Link key={course.id} href={`/courses/${course.slug}`} className="group block">
@@ -209,16 +227,28 @@ export function CourseBrowseClient({
                       <p className="line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
                     )}
                     <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-baseline gap-1.5">
-                        {isFree ? (
-                          <span className="font-bold text-green-600">Free</span>
-                        ) : course.discount_price ? (
-                          <>
-                            <span className="text-lg font-bold">₹{course.discount_price}</span>
-                            <span className="text-sm text-muted-foreground line-through">₹{course.price}</span>
-                          </>
-                        ) : (
-                          <span className="text-lg font-bold">₹{course.price}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline gap-1.5">
+                          {isFree ? (
+                            <span className="font-bold text-green-600">Free</span>
+                          ) : hasCoupon ? (
+                            <>
+                              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₹{finalPrice}</span>
+                              <span className="text-xs text-muted-foreground line-through">₹{basePrice}</span>
+                            </>
+                          ) : course.discount_price ? (
+                            <>
+                              <span className="text-lg font-bold">₹{course.discount_price}</span>
+                              <span className="text-sm text-muted-foreground line-through">₹{course.price}</span>
+                            </>
+                          ) : (
+                            <span className="text-lg font-bold">₹{course.price}</span>
+                          )}
+                        </div>
+                        {hasCoupon && (
+                          <Badge variant="outline" className="w-fit text-[9px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                            {couponPercent}% OFF Auto-Applied
+                          </Badge>
                         )}
                       </div>
                       <span className="text-xs font-medium text-primary group-hover:underline">

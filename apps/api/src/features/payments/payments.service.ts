@@ -75,12 +75,28 @@ export class PaymentsService {
       appliedCouponCode = couponValidation.code;
     }
 
+    // Generate unique 4-digit order ID
+    let fourDigitOrderId = (1000 + Math.floor(Math.random() * 9000)).toString();
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { data: existing } = await this.supabase
+        .from('payments')
+        .select('id')
+        .eq('invoice_number', fourDigitOrderId)
+        .maybeSingle();
+      if (!existing) break;
+      fourDigitOrderId = (1000 + Math.floor(Math.random() * 9000)).toString();
+    }
+
     // Create Razorpay order via API
     const orderPayload = {
       amount: Math.round(amount * 100), // Razorpay expects paise
       currency: 'INR',
-      receipt: `rcpt_${Date.now()}`,
-      notes: { course_id: dto.course_id, student_id: studentId },
+      receipt: fourDigitOrderId, // 4-digit order ID for Razorpay receipt
+      notes: {
+        order_id: fourDigitOrderId,
+        course_id: dto.course_id,
+        student_id: studentId,
+      },
     };
 
     const razorpayRes = await fetch('https://api.razorpay.com/v1/orders', {
@@ -101,8 +117,7 @@ export class PaymentsService {
 
     const order = await razorpayRes.json();
 
-    // Store pending payment
-    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    // Store pending payment with 4-digit order id as invoice_number
     const { data: payment, error } = await this.supabase
       .from('payments')
       .insert({
@@ -112,7 +127,7 @@ export class PaymentsService {
         discount_amount: discountAmount,
         coupon_code: appliedCouponCode,
         razorpay_order_id: order.id,
-        invoice_number: invoiceNumber,
+        invoice_number: fourDigitOrderId,
         status: 'pending',
       })
       .select('*')
@@ -121,6 +136,7 @@ export class PaymentsService {
 
     return {
       payment_id: payment.id,
+      order_id: fourDigitOrderId,
       razorpay_order_id: order.id,
       razorpay_key_id: this.razorpayKeyId,
       amount: order.amount,
@@ -561,7 +577,7 @@ export class PaymentsService {
             courseId,
             amount: paymentDetails.amount,
             invoiceNumber: paymentDetails.invoice_number,
-            orderId: paymentDetails.razorpay_order_id,
+            orderId: paymentDetails.invoice_number || paymentDetails.razorpay_order_id,
             purchaseDate: new Date(),
           }),
         });

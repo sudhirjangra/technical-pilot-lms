@@ -100,7 +100,7 @@ export class UpdateReferralSettingsDto {
 }
 
 export class ValidateCouponDto {
-  @ApiProperty({ description: 'Coupon or referral code to validate' })
+  @ApiProperty({ description: 'Coupon code to validate' })
   @IsString()
   code: string;
 
@@ -108,3 +108,10 @@ export class ValidateCouponDto {
   @IsString()
   course_id: string;
 }
+
+export class LinkReferralDto {
+  @ApiProperty({ description: 'Referral code to link after signup' })
+  @IsString()
+  referral_code: string;
+}
+
