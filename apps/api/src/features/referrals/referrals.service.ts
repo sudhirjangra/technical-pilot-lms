@@ -225,6 +225,49 @@ export class ReferralsService {
   }
 
   /**
+   * Validates a referral code against existing active profiles.
+   * Throws BadRequestException if invalid, inactive, or self-referral.
+   */
+  async validateReferralCode(
+    referralCode?: string,
+    currentUserId?: string,
+  ): Promise<{
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    referral_code: string | null;
+    is_active: boolean | null;
+  }> {
+    if (!referralCode || !referralCode.trim()) {
+      throw new BadRequestException('Referral code cannot be empty');
+    }
+
+    const cleanCode = referralCode.trim().toUpperCase();
+
+    const { data: referrer, error: referrerErr } = await this.supabase
+      .from('profiles')
+      .select('id, full_name, email, referral_code, is_active')
+      .eq('referral_code', cleanCode)
+      .maybeSingle();
+
+    if (referrerErr || !referrer) {
+      throw new BadRequestException('Invalid referral code');
+    }
+
+    if (currentUserId && referrer.id === currentUserId) {
+      throw new BadRequestException('You cannot refer yourself');
+    }
+
+    if (!referrer.is_active) {
+      throw new BadRequestException(
+        'Referral code belongs to an inactive user',
+      );
+    }
+
+    return referrer;
+  }
+
+  /**
    * Process signup referral: links referee with referrer, stores referral record,
    * creates an exclusive personal coupon for referee, and notifies referrer.
    */

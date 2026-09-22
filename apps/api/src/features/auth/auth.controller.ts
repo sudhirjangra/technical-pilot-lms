@@ -283,6 +283,15 @@ export class AuthController {
     @Req() req: any,
     @Body() dto: ChangePasswordDto,
   ): Promise<MessageResponse> {
+    if (
+      dto.identifier &&
+      dto.identifier.trim().toLowerCase() !==
+        req.user.email?.trim().toLowerCase()
+    ) {
+      throw new ForbiddenException(
+        'Cannot change password for another account',
+      );
+    }
     await this.authService.changePassword({
       ...dto,
       identifier: req.user.email,

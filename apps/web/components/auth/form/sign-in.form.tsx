@@ -117,13 +117,8 @@ const SignInForm = () => {
   const handleRemoveSession = async (sessionId: string) => {
     setRemovingId(sessionId);
     try {
-      const result = await removeSession({ session_token: sessionId });
-      if (result?.data === 'success') {
-        const remainingSessions = deviceSessions.filter((s) => s.id !== sessionId);
-        setDeviceSessions(remainingSessions);
-        setDeviceLimitOpen(false);
-        execute(formData);
-      }
+      setDeviceLimitOpen(false);
+      execute({ ...formData, kickout_session_id: sessionId });
     } finally {
       setRemovingId(null);
     }

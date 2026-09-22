@@ -19,6 +19,7 @@ export const {
       credentials: {
         identifier: { label: 'Identifier', type: 'string' },
         password: { label: 'Password', type: 'password' },
+        kickout_session_id: { label: 'Kickout Session ID', type: 'string' },
       },
       /**
        * @description Authorization logic for credentials provider
@@ -28,6 +29,7 @@ export const {
         return await authorizeSignIn({
           identifier: credentials.identifier as string,
           password: credentials.password as string,
+          kickout_session_id: credentials.kickout_session_id as string | undefined,
         });
       },
     }),

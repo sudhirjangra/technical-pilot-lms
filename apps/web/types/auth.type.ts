@@ -41,6 +41,7 @@ export const SignInSchema = z.object({
   password: z.string().min(1, {
     message: 'Password is required!',
   }),
+  kickout_session_id: z.string().optional(),
 });
 
 export type SignIn = z.infer<typeof SignInSchema>;

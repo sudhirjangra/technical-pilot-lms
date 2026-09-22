@@ -48,4 +48,9 @@ export class SignInUserDto {
     message: 'Password must be a string',
   })
   password: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  kickout_session_id?: string;
 }

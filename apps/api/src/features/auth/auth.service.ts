@@ -149,6 +149,11 @@ export class AuthService {
       );
     }
 
+    // Pre-validate referral code if supplied
+    if (dto.referral_code && dto.referral_code.trim()) {
+      await this.referralsService.validateReferralCode(dto.referral_code);
+    }
+
     const { data: authData, error } = await this.supabase.auth.admin.createUser(
       {
         email: dto.email,
@@ -200,18 +205,11 @@ export class AuthService {
     await this.referralsService.ensureUserReferralCode(userId);
 
     // Process referral code if student was referred by someone
-    if (dto.referral_code) {
-      try {
-        await this.referralsService.processSignupReferral(
-          userId,
-          dto.referral_code,
-        );
-      } catch (refErr) {
-        this.logger.warn(
-          { refErr, userId, referralCode: dto.referral_code },
-          'Failed to process signup referral',
-        );
-      }
+    if (dto.referral_code && dto.referral_code.trim()) {
+      await this.referralsService.processSignupReferral(
+        userId,
+        dto.referral_code,
+      );
     }
 
     const { error: resendError } = await this.supabaseAnon.auth.resend({
@@ -231,7 +229,7 @@ export class AuthService {
 
   async signIn(dto: SignInUserDto): Promise<LoginUserInterface> {
     const authUser = await this.getUserByEmail(dto.identifier);
-    if (!authUser) throw new NotFoundException('User not found');
+    if (!authUser) throw new UnauthorizedException('Invalid credentials');
 
     const { error: signInError } =
       await this.supabaseAnon.auth.signInWithPassword({
@@ -262,6 +260,26 @@ export class AuthService {
       throw new UnauthorizedException(
         'Your account has been disabled by an administrator. Please contact support for assistance.',
       );
+    }
+
+    // Atomically kick out specified session if provided, strictly validating user ownership
+    if (dto.kickout_session_id) {
+      const { error: deleteError } = await this.supabase
+        .from('devices')
+        .delete()
+        .eq('id', dto.kickout_session_id)
+        .eq('user_id', authUser.id);
+
+      if (deleteError) {
+        this.logger.warn(
+          {
+            error: deleteError.message,
+            userId: authUser.id,
+            sessionId: dto.kickout_session_id,
+          },
+          'Failed to kick out session during sign-in',
+        );
+      }
     }
 
     const { data: existingDevices } = await this.supabase
@@ -489,6 +507,11 @@ export class AuthService {
     userId: string,
     dto: CompleteProfileDto,
   ): Promise<void> {
+    // Validate referral code if provided
+    if (dto.referral_code && dto.referral_code.trim()) {
+      await this.referralsService.validateReferralCode(dto.referral_code, userId);
+    }
+
     const { error } = await this.supabase
       .from('profiles')
       .update({
@@ -511,29 +534,19 @@ export class AuthService {
     await this.referralsService.ensureUserReferralCode(userId);
 
     // Process referral code if provided
-    if (dto.referral_code) {
-      try {
-        await this.referralsService.processSignupReferral(
-          userId,
-          dto.referral_code,
-        );
-      } catch (refErr) {
-        this.logger.warn(
-          { refErr, userId, referralCode: dto.referral_code },
-          'Failed to process referral code during profile completion',
-        );
-      }
+    if (dto.referral_code && dto.referral_code.trim()) {
+      await this.referralsService.processSignupReferral(
+        userId,
+        dto.referral_code,
+      );
     }
   }
 
   async resendOtp(email: string): Promise<void> {
     const authUser = await this.getUserByEmail(email);
-    if (!authUser) throw new NotFoundException('User not found');
-
-    if (authUser.email_confirmed_at) {
-      throw new BadRequestException(
-        'Email is already confirmed. Please sign in.',
-      );
+    // Return silently if user does not exist or is already confirmed to prevent user enumeration
+    if (!authUser || authUser.email_confirmed_at) {
+      return;
     }
 
     const { error } = await this.supabaseAnon.auth.resend({
@@ -546,9 +559,7 @@ export class AuthService {
         { email, error: error.message },
         'Failed to resend verification code',
       );
-      throw new BadRequestException(
-        'Failed to resend verification code. Please try again.',
-      );
+      return;
     }
   }
 
@@ -646,18 +657,18 @@ export class AuthService {
       .eq('user_id', authUser.id)
       .order('created_at', { ascending: true });
 
-    const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
-    if (
-      (existingDevices?.length ?? 0) >= maxDevices &&
-      existingDevices &&
-      existingDevices.length > 0
-    ) {
-      // Remove oldest device to ensure clean onboarding
-      await this.supabase
-        .from('devices')
-        .delete()
-        .eq('id', existingDevices[0].id);
-    }
+      const maxDevices = this.config.get<number>('MAX_DEVICES_PER_USER', 2);
+      if (
+        (existingDevices?.length ?? 0) >= maxDevices &&
+        existingDevices &&
+        existingDevices.length > 0
+      ) {
+        // Remove oldest device to ensure clean onboarding
+        await this.supabase
+          .from('devices')
+          .delete()
+          .eq('id', existingDevices[0].id);
+      }
 
     const deviceName = dto.device_name ?? 'Web Browser';
     const { data: device } = await this.supabase
@@ -770,8 +781,15 @@ export class AuthService {
   async changePassword(dto: ChangePasswordDto): Promise<void> {
     if (!dto.identifier)
       throw new BadRequestException('Identifier is required');
+
+    if (dto.password === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
     const authUser = await this.getUserByEmail(dto.identifier);
-    if (!authUser) throw new NotFoundException('User not found');
+    if (!authUser) throw new UnauthorizedException('Invalid credentials');
 
     const { error: signInError } =
       await this.supabaseAnon.auth.signInWithPassword({
