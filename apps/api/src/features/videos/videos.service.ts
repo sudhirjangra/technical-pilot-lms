@@ -235,22 +235,159 @@ export class VideosService {
         validateStatus: (status) => status >= 200 && status < 400,
       });
     } catch (err) {
+      // Clean up VdoCipher asset immediately so it never shows as uploading 0kb
+      await this.deleteVdoCipherAsset(videoId).catch(() => {});
       throw new BadRequestException(describeAxiosError('file upload', err));
     }
 
-    const { data, error } = await this.supabase
-      .from('video_lessons')
-      .upsert(
-        { lesson_id: lessonId, vdocipher_video_id: videoId },
-        { onConflict: 'lesson_id' },
-      )
-      .select()
+    try {
+      const { data, error } = await this.supabase
+        .from('video_lessons')
+        .upsert(
+          { lesson_id: lessonId, vdocipher_video_id: videoId },
+          { onConflict: 'lesson_id' },
+        )
+        .select()
+        .single();
+      if (error) throw new BadRequestException(error.message);
+      return {
+        ...data,
+        folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}`,
+      };
+    } catch (dbErr) {
+      await this.deleteVdoCipherAsset(videoId).catch(() => {});
+      throw dbErr;
+    }
+  }
+
+  /**
+   * Generates direct upload credentials for client-side direct upload to AWS S3.
+   * This bypasses the API server buffer, enabling fast, full-speed uploads for long/large videos,
+   * accurate upload progress tracking, and zero server RAM usage.
+   */
+  async getUploadCredentials(lessonId: string): Promise<{
+    videoId: string;
+    clientPayload: Record<string, string>;
+    folder: string;
+  }> {
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, title, lesson_type, chapters(title, courses(title, slug))')
+      .eq('id', lessonId)
       .single();
-    if (error) throw new BadRequestException(error.message);
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'video')
+      throw new BadRequestException('Lesson type must be video');
+
+    const chapter = lesson.chapters as unknown as {
+      title: string;
+      courses: { title: string; slug: string };
+    };
+    const title = `${chapter.courses.title} / ${chapter.title} / ${lesson.title}`;
+    const headers = {
+      Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
+      Accept: 'application/json',
+    };
+
+    const courseFolderId = await this.resolveFolder(
+      slug(chapter.courses.slug),
+      'root',
+      headers,
+    );
+    const folderId = await this.resolveFolder(
+      slug(chapter.title),
+      courseFolderId,
+      headers,
+    );
+
+    let response;
+    try {
+      response = await axios.put(`${VDOCIPHER_BASE}/videos`, undefined, {
+        headers,
+        params: { title, folderId },
+      });
+    } catch (err) {
+      throw new BadRequestException(
+        describeAxiosError('upload credentials request', err),
+      );
+    }
+
+    const videoId = response.data.videoId as string;
+    const clientPayload = response.data.clientPayload as
+      | Record<string, string>
+      | undefined;
+    if (!videoId || !clientPayload) {
+      throw new BadRequestException('VdoCipher did not return upload credentials');
+    }
+
     return {
-      ...data,
+      videoId,
+      clientPayload,
       folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}`,
     };
+  }
+
+  /**
+   * Finalizes video registration after the client finishes uploading directly to S3.
+   * Fetches metadata from VdoCipher and saves the video_lessons row in Supabase.
+   */
+  async completeUpload(lessonId: string, videoId: string) {
+    const cleanVideoId = videoId?.trim();
+    if (!cleanVideoId) {
+      throw new BadRequestException('VdoCipher video ID is required');
+    }
+
+    const { data: lesson } = await this.supabase
+      .from('lessons')
+      .select('id, lesson_type')
+      .eq('id', lessonId)
+      .single();
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    if (lesson.lesson_type !== 'video')
+      throw new BadRequestException('Lesson type must be video');
+
+    const { durationSeconds, thumbnailUrl } =
+      await this.fetchVdoCipherDetails(cleanVideoId);
+
+    const payload: Record<string, unknown> = {
+      lesson_id: lessonId,
+      vdocipher_video_id: cleanVideoId,
+    };
+    if (thumbnailUrl) payload.thumbnail_url = thumbnailUrl;
+    if (durationSeconds !== undefined) payload.duration_seconds = durationSeconds;
+
+    const { data, error } = await this.supabase
+      .from('video_lessons')
+      .upsert(payload, { onConflict: 'lesson_id' })
+      .select()
+      .single();
+
+    if (error) {
+      await this.deleteVdoCipherAsset(cleanVideoId).catch(() => {});
+      throw new BadRequestException(error.message);
+    }
+
+    if (durationSeconds !== undefined) {
+      await this.supabase
+        .from('lessons')
+        .update({ duration_seconds: durationSeconds })
+        .eq('id', lessonId);
+    }
+
+    return data;
+  }
+
+  /**
+   * Cancels an incomplete or aborted upload, immediately deleting the VdoCipher asset
+   * so it does NOT show up as "uploading [0kb]" in VdoCipher dashboard.
+   */
+  async cancelUpload(videoId: string) {
+    const cleanVideoId = videoId?.trim();
+    if (!cleanVideoId) return { success: true };
+
+    await this.deleteVdoCipherAsset(cleanVideoId);
+
+    return { success: true };
   }
 
   /**
@@ -392,17 +529,25 @@ export class VideosService {
   }
 
   /**
-   * Deletes a video asset from VdoCipher. Best-effort: logs and swallows
+   * Deletes one or more video assets from VdoCipher. Best-effort: logs and swallows
    * errors so a provider outage never blocks lesson/chapter/course deletion.
    */
-  async deleteVdoCipherAsset(videoId: string) {
+  async deleteVdoCipherAsset(videoIds: string | string[]) {
+    const ids = (Array.isArray(videoIds) ? videoIds : [videoIds])
+      .map((id) => (typeof id === 'string' ? id.trim() : ''))
+      .filter((id): id is string => !!id);
+    if (ids.length === 0) return;
+
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    if (!apiSecret) return;
+
     try {
       await axios.delete(`${VDOCIPHER_BASE}/videos`, {
         headers: {
-          Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
+          Authorization: `Apisecret ${apiSecret}`,
           Accept: 'application/json',
         },
-        params: { videos: videoId },
+        params: { videos: ids.join(',') },
       });
     } catch (err: unknown) {
       const axiosErr = err as {
@@ -413,6 +558,331 @@ export class VideosService {
         axiosErr.response?.status,
         JSON.stringify(axiosErr.response?.data),
       );
+    }
+  }
+
+  /**
+   * Deletes a folder in VdoCipher.
+   */
+  async deleteFolder(folderId: string, headers?: Record<string, string>) {
+    if (!folderId || folderId === 'root') return;
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    if (!apiSecret) return;
+
+    const authHeaders = headers ?? {
+      Authorization: `Apisecret ${apiSecret}`,
+      Accept: 'application/json',
+    };
+
+    try {
+      await axios.delete(`${VDOCIPHER_BASE}/videos/folders/${folderId}`, {
+        headers: authHeaders,
+      });
+    } catch (err) {
+      console.warn(describeAxiosError(`folder deletion "${folderId}"`, err));
+    }
+  }
+
+  /**
+   * Lists and deletes all videos inside a VdoCipher folder.
+   */
+  private async deleteVideosInFolder(
+    folderId: string,
+    headers: Record<string, string>,
+  ) {
+    if (!folderId) return;
+    try {
+      const { data } = await axios.get(
+        `${VDOCIPHER_BASE}/videos?folderId=${folderId}&limit=100`,
+        { headers },
+      );
+      const rows: Array<Record<string, unknown>> = data?.rows ?? [];
+      const videoIds = rows
+        .map((r) => r.id as string)
+        .filter((id): id is string => typeof id === 'string' && !!id);
+
+      if (videoIds.length > 0) {
+        await this.deleteVdoCipherAsset(videoIds);
+      }
+    } catch (err) {
+      console.warn(
+        describeAxiosError(`listing/deleting videos in folder "${folderId}"`, err),
+      );
+    }
+  }
+
+  /**
+   * Deletes all VdoCipher content for an entire course:
+   * 1. Finds the course folder in VdoCipher.
+   * 2. For each chapter folder inside: deletes all videos first, then deletes the chapter folder.
+   * 3. Deletes any videos placed directly in the course folder.
+   * 4. Deletes the course folder itself.
+   * 5. Deletes any video IDs from database video_lessons for this course (in case some were outside the folder).
+   * 6. Clears the folder cache.
+   */
+  async deleteCourseVdoCipherContent(courseSlug: string, courseId: string) {
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    if (!apiSecret) return;
+
+    const headers = {
+      Authorization: `Apisecret ${apiSecret}`,
+      Accept: 'application/json',
+    };
+
+    const courseSlugStr = slug(courseSlug);
+
+    try {
+      const courseFolderId = await this.findChildFolder(
+        courseSlugStr,
+        'root',
+        headers,
+      );
+
+      if (courseFolderId) {
+        try {
+          const { data: folderData } = await axios.get(
+            `${VDOCIPHER_BASE}/videos/folders/${courseFolderId}`,
+            { headers },
+          );
+          const childFolders: Array<Record<string, unknown>> =
+            folderData?.folderList ??
+            folderData?.folders ??
+            folderData?.children ??
+            [];
+
+          for (const child of childFolders) {
+            const childId = (child.id ?? child.folderId) as string | undefined;
+            if (childId) {
+              await this.deleteVideosInFolder(childId, headers);
+              await this.deleteFolder(childId, headers);
+            }
+          }
+        } catch (err) {
+          console.warn(
+            describeAxiosError(
+              `fetching child folders for course "${courseSlug}"`,
+              err,
+            ),
+          );
+        }
+
+        await this.deleteVideosInFolder(courseFolderId, headers);
+        await this.deleteFolder(courseFolderId, headers);
+      }
+    } catch (err) {
+      console.warn(
+        describeAxiosError(
+          `course VdoCipher content deletion for "${courseSlug}"`,
+          err,
+        ),
+      );
+    }
+
+    // Delete any remaining video IDs from database records for this course
+    try {
+      const { data: chapters } = await this.supabase
+        .from('chapters')
+        .select('id, lessons(id, video_lessons(vdocipher_video_id))')
+        .eq('course_id', courseId);
+
+      const dbVideoIds = new Set<string>();
+      for (const ch of chapters ?? []) {
+        const lessons =
+          (
+            ch as unknown as {
+              lessons?: Array<{
+                video_lessons?:
+                  | Array<{ vdocipher_video_id?: string }>
+                  | { vdocipher_video_id?: string };
+              }>;
+            }
+          ).lessons ?? [];
+        for (const l of lessons) {
+          const vls = Array.isArray(l.video_lessons)
+            ? l.video_lessons
+            : l.video_lessons
+              ? [l.video_lessons]
+              : [];
+          for (const vl of vls) {
+            if (vl?.vdocipher_video_id) {
+              dbVideoIds.add(vl.vdocipher_video_id);
+            }
+          }
+        }
+      }
+
+      if (dbVideoIds.size > 0) {
+        await this.deleteVdoCipherAsset([...dbVideoIds]);
+      }
+    } catch (err) {
+      console.warn(
+        'Failed to query DB video IDs during course deletion cleanup:',
+        err,
+      );
+    }
+
+    for (const key of this.folderCache.keys()) {
+      if (key.includes(courseSlugStr)) {
+        this.folderCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Deletes all VdoCipher content for a specific chapter:
+   * 1. Finds the chapter folder inside the course folder.
+   * 2. Deletes all videos inside the chapter folder first.
+   * 3. Deletes the chapter folder.
+   * 4. Deletes any video IDs from database video_lessons for this chapter.
+   * 5. Clears the folder cache.
+   */
+  async deleteChapterVdoCipherContent(
+    courseSlug: string,
+    chapterTitle: string,
+    chapterId: string,
+  ) {
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    if (!apiSecret) return;
+
+    const headers = {
+      Authorization: `Apisecret ${apiSecret}`,
+      Accept: 'application/json',
+    };
+
+    const courseSlugStr = slug(courseSlug);
+    const chapterTitleStr = slug(chapterTitle);
+
+    try {
+      const courseFolderId = await this.findChildFolder(
+        courseSlugStr,
+        'root',
+        headers,
+      );
+
+      if (courseFolderId) {
+        const chapterFolderId = await this.findChildFolder(
+          chapterTitleStr,
+          courseFolderId,
+          headers,
+        );
+
+        if (chapterFolderId) {
+          await this.deleteVideosInFolder(chapterFolderId, headers);
+          await this.deleteFolder(chapterFolderId, headers);
+        }
+      }
+    } catch (err) {
+      console.warn(
+        describeAxiosError(
+          `chapter VdoCipher content deletion for "${chapterTitle}"`,
+          err,
+        ),
+      );
+    }
+
+    try {
+      const { data: lessons } = await this.supabase
+        .from('lessons')
+        .select('id, video_lessons(vdocipher_video_id))')
+        .eq('chapter_id', chapterId);
+
+      const dbVideoIds = new Set<string>();
+      for (const l of lessons ?? []) {
+        const vls = Array.isArray((l as any).video_lessons)
+          ? (l as any).video_lessons
+          : (l as any).video_lessons
+            ? [(l as any).video_lessons]
+            : [];
+        for (const vl of vls) {
+          if (vl?.vdocipher_video_id) {
+            dbVideoIds.add(vl.vdocipher_video_id);
+          }
+        }
+      }
+
+      if (dbVideoIds.size > 0) {
+        await this.deleteVdoCipherAsset([...dbVideoIds]);
+      }
+    } catch (err) {
+      console.warn(
+        'Failed to query DB video IDs during chapter deletion cleanup:',
+        err,
+      );
+    }
+
+    for (const key of this.folderCache.keys()) {
+      if (key.includes(chapterTitleStr)) {
+        this.folderCache.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Cleans up orphaned or failed video uploads in VdoCipher.
+   * Finds videos in VdoCipher with status 'uploading', 'failed', or 'error'
+   * that are older than 15 minutes and not linked to any active video_lessons in DB.
+   */
+  async cleanupFailedUploads(): Promise<{
+    cleanedCount: number;
+    cleanedIds: string[];
+  }> {
+    const apiSecret = this.config.get('VDOCIPHER_API_SECRET');
+    if (!apiSecret) return { cleanedCount: 0, cleanedIds: [] };
+
+    const headers = {
+      Authorization: `Apisecret ${apiSecret}`,
+      Accept: 'application/json',
+    };
+
+    try {
+      const res = await axios.get(`${VDOCIPHER_BASE}/videos?limit=100`, {
+        headers,
+      });
+      const rows: Array<Record<string, unknown>> = res.data?.rows ?? [];
+
+      const candidateIds: string[] = [];
+      const cutoffTime = Date.now() - 15 * 60 * 1000;
+
+      for (const row of rows) {
+        const id = row.id as string | undefined;
+        const status = (row.status as string | undefined)?.toLowerCase();
+        const uploadTime = row.upload_time
+          ? new Date(row.upload_time as string | number).getTime()
+          : 0;
+
+        if (!id) continue;
+
+        const isFailed = status === 'failed' || status === 'error';
+        const isStuckUploading =
+          status === 'uploading' && (!uploadTime || uploadTime < cutoffTime);
+
+        if (isFailed || isStuckUploading) {
+          candidateIds.push(id);
+        }
+      }
+
+      if (candidateIds.length === 0) {
+        return { cleanedCount: 0, cleanedIds: [] };
+      }
+
+      const { data: activeLessons } = await this.supabase
+        .from('video_lessons')
+        .select('vdocipher_video_id')
+        .in('vdocipher_video_id', candidateIds);
+
+      const activeIds = new Set(
+        (activeLessons ?? []).map((l) => l.vdocipher_video_id as string),
+      );
+      const toDelete = candidateIds.filter((id) => !activeIds.has(id));
+
+      if (toDelete.length > 0) {
+        await this.deleteVdoCipherAsset(toDelete);
+      }
+
+      return { cleanedCount: toDelete.length, cleanedIds: toDelete };
+    } catch (err) {
+      console.warn(describeAxiosError('cleanup failed uploads', err));
+      return { cleanedCount: 0, cleanedIds: [] };
     }
   }
 

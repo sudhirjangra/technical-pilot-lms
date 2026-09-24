@@ -42,11 +42,19 @@ import {
   updateTestQuestion,
 } from '@/server/admin/tests.server';
 import {
+  cleanupFailedVideoUploads,
   createVideoLesson,
   deleteVideoLesson,
   uploadVideoThumbnail,
   VideoLesson,
 } from '@/server/admin/videos.server';
+import {
+  formatRemainingTime,
+  formatUploadSize,
+  formatUploadSpeed,
+  uploadVideoDirectToVdoCipher,
+  VideoUploadProgress,
+} from '@/lib/video-upload-direct';
 import { Badge } from '@repo/shadcn/badge';
 import { Button } from '@repo/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/shadcn/card';
@@ -287,6 +295,9 @@ export function CourseDetailClient({
   const [importFile, setImportFile] = useState<File | null>(null);
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
+  const [videoUploadProgressInfo, setVideoUploadProgressInfo] = useState<VideoUploadProgress | null>(null);
+  const [cleaningFailedUploads, setCleaningFailedUploads] = useState(false);
+  const videoAbortControllerRef = useRef<AbortController | null>(null);
   const questionFormRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
@@ -318,30 +329,62 @@ export function CourseDetailClient({
       return;
     }
 
+    const abortController = new AbortController();
+    videoAbortControllerRef.current = abortController;
     setUploadingLessonId(lessonId);
     setLoading(true);
     setVideoUploadProgress(0);
-    // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
-    const accessToken = await getCurrentAccessToken();
-    const result = await uploadFileDirect<{ data: VideoLesson }>(
-      `/videos/lesson/${lessonId}/upload`,
+
+    const result = await uploadVideoDirectToVdoCipher(
+      lessonId,
       file,
-      accessToken,
-      'file',
-      setVideoUploadProgress,
+      (progress) => {
+        setVideoUploadProgress(progress.percent);
+        setVideoUploadProgressInfo(progress);
+      },
+      abortController.signal,
     );
 
     setLoading(false);
     setUploadingLessonId(null);
     setVideoUploadProgress(null);
+    setVideoUploadProgressInfo(null);
+    videoAbortControllerRef.current = null;
+
     if (result.error || !result.data) {
       toast.error(result.error ?? 'Failed to upload video');
       return;
     }
 
-    toast.success('Video uploaded');
+    toast.success('Video uploaded successfully');
     setVideoFormLessonId(null);
     router.refresh();
+  };
+
+  const handleCancelVideoUpload = () => {
+    if (videoAbortControllerRef.current) {
+      toast.info('Cancelling upload and cleaning up storage...');
+      videoAbortControllerRef.current.abort();
+      videoAbortControllerRef.current = null;
+    }
+  };
+
+  const handleCleanupFailedUploads = async () => {
+    setCleaningFailedUploads(true);
+    const res = await cleanupFailedVideoUploads();
+    setCleaningFailedUploads(false);
+    if (res.error) {
+      toast.error(res.error);
+    } else {
+      const count = res.data?.cleanedCount ?? 0;
+      if (count > 0) {
+        toast.success(
+          `Cleaned up ${count} incomplete / failed upload${count === 1 ? '' : 's'} from VdoCipher.`,
+        );
+      } else {
+        toast.info('No orphaned or failed video uploads found in VdoCipher.');
+      }
+    }
   };
 
   const handleLinkVideoId = async (
@@ -534,12 +577,9 @@ export function CourseDetailClient({
           uploadError = linkResult.error;
         }
       } else if (file instanceof File && file.size > 0) {
-        const accessToken = await getCurrentAccessToken();
-        const uploadResult = await uploadFileDirect(
-          `/videos/lesson/${createdLesson.id}/upload`,
+        const uploadResult = await uploadVideoDirectToVdoCipher(
+          createdLesson.id,
           file,
-          accessToken,
-          'file',
         );
         if (uploadResult.error) {
           uploadError = uploadResult.error;
@@ -2003,30 +2043,82 @@ export function CourseDetailClient({
                             </div>
 
                             {videoFormMode === 'upload' && (
-                              <form
-                                onSubmit={(event) => handleUploadVideo(event, lesson.id)}
-                                className="flex flex-col gap-3 sm:flex-row sm:items-end"
-                              >
-                                <div className="flex-1">
-                                  <label className="text-xs font-medium text-muted-foreground">
-                                    Video file
-                                  </label>
-                                  <Input
-                                    name="video"
-                                    type="file"
-                                    required
-                                    accept="video/*"
-                                    className="mt-1 text-xs"
-                                  />
+                              uploadingLessonId === lesson.id && videoUploadProgressInfo ? (
+                                <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-medium text-foreground flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                      {videoUploadProgressInfo.statusText}
+                                    </span>
+                                    <span className="font-semibold text-primary">
+                                      {videoUploadProgressInfo.percent}%
+                                    </span>
+                                  </div>
+                                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary/80">
+                                    <div
+                                      className="h-full bg-primary transition-all duration-200 ease-out"
+                                      style={{ width: `${videoUploadProgressInfo.percent}%` }}
+                                    />
+                                  </div>
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                    <span>
+                                      {formatUploadSize(videoUploadProgressInfo.uploadedBytes)} of{' '}
+                                      {formatUploadSize(videoUploadProgressInfo.totalBytes)}
+                                      {videoUploadProgressInfo.speedBytesPerSec > 0 &&
+                                        ` • ${formatUploadSpeed(videoUploadProgressInfo.speedBytesPerSec)}`}
+                                    </span>
+                                    {videoUploadProgressInfo.remainingSeconds > 0 && (
+                                      <span>{formatRemainingTime(videoUploadProgressInfo.remainingSeconds)}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex justify-end pt-1">
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={handleCancelVideoUpload}
+                                      className="h-7 text-xs"
+                                    >
+                                      ✕ Cancel Upload
+                                    </Button>
+                                  </div>
                                 </div>
-                                <Button type="submit" size="sm" disabled={loading}>
-                                  {uploadingLessonId === lesson.id
-                                    ? `Uploading${videoUploadProgress != null ? ` ${videoUploadProgress}%` : '...'}`
-                                    : videoLesson
-                                    ? 'Replace Video'
-                                    : 'Upload Video'}
-                                </Button>
-                              </form>
+                              ) : (
+                                <div className="space-y-2">
+                                  <form
+                                    onSubmit={(event) => handleUploadVideo(event, lesson.id)}
+                                    className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                                  >
+                                    <div className="flex-1">
+                                      <label className="text-xs font-medium text-muted-foreground">
+                                        Video file (Direct fast upload, full support for long videos)
+                                      </label>
+                                      <Input
+                                        name="video"
+                                        type="file"
+                                        required
+                                        accept="video/*"
+                                        disabled={loading}
+                                        className="mt-1 text-xs"
+                                      />
+                                    </div>
+                                    <Button type="submit" size="sm" disabled={loading}>
+                                      {videoLesson ? 'Replace Video' : 'Upload Video'}
+                                    </Button>
+                                  </form>
+                                  <div className="flex justify-between items-center pt-1 text-[11px] text-muted-foreground">
+                                    <span>Direct AWS S3 transfer • Auto-cleans incomplete uploads</span>
+                                    <button
+                                      type="button"
+                                      onClick={handleCleanupFailedUploads}
+                                      disabled={cleaningFailedUploads}
+                                      className="underline hover:text-foreground disabled:opacity-50"
+                                    >
+                                      {cleaningFailedUploads ? 'Cleaning VdoCipher...' : 'Clean failed/0kb uploads'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )
                             )}
 
                             {videoFormMode === 'link' && (

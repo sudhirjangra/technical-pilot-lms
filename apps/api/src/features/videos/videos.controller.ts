@@ -13,7 +13,12 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
-import { CreateVideoLessonDto, UpdateVideoLessonDto } from './dto';
+import {
+  CancelVideoUploadDto,
+  CompleteVideoUploadDto,
+  CreateVideoLessonDto,
+  UpdateVideoLessonDto,
+} from './dto';
 import { VideosService } from './videos.service';
 
 @Controller('videos')
@@ -28,6 +33,43 @@ export class VideosController {
   async createVideoLesson(@Body() dto: CreateVideoLessonDto) {
     const data = await this.videosService.createVideoLesson(dto);
     return { message: 'Video lesson created', data };
+  }
+
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post('lesson/:lessonId/upload-credentials')
+  async getUploadCredentials(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+  ) {
+    const data = await this.videosService.getUploadCredentials(lessonId);
+    return { message: 'Upload credentials generated', data };
+  }
+
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post('lesson/:lessonId/complete-upload')
+  async completeUpload(
+    @Param('lessonId', ParseUUIDPipe) lessonId: string,
+    @Body() dto: CompleteVideoUploadDto,
+  ) {
+    const data = await this.videosService.completeUpload(lessonId, dto.videoId);
+    return { message: 'Video upload completed', data };
+  }
+
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post('cancel-upload')
+  async cancelUpload(@Body() dto: CancelVideoUploadDto) {
+    const data = await this.videosService.cancelUpload(dto.videoId);
+    return { message: 'Incomplete video upload cancelled', data };
+  }
+
+  @Roles('ADMIN', 'SUB_ADMIN')
+  @Permissions('courses:write')
+  @Post('cleanup-failed')
+  async cleanupFailedUploads() {
+    const data = await this.videosService.cleanupFailedUploads();
+    return { message: 'Failed and orphaned video uploads cleaned up', data };
   }
 
   @Roles('ADMIN', 'SUB_ADMIN')

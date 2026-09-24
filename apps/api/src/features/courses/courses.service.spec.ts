@@ -4,6 +4,7 @@ import { NotificationsService } from '@/features/notifications/notifications.ser
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from 'nestjs-pino';
 import { LessonsService } from '../lessons/lessons.service';
+import { VideosService } from '../videos/videos.service';
 import { CoursesService } from './courses.service';
 
 describe('CoursesService', () => {
@@ -11,6 +12,7 @@ describe('CoursesService', () => {
   let mockSupabase: any;
   let mockMailService: any;
   let mockNotificationsService: any;
+  let mockVideosService: any;
 
   beforeEach(async () => {
     mockSupabase = {
@@ -23,6 +25,12 @@ describe('CoursesService', () => {
       order: jest.fn().mockReturnThis(),
       single: jest.fn(),
       maybeSingle: jest.fn(),
+      storage: {
+        from: jest.fn().mockReturnValue({
+          list: jest.fn().mockResolvedValue({ data: [], error: null }),
+          remove: jest.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      },
     };
 
     mockMailService = {
@@ -34,6 +42,10 @@ describe('CoursesService', () => {
       broadcast: jest.fn().mockResolvedValue({ sent: 1 }),
     };
 
+    mockVideosService = {
+      deleteCourseVdoCipherContent: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CoursesService,
@@ -42,6 +54,7 @@ describe('CoursesService', () => {
           provide: LessonsService,
           useValue: { cleanupExternalContent: jest.fn() },
         },
+        { provide: VideosService, useValue: mockVideosService },
         { provide: MailService, useValue: mockMailService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         {

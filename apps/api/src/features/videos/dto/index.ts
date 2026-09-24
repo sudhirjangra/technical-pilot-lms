@@ -18,6 +18,7 @@ export class CreateVideoLessonDto {
   @IsString()
   thumbnail_url?: string;
 }
+
 export class UpdateVideoLessonDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -29,4 +30,22 @@ export class UpdateVideoLessonDto {
   @IsOptional()
   @IsString()
   thumbnail_url?: string;
+}
+
+export class CompleteVideoUploadDto {
+  @ApiProperty({
+    description: 'VdoCipher video ID returned by upload credentials',
+  })
+  @IsString()
+  @MaxLength(100)
+  videoId: string;
+}
+
+export class CancelVideoUploadDto {
+  @ApiProperty({
+    description: 'VdoCipher video ID to cancel/delete',
+  })
+  @IsString()
+  @MaxLength(100)
+  videoId: string;
 }

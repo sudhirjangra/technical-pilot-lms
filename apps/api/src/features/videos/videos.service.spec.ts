@@ -148,4 +148,94 @@ describe('VideosService', () => {
       await expect(service.deleteVideoLesson('lesson-1')).resolves.not.toThrow();
     });
   });
+
+  describe('direct upload & lifecycle', () => {
+    it('getUploadCredentials should request VdoCipher PUT credentials', async () => {
+      mockSupabase.single.mockResolvedValueOnce({
+        data: {
+          id: 'lesson-1',
+          title: 'Lesson 1',
+          lesson_type: 'video',
+          chapters: {
+            title: 'Chapter 1',
+            courses: { title: 'Course 1', slug: 'course-1' },
+          },
+        },
+        error: null,
+      });
+
+      (axios.get as jest.Mock).mockResolvedValue({ data: { folderList: [] } });
+      (axios.post as jest.Mock).mockResolvedValue({ data: { id: 'folder-1' } });
+      (axios.put as jest.Mock).mockResolvedValue({
+        data: {
+          videoId: 'vdo-new-123',
+          clientPayload: { uploadLink: 'https://s3.aws.com/upload' },
+        },
+      });
+
+      const res = await service.getUploadCredentials('lesson-1');
+      expect(res.videoId).toBe('vdo-new-123');
+      expect(res.clientPayload.uploadLink).toBe('https://s3.aws.com/upload');
+    });
+
+    it('cancelUpload should delete VdoCipher asset immediately', async () => {
+      (axios.delete as jest.Mock).mockResolvedValue({ data: {} });
+      const res = await service.cancelUpload('vdo-abort-123');
+      expect(res).toEqual({ success: true });
+      expect(axios.delete).toHaveBeenCalledWith(
+        expect.stringContaining('/videos'),
+        expect.objectContaining({
+          params: { videos: 'vdo-abort-123' },
+        }),
+      );
+    });
+
+    it('completeUpload should upsert video_lessons record', async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: { id: 'lesson-1', lesson_type: 'video' },
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: {
+            id: 'vl-1',
+            lesson_id: 'lesson-1',
+            vdocipher_video_id: 'vdo-completed-123',
+          },
+          error: null,
+        });
+
+      const res = await service.completeUpload('lesson-1', 'vdo-completed-123');
+      expect(mockSupabase.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lesson_id: 'lesson-1',
+          vdocipher_video_id: 'vdo-completed-123',
+        }),
+        expect.anything(),
+      );
+      expect(res.vdocipher_video_id).toBe('vdo-completed-123');
+    });
+
+    it('cleanupFailedUploads should delete orphaned/failed uploads', async () => {
+      (axios.get as jest.Mock).mockResolvedValue({
+        data: {
+          rows: [
+            { id: 'vdo-failed-1', status: 'failed', upload_time: 1000 },
+            { id: 'vdo-active-1', status: 'ready', upload_time: 2000 },
+          ],
+        },
+      });
+
+      mockSupabase.in.mockResolvedValueOnce({
+        data: [], // not active in DB
+        error: null,
+      });
+
+      (axios.delete as jest.Mock).mockResolvedValue({ data: {} });
+
+      const res = await service.cleanupFailedUploads();
+      expect(res.cleanedCount).toBe(1);
+      expect(res.cleanedIds).toContain('vdo-failed-1');
+    });
+  });
 });

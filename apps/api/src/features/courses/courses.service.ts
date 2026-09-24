@@ -16,6 +16,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import type { FastifyRequest } from 'fastify';
 import { Logger } from 'nestjs-pino';
 import { LessonsService } from '../lessons/lessons.service';
+import { VideosService } from '../videos/videos.service';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
 
 type MultipartRequest = FastifyRequest & {
@@ -29,6 +30,7 @@ export class CoursesService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly lessonsService: LessonsService,
+    private readonly videosService: VideosService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
     private readonly logger: Logger,
@@ -283,6 +285,64 @@ export class CoursesService {
   }
 
   async remove(id: string) {
+    const { data: course } = await this.supabase
+      .from('courses')
+      .select('id, slug, thumbnail_url')
+      .eq('id', id)
+      .single();
+
+    if (!course) throw new NotFoundException('Course not found');
+
+    const courseSlug = course.slug;
+    const safeCourseSlug = (courseSlug || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // 1. Delete all VdoCipher videos and folders for this course
+    await this.videosService
+      .deleteCourseVdoCipherContent(courseSlug, id)
+      .catch((err) => {
+        this.logger.warn(
+          { err, courseId: id },
+          'VdoCipher course content cleanup failed',
+        );
+      });
+
+    // 2. Clean up Supabase Storage:
+    // a) course-media bucket (thumbnails)
+    try {
+      const { data: files } = await this.supabase.storage
+        .from('course-media')
+        .list(`courses/${id}`);
+      if (files && files.length > 0) {
+        const filePaths = files.map((f) => `courses/${id}/${f.name}`);
+        await this.supabase.storage.from('course-media').remove(filePaths);
+      }
+      if (course.thumbnail_url?.includes('course-media/')) {
+        const match = course.thumbnail_url.match(/course-media\/(.+?)(\?|$)/);
+        if (match?.[1]) {
+          await this.supabase.storage.from('course-media').remove([match[1]]);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        { err, courseId: id },
+        'Supabase course-media cleanup failed',
+      );
+    }
+
+    // b) course-materials bucket (all PDFs and lesson files for this course)
+    try {
+      await this.cleanupCourseMaterialsStorage(safeCourseSlug);
+    } catch (err) {
+      this.logger.warn(
+        { err, courseId: id },
+        'Supabase course-materials cleanup failed',
+      );
+    }
+
+    // 3. Clean up individual lesson external content
     const { data: chapters } = await this.supabase
       .from('chapters')
       .select('id')
@@ -303,6 +363,36 @@ export class CoursesService {
 
     const { error } = await this.supabase.from('courses').delete().eq('id', id);
     if (error) throw new BadRequestException(error.message);
+  }
+
+  private async cleanupCourseMaterialsStorage(coursePrefix: string) {
+    if (!coursePrefix) return;
+    const { data: entries } = await this.supabase.storage
+      .from('course-materials')
+      .list(coursePrefix);
+
+    if (!entries || entries.length === 0) return;
+
+    const filesToRemove: string[] = [];
+    for (const entry of entries) {
+      if (entry.id) {
+        // It's a file directly under coursePrefix
+        filesToRemove.push(`${coursePrefix}/${entry.name}`);
+      } else {
+        // It's a subfolder (chapter), list files inside it
+        const chapterFolder = `${coursePrefix}/${entry.name}`;
+        const { data: subFiles } = await this.supabase.storage
+          .from('course-materials')
+          .list(chapterFolder);
+        for (const sub of subFiles ?? []) {
+          filesToRemove.push(`${chapterFolder}/${sub.name}`);
+        }
+      }
+    }
+
+    if (filesToRemove.length > 0) {
+      await this.supabase.storage.from('course-materials').remove(filesToRemove);
+    }
   }
 
   async uploadThumbnail(id: string, request: FastifyRequest) {

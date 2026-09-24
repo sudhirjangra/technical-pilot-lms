@@ -1,6 +1,7 @@
 'use client';
 
 import { Category } from '@/server/admin/categories.server';
+import { getCurrentAccessToken } from '@/server/auth.server';
 import {
   Course,
   createCourse,
@@ -41,7 +42,6 @@ import { RichTextEditor } from '@repo/shadcn/rich-text-editor';
 import { sanitizeSlugInput, slugify } from '@repo/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useMemo, useState } from 'react';
 import {
   compareValues,
@@ -109,7 +109,6 @@ export function CoursesClient({
   categories: Category[];
 }) {
   const router = useRouter();
-  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search);
@@ -265,10 +264,11 @@ export function CoursesClient({
     if (!file || !editingId) return;
     setThumbnailUploading(true);
     // Upload directly from the browser to the API to avoid platform payload-size limits on the Next.js server.
+    const accessToken = await getCurrentAccessToken();
     const result = await uploadFileDirect<{ data: Course }>(
       `/courses/${editingId}/thumbnail`,
       file,
-      session?.user?.tokens.access_token,
+      accessToken,
       'file',
     );
     setThumbnailUploading(false);

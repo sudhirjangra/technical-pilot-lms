@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { LessonsService } from '../lessons/lessons.service';
+import { VideosService } from '../videos/videos.service';
 import { CreateChapterDto, UpdateChapterDto } from './dto';
 
 // Lessons must be returned with every column the admin UI validates against
@@ -20,6 +21,7 @@ export class ChaptersService {
   constructor(
     @Inject(SUPABASE_ADMIN) private readonly supabase: SupabaseClient,
     private readonly lessonsService: LessonsService,
+    private readonly videosService: VideosService,
   ) {}
 
   async create(dto: CreateChapterDto) {
@@ -204,6 +206,45 @@ export class ChaptersService {
   }
 
   async remove(id: string) {
+    const { data: chapter } = await this.supabase
+      .from('chapters')
+      .select('id, title, course_id, courses(slug)')
+      .eq('id', id)
+      .single();
+
+    if (!chapter) throw new NotFoundException('Chapter not found');
+
+    const courseSlug = (chapter.courses as unknown as { slug?: string })?.slug ?? '';
+    if (courseSlug && chapter.title) {
+      // 1. Clean up VdoCipher chapter folder and videos
+      await this.videosService
+        .deleteChapterVdoCipherContent(courseSlug, chapter.title, id)
+        .catch(() => {});
+
+      // 2. Clean up Supabase Storage PDFs/materials for this chapter
+      const safeCourseSlug = courseSlug
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      const safeChapterTitle = chapter.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      try {
+        const chapterFolder = `${safeCourseSlug}/${safeChapterTitle}`;
+        const { data: files } = await this.supabase.storage
+          .from('course-materials')
+          .list(chapterFolder);
+        if (files && files.length > 0) {
+          await this.supabase.storage
+            .from('course-materials')
+            .remove(files.map((f) => `${chapterFolder}/${f.name}`));
+        }
+      } catch {}
+    }
+
+    // 3. Clean up individual lesson external content
     const { data: lessons } = await this.supabase
       .from('lessons')
       .select('id')

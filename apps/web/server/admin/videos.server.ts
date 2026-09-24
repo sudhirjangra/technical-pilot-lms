@@ -58,6 +58,75 @@ export async function createVideoLesson(payload: {
   return { data: data!.data };
 }
 
+const UploadCredentialsSchema = z.object({
+  videoId: z.string(),
+  clientPayload: z.record(z.string(), z.string()),
+  folder: z.string().optional(),
+});
+
+export async function getVideoUploadCredentials(lessonId: string) {
+  const [error, data] = await safeFetch(
+    z.object({ data: UploadCredentialsSchema }),
+    `/videos/lesson/${lessonId}/upload-credentials`,
+    {
+      method: 'POST',
+      headers: await authHeaders(),
+      cache: 'no-store',
+    },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
+export async function completeVideoUpload(lessonId: string, videoId: string) {
+  const [error, data] = await safeFetch(
+    z.object({ data: VideoLessonSchema }),
+    `/videos/lesson/${lessonId}/complete-upload`,
+    {
+      method: 'POST',
+      headers: await authHeaders(),
+      cache: 'no-store',
+      body: JSON.stringify({ videoId }),
+    },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
+export async function cancelVideoUpload(videoId: string) {
+  const [error] = await safeFetch(
+    MessageResponseSchema,
+    `/videos/cancel-upload`,
+    {
+      method: 'POST',
+      headers: await authHeaders(),
+      cache: 'no-store',
+      body: JSON.stringify({ videoId }),
+    },
+  );
+  if (error) return { error };
+  return { success: true };
+}
+
+export async function cleanupFailedVideoUploads() {
+  const [error, data] = await safeFetch(
+    z.object({
+      data: z.object({
+        cleanedCount: z.number(),
+        cleanedIds: z.array(z.string()),
+      }),
+    }),
+    `/videos/cleanup-failed`,
+    {
+      method: 'POST',
+      headers: await authHeaders(),
+      cache: 'no-store',
+    },
+  );
+  if (error) return { error };
+  return { data: data!.data };
+}
+
 export async function uploadVideoLesson(lessonId: string, file: File) {
   const formData = new FormData();
   formData.append('file', file);
