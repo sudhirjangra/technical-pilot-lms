@@ -4,37 +4,12 @@ import { PwaRegister } from '@/components/pwa-register';
 import { APP_NAME, APP_URL } from '@repo/constants/app';
 import { cn } from '@repo/shadcn/lib/utils';
 import { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, Roboto, Roboto_Mono } from 'next/font/google';
 import { ReactNode } from 'react';
 
 /** Tailwindcss **/
 import '@repo/shadcn/shadcn.css';
 import { Toaster } from '@repo/shadcn/sonner';
 import { cookies } from 'next/headers';
-
-const geist = Geist({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-geist',
-});
-
-const geist_mono = Geist_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-geist-mono',
-});
-
-const roboto = Roboto({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-roboto',
-});
-
-const roboto_mono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-roboto-mono',
-});
 
 export const viewport: Viewport = {
   themeColor: [
@@ -120,10 +95,6 @@ const RootLayout = async ({
       <body
         className={cn(
           'antialiased tracking-normal leading-normal',
-          geist.variable,
-          geist_mono.variable,
-          roboto.variable,
-          roboto_mono.variable,
         )}
         style={{
           fontFamily: `var(${select_font})`,

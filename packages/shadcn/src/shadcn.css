@@ -10,6 +10,10 @@
 
 /* Root CSS Variables for Color Palette */
 :root {
+  --font-geist: ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-roboto: ui-sans-serif, system-ui, sans-serif;
+  --font-roboto-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --expo-in: linear(
     0 0%,
     0.0085 31.26%,
