@@ -21,7 +21,7 @@ export const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default('noreply@example.com'),
-  FILE_MAX_SIZE: z.coerce.number().default(20971520),
+  FILE_MAX_SIZE: z.coerce.number().default(2147483648),
   RAZORPAY_KEY_ID: z.string().default(''),
   RAZORPAY_KEY_SECRET: z.string().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().default(''),

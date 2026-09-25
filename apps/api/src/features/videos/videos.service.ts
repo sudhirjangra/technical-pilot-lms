@@ -52,13 +52,13 @@ function describeAxiosError(step: string, err: unknown): string {
   const axiosErr = err as {
     response?: { status?: number; data?: unknown };
     message?: string;
-  };
-  const status = axiosErr.response?.status;
-  const body = axiosErr.response?.data;
+  } | null | undefined;
+  const status = axiosErr?.response?.status;
+  const body = axiosErr?.response?.data;
   const rendered =
     typeof body === 'string' ? body : body ? JSON.stringify(body) : undefined;
   return `VdoCipher ${step} failed${status ? ` (HTTP ${status})` : ''}: ${
-    rendered ?? axiosErr.message ?? 'unknown error'
+    rendered ?? axiosErr?.message ?? 'unknown error'
   }`;
 }
 
@@ -168,11 +168,16 @@ export class VideosService {
     if (!part || !part.mimetype.startsWith('video/'))
       throw new BadRequestException('A video file is required');
 
-    const chapter = lesson.chapters as unknown as {
-      title: string;
-      courses: { title: string; slug: string };
-    };
-    const title = `${chapter.courses.title} / ${chapter.title} / ${lesson.title}`;
+    const chapter = lesson.chapters as unknown as
+      | {
+          title?: string;
+          courses?: { title?: string; slug?: string };
+        }
+      | undefined;
+    const courseTitle = chapter?.courses?.title ?? 'Course';
+    const courseSlug = chapter?.courses?.slug ?? 'course';
+    const chapterTitle = chapter?.title ?? 'Chapter';
+    const title = `${courseTitle} / ${chapterTitle} / ${lesson.title}`;
     const headers = {
       Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
       Accept: 'application/json',
@@ -180,12 +185,12 @@ export class VideosService {
 
     // Folders are a convenience only — never let them block an upload.
     const courseFolderId = await this.resolveFolder(
-      slug(chapter.courses.slug),
+      slug(courseSlug),
       'root',
       headers,
     );
     const folderId = await this.resolveFolder(
-      slug(chapter.title),
+      slug(chapterTitle),
       courseFolderId,
       headers,
     );
@@ -252,7 +257,7 @@ export class VideosService {
       if (error) throw new BadRequestException(error.message);
       return {
         ...data,
-        folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}`,
+        folder: `${slug(courseSlug)}/${slug(chapterTitle)}`,
       };
     } catch (dbErr) {
       await this.deleteVdoCipherAsset(videoId).catch(() => {});
@@ -279,23 +284,28 @@ export class VideosService {
     if (lesson.lesson_type !== 'video')
       throw new BadRequestException('Lesson type must be video');
 
-    const chapter = lesson.chapters as unknown as {
-      title: string;
-      courses: { title: string; slug: string };
-    };
-    const title = `${chapter.courses.title} / ${chapter.title} / ${lesson.title}`;
+    const chapter = lesson.chapters as unknown as
+      | {
+          title?: string;
+          courses?: { title?: string; slug?: string };
+        }
+      | undefined;
+    const courseTitle = chapter?.courses?.title ?? 'Course';
+    const courseSlug = chapter?.courses?.slug ?? 'course';
+    const chapterTitle = chapter?.title ?? 'Chapter';
+    const title = `${courseTitle} / ${chapterTitle} / ${lesson.title}`;
     const headers = {
       Authorization: `Apisecret ${this.config.get('VDOCIPHER_API_SECRET')}`,
       Accept: 'application/json',
     };
 
     const courseFolderId = await this.resolveFolder(
-      slug(chapter.courses.slug),
+      slug(courseSlug),
       'root',
       headers,
     );
     const folderId = await this.resolveFolder(
-      slug(chapter.title),
+      slug(chapterTitle),
       courseFolderId,
       headers,
     );
@@ -323,7 +333,7 @@ export class VideosService {
     return {
       videoId,
       clientPayload,
-      folder: `${slug(chapter.courses.slug)}/${slug(chapter.title)}`,
+      folder: `${slug(courseSlug)}/${slug(chapterTitle)}`,
     };
   }
 
@@ -419,20 +429,13 @@ export class VideosService {
       const { data } = await axios.post(
         `${VDOCIPHER_BASE}/videos/folders`,
         { name, parent },
-        { headers },
+        { headers, timeout: 2500 },
       );
       const created = (data?.id ?? data?.folderId) as string | undefined;
       if (!created) return parent;
       this.folderCache.set(cacheKey, created);
       return created;
     } catch (err) {
-      // A concurrent upload may have created it between our lookup and this
-      // POST, so re-check before giving up and falling back to the parent.
-      const raced = await this.findChildFolder(name, parent, headers);
-      if (raced) {
-        this.folderCache.set(cacheKey, raced);
-        return raced;
-      }
       console.warn(describeAxiosError(`folder "${name}" creation`, err));
       return parent;
     }
@@ -449,6 +452,7 @@ export class VideosService {
         `${VDOCIPHER_BASE}/videos/folders/${parent}`,
         {
           headers,
+          timeout: 2500,
         },
       );
       const children: Array<Record<string, unknown>> =

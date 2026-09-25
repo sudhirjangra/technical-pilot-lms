@@ -55,14 +55,38 @@ export const safeFetch = async <T extends ZodSchema<unknown>>(
       ? new URL(relativePath, fallbackBase).toString()
       : null;
 
+  // When no body is provided, omit Content-Type: application/json to avoid Fastify FST_ERR_CTP_EMPTY_JSON_BODY errors
+  let normalizedInit = init;
+  if (init && (init.body === undefined || init.body === null) && init.headers) {
+    if (init.headers instanceof Headers) {
+      const cloned = new Headers(init.headers);
+      cloned.delete('content-type');
+      cloned.delete('Content-Type');
+      normalizedInit = { ...init, headers: cloned };
+    } else if (Array.isArray(init.headers)) {
+      normalizedInit = {
+        ...init,
+        headers: init.headers.filter(([key]) => key.toLowerCase() !== 'content-type'),
+      };
+    } else if (typeof init.headers === 'object') {
+      const cleaned = { ...(init.headers as Record<string, string>) };
+      for (const key of Object.keys(cleaned)) {
+        if (key.toLowerCase() === 'content-type') {
+          delete cleaned[key];
+        }
+      }
+      normalizedInit = { ...init, headers: cleaned };
+    }
+  }
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      response = await fetch(requestUrl, init);
+      response = await fetch(requestUrl, normalizedInit);
       break;
     } catch {
       if (fallbackUrl) {
         try {
-          response = await fetch(fallbackUrl, init);
+          response = await fetch(fallbackUrl, normalizedInit);
           break;
         } catch {
           response = null;

@@ -70,7 +70,7 @@ export async function getVideoUploadCredentials(lessonId: string) {
     `/videos/lesson/${lessonId}/upload-credentials`,
     {
       method: 'POST',
-      headers: await authHeaders(),
+      headers: await authHeaders(false),
       cache: 'no-store',
     },
   );
@@ -119,7 +119,7 @@ export async function cleanupFailedVideoUploads() {
     `/videos/cleanup-failed`,
     {
       method: 'POST',
-      headers: await authHeaders(),
+      headers: await authHeaders(false),
       cache: 'no-store',
     },
   );

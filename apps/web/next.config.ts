@@ -45,7 +45,7 @@ const nextConfig = {
               "worker-src 'self' blob:",
               "img-src 'self' data: blob: https: https://*.razorpay.com https://*.rzp.io https://cdn.razorpay.com",
               "font-src 'self' https://fonts.gstatic.com data:",
-              `connect-src 'self' https://api.razorpay.com https://*.razorpay.com https://razorpay.com https://*.rzp.io https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com https://*.vdocipher.com https://*.supabase.co https://*.google.com https://www.google.com https://technical-pilot-lms.onrender.com${publicApiUrl ? ` ${new URL(publicApiUrl).origin}` : ''}`,
+              `connect-src 'self' https://api.razorpay.com https://*.razorpay.com https://razorpay.com https://*.rzp.io https://lumberjack.razorpay.com https://lumberjack-cx.razorpay.com https://*.vdocipher.com https://*.s3.amazonaws.com https://*.s3.ap-southeast-1.amazonaws.com https://*.s3-accelerate.amazonaws.com https://*.supabase.co https://*.google.com https://www.google.com https://technical-pilot-lms.onrender.com${publicApiUrl ? ` ${new URL(publicApiUrl).origin}` : ''}`,
               "frame-src 'self' https: data: blob:",
             ].join('; '),
           },

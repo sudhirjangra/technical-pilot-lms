@@ -332,7 +332,7 @@ export function CourseDetailClient({
     const abortController = new AbortController();
     videoAbortControllerRef.current = abortController;
     setUploadingLessonId(lessonId);
-    setLoading(true);
+    // Don't setLoading(true) — the progress bar UI replaces the spinner during upload
     setVideoUploadProgress(0);
 
     const result = await uploadVideoDirectToVdoCipher(
@@ -345,7 +345,6 @@ export function CourseDetailClient({
       abortController.signal,
     );
 
-    setLoading(false);
     setUploadingLessonId(null);
     setVideoUploadProgress(null);
     setVideoUploadProgressInfo(null);
@@ -577,13 +576,27 @@ export function CourseDetailClient({
           uploadError = linkResult.error;
         }
       } else if (file instanceof File && file.size > 0) {
+        const abortController = new AbortController();
+        videoAbortControllerRef.current = abortController;
+        setUploadingLessonId(createdLesson.id);
+        setVideoUploadProgress(0);
+
         const uploadResult = await uploadVideoDirectToVdoCipher(
           createdLesson.id,
           file,
+          (progress) => {
+            setVideoUploadProgress(progress.percent);
+            setVideoUploadProgressInfo(progress);
+          },
+          abortController.signal,
         );
         if (uploadResult.error) {
           uploadError = uploadResult.error;
         }
+        setUploadingLessonId(null);
+        setVideoUploadProgress(null);
+        setVideoUploadProgressInfo(null);
+        videoAbortControllerRef.current = null;
       }
     } else if (lessonType === 'pdf' && file instanceof File && file.size > 0) {
       const uploadResult = await uploadPdfLesson(createdLesson.id, file);
@@ -1823,7 +1836,47 @@ export function CourseDetailClient({
                         />
                       </div>
                     )}
-                    <Button type="submit" disabled={loading} size="sm">Add</Button>
+                    {loading && videoUploadProgressInfo && lessonFormChapterId === chapter.id ? (
+                      <div className="w-full space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-foreground flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                            {videoUploadProgressInfo.statusText}
+                          </span>
+                          <span className="font-semibold text-primary">
+                            {videoUploadProgressInfo.percent}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary/80">
+                          <div
+                            className="h-full bg-primary transition-all duration-200 ease-out"
+                            style={{ width: `${videoUploadProgressInfo.percent}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                          <span>
+                            {formatUploadSize(videoUploadProgressInfo.uploadedBytes)} of{' '}
+                            {formatUploadSize(videoUploadProgressInfo.totalBytes)}
+                            {videoUploadProgressInfo.speedBytesPerSec > 0 &&
+                              ` • ${formatUploadSpeed(videoUploadProgressInfo.speedBytesPerSec)}`}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {videoUploadProgressInfo.remainingSeconds > 0 && (
+                              <span>{formatRemainingTime(videoUploadProgressInfo.remainingSeconds)}</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleCancelVideoUpload}
+                              className="font-medium text-destructive hover:underline cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button type="submit" disabled={loading} size="sm">Add</Button>
+                    )}
                   </form>
                 )}
 
